@@ -1,0 +1,44 @@
+// single line comment.
+
+/*
+multiple
+line
+comment
+*/
+
+extern multiple split(str, delim);
+extern single array_interpret(arr);
+
+
+func array(args*) { return args; }
+
+// Varargs indicated by trailing '*'.  All extra args are passed as
+// an array in the last variable.  In this case, the one named 'data'.
+func cat(data*) {
+    return array_interpret(data);
+}
+
+func helloworld() { return "Hello World!"; }
+
+func arraydemo() {
+    var myarr = array();
+    myarr[23] = 42;
+    notify(me, myarr[23]);
+}
+
+func first_word(thing) { return split(thing, " ")[0]; }
+
+func submit(arg) {
+    if (!strcmp(arg, "")) {
+        notify(me, "Enter your submission here:");
+        arg = read();
+    }
+    var new = copyobj(#1981);
+    var word = first_word(arg);
+    var newname = cat(name(me), "'s submission (", word, ")");
+    setname(new, newname);
+    setdesc(new, arg);
+    moveto(new, #1976);
+    notify(me, "Thank you for the submission.");
+}
+

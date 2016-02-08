@@ -1,0 +1,1209 @@
+%{
+
+#define MAXIDENTLEN 128
+#define STRBUFSIZ 2048
+
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <strings.h>
+
+int yylex(void);
+void yyerror(char *s);
+
+static int stringoff;
+static char varsbuf[STRBUFSIZ];
+
+char *savefmt(const char *fmt, ...);
+char *savestring(const char *);
+char *indent();
+
+struct str_list {
+    const char** list;
+    short count;
+    short cmax;
+} lvars_list, fvars_list;
+
+void strlist_init(struct str_list *l);
+void strlist_free(struct str_list *l);
+void strlist_add(struct str_list *l, const char *s);
+int strlist_find(struct str_list *l, const char *s);
+char *strlist_join(struct str_list *l, const char *s, int start, int end);
+
+struct prim_info_t {
+    const char *name;
+    const char *code;
+    short expects;
+    short returns;
+    short hasvarargs;
+};
+
+void priminfo_free(struct prim_info_t *l);
+
+struct prim_list_t {
+    struct prim_info_t* list;
+    short count;
+    short cmax;
+} funcs_list;
+
+void funclist_init(struct prim_list_t *l);
+void funclist_free(struct prim_list_t *l);
+void funclist_add(struct prim_list_t *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs);
+struct prim_info_t *funclist_find(struct prim_list_t *l, const char *s);
+
+struct prim_info_t *prim_lookup(const char*s);
+
+/* compiler state exception flag */
+%}
+
+
+%union {
+    int token;
+    char *str;
+    int num_int;
+    double num_float;
+    struct str_list list;
+    struct prim_info_t prim;
+}
+
+
+%token <num_int> INTEGER
+%token <prim> PRIMITIVE DECLARED_FUNC
+%token <str> STR IDENT DECLARED_VAR
+%token <token> IF ELSE FUNC RETURN TRY CATCH
+%token <token> FOR FOREACH WHILE VAR IN
+%token <token> DO UNTIL CONTINUE BREAK
+%token <token> TOP PUSH MUF
+%token <token> UNARY EXTERN VOID SINGLE MULTIPLE
+
+%right THEN ELSE
+%left ',' KEYVAL
+%right ASGN PLUSASGN MINUSASGN MULTASGN DIVASGN MODASGN BITLEFTASGN BITRIGHTASGN BITANDASGN BITORASGN BITXORASGN
+/* %right '?' ':' */
+%left OR
+%left AND
+%left BITOR
+%left BITXOR
+%left BITAND
+%left EQ NEQ
+%left GT GTE LT LTE
+%left BITLEFT BITRIGHT
+%left PLUS MINUS
+%left MULT DIV MOD
+%right UNARY NOT BITNOT INCR DECR
+%left '[' ']' '(' ')'
+%left LVAL_SUBS
+
+%type <str> globalstatement funcdef
+%type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
+%type <prim> function
+%type <str> undeclared_function
+%type <str> proposed_varname good_proposed_varname bad_proposed_varname
+%type <str> variable undeclared_variable
+%type <str> externdef statement statements condition
+%type <str> comma_expr comma_expr_or_null
+%type <str> function_call primitive_call expr
+%type <str> unary_oper binary_oper
+%type <str> asgn_oper lval_subscript
+%type <str> lvarlist fvardef fvarlist
+%type <list> arglist arglist_or_null argvarlist
+%type <list> lval_subs_or_null lval_subscripts
+%type <num_int> ret_count_type opt_varargs
+
+%start program
+
+%%
+
+program: /* nothing */ { }
+    | program globalstatement { printf("%s\n", $2);  free($2); }
+    | program funcdef { printf("%s\n", $2);  free($2); }
+    | program externdef { }
+    ;
+
+globalstatement:
+      VAR lvarlist ';' { $$ = $2; }
+    ;
+
+lvarlist:
+      proposed_varname {
+            $$ = savefmt("lvar %s", $1);
+            strlist_add(&lvars_list, $1);
+            free($1);
+        }
+    | lvarlist ',' proposed_varname {
+            $$ = savefmt("%s\nlvar %s", $1, $3);
+            strlist_add(&lvars_list, $3);
+            free($1);
+            free($3);
+        }
+    ;
+
+funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
+        /* Mid-rule action to make sure function is declared
+         * before statements, to allow possible recursion. */
+        funclist_add(&funcs_list, $2, $2, $4.count - ($5?1:0), 1, $5);
+    } '{' statements '}' {
+        char *body = indent($9);
+        char *vars = strlist_join(&$4, " ", 0, -1);
+        $$ = savefmt(": %s[ %s -- ret ]\n%s 0\n;\n\n", $2, vars, body);
+        free($2);
+        strlist_free(&$4);
+        free($9);
+        free(body);
+        free(vars);
+        strlist_free(&fvars_list);
+        strlist_init(&fvars_list);
+    } ;
+
+externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
+        funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
+        free($3);
+        strlist_free(&$5);
+    } ;
+
+bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
+    | DECLARED_FUNC { $$ = savestring($1.name); }
+    ;
+
+good_proposed_funcname: IDENT { $$ = $1; }
+    | PRIMITIVE { $$ = savestring($1.name); } /* allow overriding primitives */
+    ;
+
+proposed_funcname:
+      good_proposed_funcname { $$ = $1; }
+    | bad_proposed_funcname {
+        char buf[1024];
+        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared", $1);
+        yyerror(buf);
+        YYERROR;
+    }
+    ;
+
+undeclared_function: IDENT { $$ = $1; }
+    | DECLARED_VAR { $$ = $1; }
+    ;
+
+function: DECLARED_FUNC { $$ = $1; }
+    | undeclared_function {
+            char buf[1024];
+            snprintf(buf, sizeof(buf), "Undeclared function '%s'", $1);
+            yyerror(buf);
+            YYERROR;
+        }
+    ;
+
+bad_proposed_varname: DECLARED_VAR { $$ = $1; }
+    | DECLARED_FUNC { $$ = savestring($1.name); }
+    ;
+
+good_proposed_varname: IDENT { $$ = $1; }
+    | PRIMITIVE { $$ = savestring($1.name); } /* allow overriding primitives */
+    ;
+
+proposed_varname: good_proposed_varname { $$ = $1; }
+    | bad_proposed_varname {
+        char buf[1024];
+        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared", $1);
+        yyerror(buf);
+        YYERROR;
+    }
+    ;
+
+undeclared_variable: IDENT { $$ = $1; }
+    | DECLARED_FUNC { $$ = savestring($1.name); }
+    | PRIMITIVE { $$ = savestring($1.name); }
+    ;
+
+variable: DECLARED_VAR { $$ = $1; }
+    | undeclared_variable {
+            char buf[1024];
+            $$ = $1;
+            snprintf(buf, sizeof(buf), "Undeclared variable '%s'", $1);
+            yyerror(buf);
+            YYERROR;
+        }
+    ;
+
+ret_count_type:
+      VOID { $$ = 0; }
+    | SINGLE  { $$ = 1; }
+    | MULTIPLE { $$ = 999; }
+    ;
+
+opt_varargs: /* nothing */ { $$ = 0; }
+    | MULT { $$ = 1; }
+    ;
+
+argvarlist:
+    /* nothing */ { strlist_init(&$$); }
+    | proposed_varname {
+            strlist_init(&$$);
+            strlist_add(&$$, $1);
+            strlist_add(&fvars_list, $1);
+            free($1);
+        }
+    | argvarlist ',' proposed_varname {
+            $$ = $1;
+            strlist_add(&$$, $3);
+            strlist_add(&fvars_list, $3);
+            free($3);
+        }
+    ;
+
+statement: ';' { $$ = savestring(""); }
+    | comma_expr ';' { $$ = savefmt("%s pop", $1); free($1); }
+    | RETURN ';' { $$ = savestring("0 exit"); }
+    | RETURN expr ';' { $$ = savefmt("%s exit", $2); free($2); }
+    | BREAK ';' { $$ = savestring("break"); }
+    | CONTINUE ';' { $$ = savestring("continue"); }
+    | VAR fvarlist ';' { $$ = $2; }
+    | IF condition statement %prec THEN {
+            char *body = indent($3);
+            $$ = savefmt("%s if\n%s\nthen", $2, body);
+            free($2); free($3);
+            free(body);
+        }
+    | IF condition statement ELSE statement {
+            char *ifbody = indent($3);
+            char *elsebody = indent($5);
+            $$ = savefmt("%s if\n%s\nelse\n%s\nthen", $2, ifbody, elsebody);
+            free($2); free($3); free($5);
+            free(ifbody); free(elsebody);
+        }
+    | WHILE condition statement {
+            char *cond = indent($2);
+            char *body = indent($3);
+            $$ = savefmt("begin\n%s\nwhile\n%s\nrepeat", cond, body);
+            free($2); free($3);
+            free(cond); free(body);
+        }
+    | DO statement WHILE condition ';' {
+            char *body = indent($2);
+            char *cond = indent($4);
+            $$ = savefmt("begin\n%s\n(conditional follows)\n%s not\nuntil", body, cond);
+            free($2); free($4);
+            free(cond); free(body);
+        }
+    | DO statement UNTIL condition ';' {
+            char *body = indent($2);
+            char *cond = indent($4);
+            $$ = savefmt("begin\n%s\n(conditional follows)\n%s\nuntil", body, cond);
+            free($2); free($4);
+            free(cond); free(body);
+        }
+    | FOR '(' comma_expr_or_null ';' comma_expr_or_null ';' comma_expr_or_null ')' statement {
+            char *cond = indent($5);
+            char *next = indent($7);
+            char *body = indent($9);
+            $$ = savefmt("%s pop\nbegin\n%s\nwhile\n%s\n%s pop\nrepeat", $3, cond, body, next);
+            free($3); free($5); free($7); free($9);
+            free(cond); free(next); free(body);
+        }
+    | FOREACH '(' variable IN expr ')' statement {
+            char *body = indent($7);
+            $$ = savefmt("%s\nforeach pop %s !\n%s\nrepeat", $5, $3, body);
+            free($3); free($5); free($7);
+            free(body);
+        }
+    | FOREACH '(' variable KEYVAL variable IN expr ')' statement {
+            char *body = indent($9);
+            $$ = savefmt("%s\nforeach %s ! %s !\n%s\nrepeat", $7, $5, $3, body);
+            free($3); free($5); free($7); free($9);
+            free(body);
+        }
+    | TRY statement CATCH '(' ')' statement {
+            char *trybody = indent($2);
+            char *catchbody = indent($6);
+            $$ = savefmt("0 try\n%s\ncatch pop\n%s\nendcatch", trybody, catchbody);
+            free($2); free($6);
+            free(trybody);
+            free(catchbody);
+        }
+    | TRY statement CATCH '(' variable ')' statement {
+            char *trybody = indent($2);
+            char *catchbody = indent($7);
+            $$ = savefmt("0 try\n%s\ncatch_detailed %s !\n%s\nendcatch", trybody, $5, catchbody);
+            free($2); free($5); free($7);
+            free(trybody);
+            free(catchbody);
+        }
+    | '{' statements '}' { $$ = $2; }
+    ;
+
+condition: '(' expr ')' { $$ = $2; } ;
+
+statements: /* nothing */ { $$ = savestring(""); }
+    | statements statement {
+            if (*$1) {
+                $$ = savefmt("%s\n%s", $1, $2);
+            } else {
+                $$ = $2;
+            }
+        }
+    ;
+
+comma_expr_or_null: /* nothing */ { $$ = savestring(""); }
+    | comma_expr { $$ = $1; }
+    ;
+
+comma_expr: expr { $$ = $1; }
+    | comma_expr ',' expr { $$ = savefmt("%s pop\n%s", $1, $3); free($1); free($3); }
+    ;
+
+function_call: function '(' arglist_or_null ')' {
+        if ($1.hasvarargs) {
+            if ($3.count < $1.expects) {
+                char buf[1024];
+                snprintf(buf, sizeof(buf),
+                    "Function '%s' expects at least %d args, but was provided %d args",
+                    $1.name, $1.expects, $3.count
+                );
+                strlist_free(&$3);
+                yyerror(buf);
+                YYERROR;
+            }
+        } else {
+            if ($3.count != $1.expects) {
+                char buf[1024];
+                snprintf(buf, sizeof(buf),
+                    "Function '%s' expects %d args, but was provided %d args",
+                    $1.name, $1.expects, $3.count
+                );
+                strlist_free(&$3);
+                yyerror(buf);
+                YYERROR;
+            }
+        }
+        if ($1.hasvarargs) {
+            char* fargs = strlist_join(&$3, " ", 0, $1.expects);
+            char* vargs = strlist_join(&$3, " ", $1.expects, -1);
+            $$ = savefmt("%s%s{ %s }list %s", fargs, (*fargs? " ":""), vargs, $1.code);
+            free(fargs);
+            free(vargs);
+        } else {
+            char* funcargs = strlist_join(&$3, " ", 0, -1);
+            $$ = savefmt("%s %s", funcargs, $1.code);
+            free(funcargs);
+        }
+        strlist_free(&$3);
+    } ;
+
+primitive_call:
+      TOP { $$ = savestring(""); }
+    | PUSH '(' arglist ')' { $$ = strlist_join(&$3, " ", 0, -1); strlist_free(&$3); }
+    | MUF '(' STR ')' { $$ = $3; }
+    | PRIMITIVE '(' arglist_or_null ')' {
+            if ($3.count != $1.expects) {
+                char buf[1024];
+                snprintf(buf, sizeof(buf),
+                    "Built-in primitive '%s' expects %d args, but was provided %d args",
+                    $1.name, $1.expects, $3.count
+                );
+                strlist_free(&$3);
+                yyerror(buf);
+                YYERROR;
+            }
+            char *args = strlist_join(&$3, " ", 0, -1);
+            if ($1.returns == 0) {
+                $$ = savefmt("%s%s%s 0", args, (*args?" ":""), $1.code);
+            } else if ($1.returns == 1) {
+                $$ = savefmt("%s%s%s", args, (*args?" ":""), $1.code);
+            } else {
+                $$ = savefmt("{ %s%s%s }list", args, (*args?" ":""), $1.code);
+            }
+            free(args);
+            strlist_free(&$3);
+        }
+    ;
+
+lval_subs_or_null: /* nothing */ { strlist_init(&$$); }
+    | lval_subscripts { $$ = $1; }
+    ;
+
+lval_subscripts:
+      lval_subscript { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+    | lval_subscripts lval_subscript { $$ = $1; strlist_add(&$$, $2); free($2); }
+    ;
+
+lval_subscript: '[' expr ']' %prec LVAL_SUBS { $$ = $2; } ;
+
+unary_oper:
+      PLUS     { $$ = ""; }
+    | MINUS    { $$ = "0 swap -"; }
+    | NOT      { $$ = "not"; }
+    | BITNOT   { $$ = "-1 bitxor"; }
+    ;
+
+binary_oper:
+      PLUS     { $$ = "+"; }
+    | MINUS    { $$ = "-"; }
+    | MULT     { $$ = "*"; }
+    | DIV      { $$ = "/"; }
+    | MOD      { $$ = "%"; }
+    | BITOR    { $$ = "bitor"; }
+    | BITXOR   { $$ = "bitxor"; }
+    | BITAND   { $$ = "bitand"; }
+    | BITLEFT  { $$ = "bitshift"; }
+    | BITRIGHT { $$ = "0 swap - bitshift"; }
+    | EQ       { $$ = "="; }
+    | NEQ      { $$ = "= not"; }
+    | LT       { $$ = "<"; }
+    | GT       { $$ = ">"; }
+    | LTE      { $$ = "<="; }
+    | GTE      { $$ = ">="; }
+    | AND      { $$ = "and"; }
+    | OR       { $$ = "or"; }
+    ;
+
+asgn_oper:
+      PLUSASGN     { $$ = "+"; }
+    | MINUSASGN    { $$ = "-"; }
+    | MULTASGN     { $$ = "*"; }
+    | DIVASGN      { $$ = "/"; }
+    | MODASGN      { $$ = "%"; }
+    | BITORASGN    { $$ = "bitor"; }
+    | BITXORASGN   { $$ = "bitxor"; }
+    | BITANDASGN   { $$ = "bitand"; }
+    | BITLEFTASGN  { $$ = "bitshift"; }
+    | BITRIGHTASGN { $$ = "0 swap - bitshift"; }
+    ;
+
+expr: INTEGER { $$ = savefmt("%d", $1); }
+    | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
+    | '#' INTEGER { $$ = savefmt("#%d", $2); }
+    | STR { $$ = savefmt("\"%s\"", $1); free($1); }
+    | '(' expr ')' { $$ = $2; }
+    | function_call { $$ = $1; }
+    | primitive_call { $$ = $1; }
+    | variable { $$ = savefmt("%s @", $1); free($1); }
+    /* Ternary operator conflicts with allowing ? in function identifiers! */
+    /* | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); } */
+    | expr '[' expr ']' {
+            $$ = savefmt("%s %s []", $1, $3);
+            free($1); free($3);
+        }
+    | unary_oper expr  %prec UNARY {
+            $$ = savefmt("%s%s%s", $2, (*$1?" ":""), $1);
+            free($2);
+        }
+    | expr binary_oper expr {
+           $$ = savefmt("%s %s %s", $1, $3, $2);
+           free($1); free($3);
+       }
+    | variable lval_subs_or_null ASGN expr {
+            if ($2.count == 0) {
+                $$ = savefmt("%s dup %s !", $4, $1);
+            } else if ($2.count == 1) {
+                $$ = savefmt("%s dup %s @ %s ->[] %s !", $4, $1, $2.list[0], $1);
+            } else {
+                char *idx = strlist_join(&$2, " ", 0, -1);
+                $$ = savefmt("%s dup %s @ { %s }list array_nested_set %s !", $4, $1, idx, $1);
+                free(idx);
+            }
+            free($1); strlist_free(&$2); free($4);
+        }
+    | variable lval_subs_or_null asgn_oper expr {
+            if ($2.count == 0) {
+                /* VAR @ EXPR OPER dup VAR ! */
+                $$ = savefmt("%s @ %s %s dup %s !", $1, $4, $3, $1);
+            } else if ($2.count == 1) {
+                /* VAR @ IDX over over [] EXPR OPER dup 4 rotate 4 rotate ->[] VAR ! */
+                $$ = savefmt("%s @ %s over over [] %s %s dup 4 rotate 4 rotate ->[] %s !",
+                    $1, $2.list[0], $4, $3, $1);
+            } else {
+                /* VAR @ { IDXs }list over over [] EXPR OPER dup 4 rotate 4 rotate array_nested_set VAR ! */
+                char *idx = strlist_join(&$2, " ", 0, -1);
+                $$ = savefmt("%s @ { %s }list over over [] %s %s dup 4 rotate 4 rotate array_nested_set %s !",
+                    $1, $2, $4, $3, $1);
+                free(idx);
+            }
+            free($1); strlist_free(&$2); free($4);
+        }
+    ;
+
+
+arglist_or_null: /* nothing */ { strlist_init(&$$); }
+    | arglist { $$ = $1; }
+    ;
+
+arglist:
+      expr { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+    | arglist ',' expr { $$ = $1;  strlist_add(&$$, $3); free($3); }
+    ;
+
+fvardef: proposed_varname {
+            $$ = savefmt("var %s", $1);
+            strlist_add(&fvars_list, $1);
+            free($1);
+        }
+    | proposed_varname ASGN expr {
+            $$ = savefmt("%s var! %s", $3, $1);
+            strlist_add(&fvars_list, $1);
+            free($1);
+            free($3);
+        }
+    ;
+
+fvarlist: fvardef { $$ = $1; }
+    | fvarlist ',' fvardef { $$ = savefmt("%s\n%s", $1, $3); free($1); free($3); }
+    ;
+
+%%
+
+FILE *yyin=NULL;
+int yylineno = 1;
+
+
+
+void
+strlist_init(struct str_list *l)
+{
+    l->count = 0;
+    l->cmax = 8;
+    l->list = (const char**)malloc(sizeof(const char*) * l->cmax);
+}
+
+
+void
+strlist_free(struct str_list *l)
+{
+    for (int i = 0; i < l->count; i++) {
+        free((void*) l->list[i]);
+    }
+    free(l->list);
+    l->list = 0;
+    l->count = 0;
+    l->cmax = 0;
+}
+
+
+void
+strlist_add(struct str_list *l, const char *s)
+{
+    if (l->count >= l->cmax) {
+        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
+        l->list = (const char**)realloc(l->list, sizeof(const char*) * l->cmax);
+    }
+    l->list[l->count++] = savestring(s);
+}
+
+
+int
+strlist_find(struct str_list *l, const char *s)
+{
+    for (int i = 0; i < l->count; i++) {
+        if (!strcmp(l->list[i], s)) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+
+char *
+strlist_join(struct str_list *l, const char *s, int start, int end)
+{
+    char *buf;
+    const char *ptr;
+    char *ptr2;
+    int i;
+    char totlen = 0;
+    if (end == -1) {
+        end = l->count;
+    }
+    for (i = start; i < l->count && i < end; i++) {
+        for (ptr = l->list[i]; *ptr++; totlen++);
+    }
+    totlen += strlen(s) * l->count;
+    ptr2 = buf = (char*)malloc(totlen+1);
+    for (i = start; i < l->count && i < end; i++) {
+        if (i > 0) {
+            for(ptr = s; *ptr; ) *ptr2++ = *ptr++;
+        }
+        for(ptr = l->list[i]; *ptr; ) *ptr2++ = *ptr++;
+    }
+    *ptr2 = '\0';
+    return buf;
+}
+
+
+void
+priminfo_free(struct prim_info_t *l)
+{
+    free((void*) l->name);
+    free((void*) l->code);
+}
+
+
+void
+funclist_init(struct prim_list_t *l)
+{
+    l->count = 0;
+    l->cmax = 8;
+    l->list = (struct prim_info_t*)malloc(sizeof(struct prim_info_t) * l->cmax);
+}
+
+
+void
+funclist_free(struct prim_list_t *l)
+{
+    for (int i = 0; i < l->count; i++) {
+        priminfo_free(&l->list[i]);
+    }
+    free(l->list);
+    l->list = 0;
+    l->count = 0;
+    l->cmax = 0;
+}
+
+
+void
+funclist_add(struct prim_list_t *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs)
+{
+    struct prim_info_t *p;
+    if (l->count >= l->cmax) {
+        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
+        l->list = (struct prim_info_t*)realloc(l->list, sizeof(struct prim_info_t) * l->cmax);
+    }
+    p = &l->list[l->count];
+    p->name = savestring(name);
+    p->code = savestring(code);
+    p->expects = argcnt;
+    p->returns = retcnt;
+    p->hasvarargs = hasvarargs;
+    l->count++;
+}
+
+
+struct prim_info_t *
+funclist_find(struct prim_list_t *l, const char *s)
+{
+    for (int i = 0; i < l->count; i++) {
+        if (!strcmp(l->list[i].name, s)) {
+            return &l->list[i];
+        }
+    }
+    return NULL;
+}
+
+
+void
+setyyinput(FILE *f)
+{
+    yyin = f;
+}
+
+
+
+static int
+lookup(char *s, int *bval)
+{
+    int start = 0;
+    int ret;
+
+    static struct kwordz{
+        char *kw;
+        int rval;
+        int bltin;  /* # of builtin if builtin */
+    } keyz[] = {
+        /* MUST BE IN LEXICAL SORT ORDER !!!!!! */
+        "break",     BREAK,     -1,
+        "catch",     CATCH,     -1,
+        "continue",  CONTINUE,  -1,
+        "do",        DO,        -1,
+        "else",      ELSE,      -1,
+        "extern",    EXTERN,    -1,
+        "for",       FOR,       -1,
+        "foreach",   FOREACH,   -1,
+        "func",      FUNC,      -1,
+        "if",        IF,        -1,
+        "in",        IN,        -1,
+        "muf",       MUF,       -1,
+        "multiple",  MULTIPLE,  -1,
+        "push",      PUSH,      -1,
+        "return",    RETURN,    -1,
+        "single",    SINGLE,    -1,
+        "top",       TOP,       -1,
+        "try",       TRY,       -1,
+        "until",     UNTIL,     -1,
+        "var",       VAR,       -1,
+        "void",      VOID,      -1,
+        "while",     WHILE,     -1,
+        0, 0, 0
+    };
+
+    int end = (sizeof(keyz) / sizeof(struct kwordz)) - 2;
+    int p = end / 2;
+
+    *bval = -1;
+    while (start <= end) {
+        ret = strcmp(s, keyz[p].kw);
+        if (ret == 0) {
+            *bval = keyz[p].bltin;
+            return(keyz[p].rval);
+        }
+        if (ret > 0) {
+            start = p + 1;
+        } else {
+            end = p - 1;
+        }
+        p = start + ((end - start)/2);
+    }
+    return(-1);
+}
+
+
+
+int
+yylex()
+{
+    char in[BUFSIZ];
+    char *p = in;
+    int c;
+    struct prim_info_t* pinfo;
+
+    do {
+        /* skip whitespace */
+        while (isspace(c = fgetc(yyin))) {
+            if (c == '\n') {
+                yylineno++;
+            }
+        }
+
+        /* skip comments */
+        if (c == '/') {
+            c = fgetc(yyin);
+            if (c == EOF) {
+                return c;
+            } else if (c == '/') {
+                do {
+                    c = fgetc(yyin);
+                } while (c != EOF && c != '\n');
+                if (c == '\n') {
+                    yylineno++;
+                }
+            } else if (c == '*') {
+                do {
+                    do {
+                        c = fgetc(yyin);
+                        if (c == '\n') {
+                            yylineno++;
+                        }
+                    } while (c != EOF && c != '*');
+                    c = fgetc(yyin);
+                    if (c == '*') {
+                        (void)ungetc(c,yyin);
+                    } else if (c == '\n') {
+                        yylineno++;
+                    }
+                } while (c != EOF && c != '/');
+                if (c == '/') {
+                    c = fgetc(yyin);
+                }
+                if (c == '\n') {
+                    yylineno++;
+                }
+            } else {
+                (void)ungetc(c,yyin);
+                c = '/';
+            }
+        }
+    } while (isspace(c));
+
+    /* handle EOF */
+    if (c == EOF) {
+        return c;
+    }
+
+    /* save current char - it is valuable */
+    *p++ = c;
+
+    /* handle INTEGER */
+    if (isdigit(c)) {
+        int num;
+
+        num = c - '0';
+        while (isdigit(c = fgetc(yyin))) {
+            num = (num * 10) + (c - '0');
+        }
+
+        (void)ungetc(c,yyin);
+        if (c == '\n') {
+            yylineno--;
+        }
+
+        yylval.num_int = num;
+        return(INTEGER);
+    }
+
+    /* handle keywords or idents/builtins */
+    if (isalpha(c) || c == '_' || c == '.') {
+        int cnt = 0;
+        int rv;
+        int bltin;
+
+        while ((c = fgetc(yyin)) != EOF && (isalnum(c) || c == '_' || c == '?')) {
+            if (++cnt + 1 >= MAXIDENTLEN) {
+                yyerror("identifier too long");
+            }
+            *p++ = c;
+        }
+
+        (void)ungetc(c, yyin);
+
+        *p = '\0';
+
+        /* Program flow keywords are inviolate and take priority. */
+        if ((rv = lookup(in, &bltin)) != -1) {
+            return(rv);
+        }
+
+        /* Function local variable take precendence over globals */
+        if (strlist_find(&fvars_list, in) >= 0) {
+            yylval.str = savestring(in);
+            return DECLARED_VAR;
+        }
+        if (strlist_find(&lvars_list, in) >= 0) {
+            yylval.str = savestring(in);
+            return DECLARED_VAR;
+        }
+
+        /* Declared functions should override primitives. */
+        pinfo = funclist_find(&funcs_list, in);
+        if (pinfo) {
+            yylval.prim = *pinfo;
+            return DECLARED_FUNC;
+        }
+
+        /* primitives match after everything else. */
+        if ((pinfo = prim_lookup(in))) {
+            yylval.prim = *pinfo;
+            return PRIMITIVE;
+        }
+
+        /* If identifier isn't already claimed, return as an undeclared identifier. */
+        yylval.str = savestring(in);
+        return IDENT;
+    }
+
+    /* handle quoted strings */
+    if (c == '"') {
+        int cnt = 0;
+        int quot = c;
+
+        /* strip start quote by resetting ptr */
+        p = in;
+
+        /* match quoted strings */
+        while ((c = fgetc(yyin)) != EOF && c != quot) {
+            if (!isascii(c)) {
+                continue;
+            }
+
+            if (++cnt + 1 >= sizeof(in)) {
+                yyerror("string too long");
+            }
+
+            /* we have to guard the line count */
+            if (c == '\n') {
+                yylineno++;
+            }
+
+            if (c == '\\') {
+                *p++ = c;
+                cnt++;
+                c = fgetc(yyin);
+            }
+
+            *p++ = c;
+        }
+
+        if (c == EOF) {
+            yyerror("EOF in quoted string");
+        }
+
+        *p = '\0';
+
+        yylval.str = savestring(in);
+        return(STR);
+    }
+
+    switch(c) {
+        case '<':
+            c = fgetc(yyin);
+            if (c == '<') {
+                c = fgetc(yyin);
+                if (c == '=') {
+                    return BITLEFTASGN;
+                } else {
+                    (void)ungetc(c,yyin);
+                }
+                return BITLEFT;
+            } else if (c == '=') {
+                return LTE;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return LT;
+
+        case '>':
+            c = fgetc(yyin);
+            if (c == '>') {
+                c = fgetc(yyin);
+                if (c == '=') {
+                    return BITRIGHTASGN;
+                } else {
+                    (void)ungetc(c,yyin);
+                }
+                return BITRIGHT;
+            } else if (c == '=') {
+                return GTE;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return GT;
+
+        case '&':
+            c = fgetc(yyin);
+            if (c == '&') {
+                return AND;
+            } else if (c == '=') {
+                return BITANDASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return BITAND;
+
+        case '|':
+            c = fgetc(yyin);
+            if (c == '|') {
+                return OR;
+            } else if (c == '=') {
+                return BITORASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return BITOR;
+
+        case '^':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return BITXORASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return BITXOR;
+
+        case '+':
+            c = fgetc(yyin);
+            if (c == '+') {
+                return INCR;
+            } else if (c == '=') {
+                return PLUSASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return PLUS;
+
+        case '-':
+            c = fgetc(yyin);
+            if (c == '-') {
+                return DECR;
+            } else if (c == '=') {
+                return MINUSASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return MINUS;
+
+        case '*':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return MULTASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return MULT;
+
+        case '/':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return DIVASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return DIV;
+
+        case '%':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return MODASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return MOD;
+
+        case '~':
+            return BITNOT;
+
+        case '=':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return EQ;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return ASGN;
+
+        case '!':
+            c = fgetc(yyin);
+            if (c == '=') {
+                return NEQ;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return NOT;
+
+    }
+
+    /* punt */
+    if (c == '\n') {
+        yylineno++;
+    }
+    return(c);
+}
+
+
+
+char *
+savestring(const char *arg)
+{
+    char *tmp = (char *)malloc(strlen(arg) + 1);
+    strcpy(tmp, arg);
+    return(tmp);
+}
+
+
+
+char *
+savefmt(const char *fmt, ...)
+{
+    va_list aptr;
+    char buf[STRBUFSIZ];
+
+    va_start(aptr, fmt);
+    vsprintf(buf, fmt, aptr);
+    va_end(aptr);
+
+    return savestring(buf);
+}
+
+
+
+char *
+indent(char *arg)
+{
+    const int indentlen = 4;
+    char *buf;
+    char *ptr, *ptr2;
+    int i, lines;
+
+    if (!arg || !*arg) {
+        return savestring("");
+    }
+    for (ptr = arg, lines = 1; *ptr; ptr++) {
+        if (*ptr == '\n') {
+            lines++;
+        }
+    }
+    buf = (char *)malloc(strlen(arg) + 1 + indentlen*lines);
+    ptr = arg;
+    ptr2 = buf;
+    while (*ptr) {
+        for (i = 0; *ptr != '\n' && i < indentlen; i++) {
+            *ptr2++ = ' ';
+        }
+        while (*ptr) {
+            *ptr2++ = *ptr;
+            if (*ptr++ == '\n') break;
+        }
+    }
+    *ptr2 = '\0';
+    return buf;
+}
+
+
+
+void
+yyerror(char *arg)
+{
+    fprintf(stderr, "%s in line %d\n", arg, yylineno);
+}
+
+
+
+struct prim_info_t prims_list[] = {
+    { "awake?",       "awake?",        1,  1,  0},
+    { "array_notify", "array_notify",  2,  0,  0},
+    { "notify",       "notify",        2,  0,  0},
+    { "online",       "online_array",  0,  1,  0},
+    { "strcmp",       "strcmp",        2,  1,  0},
+    { "read",         "read",          0,  1,  0},
+    { "copyobj",      "copyobj",       1,  1,  0},
+    { "strcat",       "strcat",        2,  1,  0},
+    { "name",         "name",          1,  1,  0},
+    { "setname",      "setname",       2,  0,  0},
+    { "setdesc",      "setdesc",       2,  0,  0},
+    { "moveto",       "moveto",        2,  0,  0},
+    {0, 0, 0, 0, 0}
+};
+
+
+struct prim_info_t *
+prim_lookup(const char*s)
+{
+    int i;
+    for (i = 0; prims_list[i].name; i++) {
+        if (!strcmp(prims_list[i].name, s)) {
+            return &prims_list[i];
+        }
+    }
+    return NULL;
+}
+
+
+int
+main()
+{
+    int res;
+    yyin = stdin;
+
+    strlist_init(&lvars_list);
+    strlist_init(&fvars_list);
+    funclist_init(&funcs_list);
+
+    /* Reserve ME and LOC vars, even if they aren't really LVARS. */
+    strlist_add(&lvars_list, "me");
+    strlist_add(&lvars_list, "loc");
+
+    res = yyparse();
+    if (res == 2) {
+        yyerror("Out of Memory");
+    }
+
+    strlist_free(&lvars_list);
+    strlist_free(&fvars_list);
+    funclist_free(&funcs_list);
+
+    return -res;
+}
+
+
+
+/* TODO LIST:
+ *   Floating point numbers.
+ *   array/dict declaration via [] and {}
+ *   Fix var[x][y] = 0;
+ */
+
