@@ -17,5 +17,5 @@ y.tab.c: parse_rules.y
 	${YACC} ${YFLAGS} parse_rules.y
 
 clean:
-	rm -f core ${TARGET} ${OBJECTS} y.tab.c y.tab.h *.output parse_rules.vcg
+	rm -f core ${TARGET} ${OBJECTS} y.tab.c y.tab.h *.output *.vcg *.tab.c *.tab.h
 
