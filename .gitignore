@@ -30,3 +30,9 @@
 
 # Debug files
 *.dSYM/
+
+# Bison temp files.
+parse_rules.output
+parse_rules.tab.c
+parse_rules.tab.h
+
