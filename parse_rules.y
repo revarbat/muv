@@ -19,6 +19,11 @@ char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
 char *indent();
 
+struct gettersetter {
+    char *get;
+    char *set;
+};
+
 struct str_list {
     const char** list;
     short count;
@@ -27,6 +32,7 @@ struct str_list {
 
 void strlist_init(struct str_list *l);
 void strlist_free(struct str_list *l);
+void strlist_clear(struct str_list *l);
 void strlist_add(struct str_list *l, const char *s);
 int strlist_find(struct str_list *l, const char *s);
 char *strlist_join(struct str_list *l, const char *s, int start, int end);
@@ -65,15 +71,17 @@ struct prim_info_t *prim_lookup(const char*s);
     double num_float;
     struct str_list list;
     struct prim_info_t prim;
+    struct gettersetter getset;
 }
 
 
 %token <num_int> INTEGER
 %token <prim> PRIMITIVE DECLARED_FUNC
-%token <str> STR IDENT DECLARED_VAR
+%token <str> STR IDENT DECLARED_VAR VAR
 %token <token> IF ELSE FUNC RETURN TRY CATCH
-%token <token> FOR FOREACH WHILE VAR IN
-%token <token> DO UNTIL CONTINUE BREAK
+%token <token> SWITCH CASE DEFAULT
+%token <token> DO WHILE FOR FOREACH IN
+%token <token> UNTIL CONTINUE BREAK
 %token <token> TOP PUSH MUF
 %token <token> UNARY EXTERN VOID SINGLE MULTIPLE
 
@@ -93,29 +101,27 @@ struct prim_info_t *prim_lookup(const char*s);
 %left MULT DIV MOD
 %right UNARY NOT BITNOT INCR DECR
 %left '[' ']' '(' ')'
-%left LVAL_SUBS
 
 %type <str> globalstatement funcdef
 %type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
 %type <prim> function
+%type <getset> lvalue
 %type <str> undeclared_function
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> variable undeclared_variable
-%type <str> externdef statement statements condition
+%type <str> externdef statement statements paren_expr
 %type <str> comma_expr comma_expr_or_null
-%type <str> function_call primitive_call expr
-%type <str> unary_oper binary_oper
-%type <str> asgn_oper lval_subscript
+%type <str> case_clause case_clauses default_clause
+%type <str> function_call primitive_call expr subscripts
 %type <str> lvarlist fvardef fvarlist
 %type <list> arglist arglist_or_null argvarlist
-%type <list> lval_subs_or_null lval_subscripts
 %type <num_int> ret_count_type opt_varargs
 
 %start program
 
 %%
 
-program: /* nothing */ { }
+program: /* nothing */ { printf("$def cmp dup string? if strcmp not else = then\n"); }
     | program globalstatement { printf("%s\n", $2);  free($2); }
     | program funcdef { printf("%s\n", $2);  free($2); }
     | program externdef { }
@@ -152,8 +158,7 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         free($9);
         free(body);
         free(vars);
-        strlist_free(&fvars_list);
-        strlist_init(&fvars_list);
+        strlist_clear(&fvars_list);
     } ;
 
 externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
@@ -258,34 +263,41 @@ statement: ';' { $$ = savestring(""); }
     | BREAK ';' { $$ = savestring("break"); }
     | CONTINUE ';' { $$ = savestring("continue"); }
     | VAR fvarlist ';' { $$ = $2; }
-    | IF condition statement %prec THEN {
+    | IF paren_expr statement %prec THEN {
             char *body = indent($3);
             $$ = savefmt("%s if\n%s\nthen", $2, body);
             free($2); free($3);
             free(body);
         }
-    | IF condition statement ELSE statement {
+    | IF paren_expr statement ELSE statement {
             char *ifbody = indent($3);
             char *elsebody = indent($5);
             $$ = savefmt("%s if\n%s\nelse\n%s\nthen", $2, ifbody, elsebody);
             free($2); free($3); free($5);
             free(ifbody); free(elsebody);
         }
-    | WHILE condition statement {
+    | WHILE paren_expr statement {
             char *cond = indent($2);
             char *body = indent($3);
             $$ = savefmt("begin\n%s\nwhile\n%s\nrepeat", cond, body);
             free($2); free($3);
             free(cond); free(body);
         }
-    | DO statement WHILE condition ';' {
+    | UNTIL paren_expr statement {
+            char *cond = indent($2);
+            char *body = indent($3);
+            $$ = savefmt("begin\n%s not\nwhile\n%s\nrepeat", cond, body);
+            free($2); free($3);
+            free(cond); free(body);
+        }
+    | DO statement WHILE paren_expr ';' {
             char *body = indent($2);
             char *cond = indent($4);
             $$ = savefmt("begin\n%s\n(conditional follows)\n%s not\nuntil", body, cond);
             free($2); free($4);
             free(cond); free(body);
         }
-    | DO statement UNTIL condition ';' {
+    | DO statement UNTIL paren_expr ';' {
             char *body = indent($2);
             char *cond = indent($4);
             $$ = savefmt("begin\n%s\n(conditional follows)\n%s\nuntil", body, cond);
@@ -328,10 +340,33 @@ statement: ';' { $$ = savestring(""); }
             free(trybody);
             free(catchbody);
         }
+    | SWITCH paren_expr '{' case_clauses default_clause '}' {
+            char *exp = indent($2);
+            char *body = indent($4);
+            char *dflt = indent($5);
+            $$ = savefmt("0 begin pop (switch)\n%s\n%s%srepeat pop", exp, body, dflt);
+            free(exp); free(dflt); free(body);
+            free($2); free($4); free($5);
+        }
     | '{' statements '}' { $$ = $2; }
     ;
 
-condition: '(' expr ')' { $$ = $2; } ;
+case_clause: CASE paren_expr statement {
+        char *body = indent($3);
+        $$ = savefmt("(case)\ndup %s cmp if\n%s break\nthen\n", $2, body);
+        free(body);
+        free($3); free($3);
+    } ;
+
+case_clauses: case_clause { $$ = $1; }
+    | case_clauses case_clause { $$ = savefmt("%s%s", $1, $2); free($1); free($2); }
+    ;
+
+default_clause: /* nothing */ { $$ = savestring("break\n"); }
+    | DEFAULT statement { $$ = savefmt("(default)\n%s break\n", $2); free($2); }
+    ;
+
+paren_expr: '(' expr ')' { $$ = $2; } ;
 
 statements: /* nothing */ { $$ = savestring(""); }
     | statements statement {
@@ -417,109 +452,70 @@ primitive_call:
         }
     ;
 
-lval_subs_or_null: /* nothing */ { strlist_init(&$$); }
-    | lval_subscripts { $$ = $1; }
+lvalue: variable {
+            $$.get = savefmt("%s @", $1);
+            $$.set = savefmt("%s !", $1);
+            free($1);
+        }
+    | variable '[' expr ']' {
+            $$.get = savefmt("%s @ %s []", $1, $3);
+            $$.set = savefmt("%s @ %s ->[] %s !", $1, $3, $1);
+            free($1); free($3);
+        }
+    | variable '[' expr ']' '[' subscripts {
+            $$.get = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
+            $$.set = savefmt("%s @ { %s %s }list array_nested_set %s !", $1, $3, $6, $1);
+            free($1); free($3); free($6);
+        }
     ;
 
-lval_subscripts:
-      lval_subscript { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
-    | lval_subscripts lval_subscript { $$ = $1; strlist_add(&$$, $2); free($2); }
-    ;
-
-lval_subscript: '[' expr ']' %prec LVAL_SUBS { $$ = $2; } ;
-
-unary_oper:
-      PLUS     { $$ = ""; }
-    | MINUS    { $$ = "0 swap -"; }
-    | NOT      { $$ = "not"; }
-    | BITNOT   { $$ = "-1 bitxor"; }
-    ;
-
-binary_oper:
-      PLUS     { $$ = "+"; }
-    | MINUS    { $$ = "-"; }
-    | MULT     { $$ = "*"; }
-    | DIV      { $$ = "/"; }
-    | MOD      { $$ = "%"; }
-    | BITOR    { $$ = "bitor"; }
-    | BITXOR   { $$ = "bitxor"; }
-    | BITAND   { $$ = "bitand"; }
-    | BITLEFT  { $$ = "bitshift"; }
-    | BITRIGHT { $$ = "0 swap - bitshift"; }
-    | EQ       { $$ = "="; }
-    | NEQ      { $$ = "= not"; }
-    | LT       { $$ = "<"; }
-    | GT       { $$ = ">"; }
-    | LTE      { $$ = "<="; }
-    | GTE      { $$ = ">="; }
-    | AND      { $$ = "and"; }
-    | OR       { $$ = "or"; }
-    ;
-
-asgn_oper:
-      PLUSASGN     { $$ = "+"; }
-    | MINUSASGN    { $$ = "-"; }
-    | MULTASGN     { $$ = "*"; }
-    | DIVASGN      { $$ = "/"; }
-    | MODASGN      { $$ = "%"; }
-    | BITORASGN    { $$ = "bitor"; }
-    | BITXORASGN   { $$ = "bitxor"; }
-    | BITANDASGN   { $$ = "bitand"; }
-    | BITLEFTASGN  { $$ = "bitshift"; }
-    | BITRIGHTASGN { $$ = "0 swap - bitshift"; }
+subscripts: expr ']' { $$ = $1; }
+    | subscripts '[' expr ']' { $$ = savefmt("%s %s", $1, $3); free($1); free($3); }
     ;
 
 expr: INTEGER { $$ = savefmt("%d", $1); }
     | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
     | '#' INTEGER { $$ = savefmt("#%d", $2); }
     | STR { $$ = savefmt("\"%s\"", $1); free($1); }
-    | '(' expr ')' { $$ = $2; }
+    | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
-    | variable { $$ = savefmt("%s @", $1); free($1); }
-    /* Ternary operator conflicts with allowing ? in function identifiers! */
+    | lvalue { $$ = $1.get; free($1.set); }
+    | '[' arglist_or_null ']' { char *items = strlist_join(&$2, " ", 0, -1); $$ = savefmt("{ %s }list", items); free(items); strlist_free(&$2); }
+    | PLUS expr   %prec UNARY { $$ = $2; }
+    | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
+    | NOT expr    %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
+    | BITNOT expr %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
+    | expr PLUS expr  { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
+    | expr MINUS expr { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
+    | expr MULT expr  { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
+    | expr DIV expr   { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
+    | expr MOD expr   { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
+    | expr EQ expr    { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
+    | expr NEQ expr   { $$ = savefmt("%s %s = not", $1, $3); free($1); free($3); }
+    | expr LT expr    { $$ = savefmt("%s %s <", $1, $3); free($1); free($3); }
+    | expr GT expr    { $$ = savefmt("%s %s >", $1, $3); free($1); free($3); }
+    | expr LTE expr   { $$ = savefmt("%s %s <=", $1, $3); free($1); free($3); }
+    | expr GTE expr   { $$ = savefmt("%s %s >=", $1, $3); free($1); free($3); }
+    | expr AND expr   { $$ = savefmt("%s %s and", $1, $3); free($1); free($3); }
+    | expr OR expr    { $$ = savefmt("%s %s or", $1, $3); free($1); free($3); }
+    | expr BITOR expr    { $$ = savefmt("%s %s bitor", $1, $3); free($1); free($3); }
+    | expr BITXOR expr   { $$ = savefmt("%s %s bitxor", $1, $3); free($1); free($3); }
+    | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
+    | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
+    | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
+    | lvalue ASGN expr       { $$ = savefmt("%s dup %s", $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue PLUSASGN expr   { $$ = savefmt("%s %s + dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue MINUSASGN expr  { $$ = savefmt("%s %s - dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue MULTASGN expr   { $$ = savefmt("%s %s * dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue DIVASGN expr    { $$ = savefmt("%s %s / dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue MODASGN expr    { $$ = savefmt("%s %s %% dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue BITORASGN expr  { $$ = savefmt("%s %s bitor dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue BITXORASGN expr { $$ = savefmt("%s %s bitxor dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue BITANDASGN expr { $$ = savefmt("%s %s bitand dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue BITLEFTASGN expr { $$ = savefmt("%s %s bitshift dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue BITRIGHTASGN expr { $$ = savefmt("%s 0 %s - bitshift dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
     /* | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); } */
-    | expr '[' expr ']' {
-            $$ = savefmt("%s %s []", $1, $3);
-            free($1); free($3);
-        }
-    | unary_oper expr  %prec UNARY {
-            $$ = savefmt("%s%s%s", $2, (*$1?" ":""), $1);
-            free($2);
-        }
-    | expr binary_oper expr {
-           $$ = savefmt("%s %s %s", $1, $3, $2);
-           free($1); free($3);
-       }
-    | variable lval_subs_or_null ASGN expr {
-            if ($2.count == 0) {
-                $$ = savefmt("%s dup %s !", $4, $1);
-            } else if ($2.count == 1) {
-                $$ = savefmt("%s dup %s @ %s ->[] %s !", $4, $1, $2.list[0], $1);
-            } else {
-                char *idx = strlist_join(&$2, " ", 0, -1);
-                $$ = savefmt("%s dup %s @ { %s }list array_nested_set %s !", $4, $1, idx, $1);
-                free(idx);
-            }
-            free($1); strlist_free(&$2); free($4);
-        }
-    | variable lval_subs_or_null asgn_oper expr {
-            if ($2.count == 0) {
-                /* VAR @ EXPR OPER dup VAR ! */
-                $$ = savefmt("%s @ %s %s dup %s !", $1, $4, $3, $1);
-            } else if ($2.count == 1) {
-                /* VAR @ IDX over over [] EXPR OPER dup 4 rotate 4 rotate ->[] VAR ! */
-                $$ = savefmt("%s @ %s over over [] %s %s dup 4 rotate 4 rotate ->[] %s !",
-                    $1, $2.list[0], $4, $3, $1);
-            } else {
-                /* VAR @ { IDXs }list over over [] EXPR OPER dup 4 rotate 4 rotate array_nested_set VAR ! */
-                char *idx = strlist_join(&$2, " ", 0, -1);
-                $$ = savefmt("%s @ { %s }list over over [] %s %s dup 4 rotate 4 rotate array_nested_set %s !",
-                    $1, $2, $4, $3, $1);
-                free(idx);
-            }
-            free($1); strlist_free(&$2); free($4);
-        }
     ;
 
 
@@ -551,9 +547,9 @@ fvarlist: fvardef { $$ = $1; }
 
 %%
 
+
 FILE *yyin=NULL;
 int yylineno = 1;
-
 
 
 void
@@ -575,6 +571,14 @@ strlist_free(struct str_list *l)
     l->list = 0;
     l->count = 0;
     l->cmax = 0;
+}
+
+
+void
+strlist_clear(struct str_list *l)
+{
+    strlist_free(l);
+    strlist_init(l);
 }
 
 
@@ -709,8 +713,10 @@ lookup(char *s, int *bval)
     } keyz[] = {
         /* MUST BE IN LEXICAL SORT ORDER !!!!!! */
         "break",     BREAK,     -1,
+        "case",      CASE,      -1,
         "catch",     CATCH,     -1,
         "continue",  CONTINUE,  -1,
+        "default",   DEFAULT,   -1,
         "do",        DO,        -1,
         "else",      ELSE,      -1,
         "extern",    EXTERN,    -1,
@@ -724,6 +730,7 @@ lookup(char *s, int *bval)
         "push",      PUSH,      -1,
         "return",    RETURN,    -1,
         "single",    SINGLE,    -1,
+        "switch",    SWITCH,    -1,
         "top",       TOP,       -1,
         "try",       TRY,       -1,
         "until",     UNTIL,     -1,
@@ -1206,4 +1213,3 @@ main()
  *   array/dict declaration via [] and {}
  *   Fix var[x][y] = 0;
  */
-

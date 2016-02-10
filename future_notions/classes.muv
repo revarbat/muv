@@ -1,0 +1,134 @@
+class person {
+    var surname = "";
+    var givenname = "";
+
+    init(surname, givenname) {
+        self.surname = surname;
+        self.givenname = givenname;
+        return self;
+    }
+
+    method greet() {
+        notify(me, cat("Hello ", self.givenname, " ", self.surname, "!"));
+    }
+};
+
+
+class employee(person) {
+    var empnum = 0;
+    var ssn = "", account = "";
+
+    method _init(empnum, surname, givenname, ssn, account) {
+        self.empnum  = empnum;
+        self.ssn = ssn;
+        self.accountname = account;
+        return super(surname, givenname);
+    }
+
+    method welcome() {
+        notify_fmt(me, fmtstring(
+            "Welcome %s %s, as employee %s.",
+            self.givenname, self.surname, self.empnum
+        ));
+    }
+};
+
+
+---------------------------------------------------------------------------
+
+
+lvar classdata_person;
+
+: class_person_new[ -- inst ]
+    classdata_person @ dup "idx" [] 1 + dup rot "idx" ->[] classdata_person !
+;
+
+: class_person_get[ inst attr -- ]
+    classdata_person @ { inst @ attr @ }list array_nested_get
+;
+
+: class_person_set[ val inst attr -- ]
+    val @ classdata_person @ { inst @ attr @ }list array_nested_set classdata_person !
+;
+
+: method_person__init[ self surname givenname -- ]
+    surname   @ self @ "surname"   class_person_set pop
+    givenname @ self @ "givenname" class_person_set pop
+    self @ exit 0
+;
+
+: method_person__greet[ self -- ]
+    me @
+    {
+        "Hello "
+        self @ "givenname" class_person_get
+        " "
+        self @ "surname" class_person_get
+        "!"
+    }cat
+    notify
+    0
+;
+
+: classinit_person[ self -- ]
+    {
+        "idx" 100
+        "static" {
+            "surname"   ""
+            "givenname" ""
+        }dict
+    }dict classdata_person !
+;
+
+lvar classdata_employee;
+
+: class_employee_new[ -- inst ]
+    classdata_employee @ dup "idx" [] 1 + dup rot "idx" ->[] classdata_employee !
+;
+
+: class_employee_get[ inst attr -- ]
+    classdata_employee @ { inst @ attr @ }list array_nested_get
+;
+
+: class_employee_set[ val inst attr -- ]
+    val @ classdata_employee @ { inst @ attr @ }list array_nested_set classdata_employee !
+;
+
+: method_employee__init[ self empnum surname givenname ssn account -- ]
+    empnum  @ self @ "empnum"  class_employee_set pop
+    ssn     @ self @ "ssn"     class_employee_set pop
+    account @ self @ "account" class_employee_set pop
+    surname @ givenname @ method_person__init
+    exit 0
+;
+
+: classinit_employee[ self -- ]
+    {
+        "idx" 100
+        "static" {
+            "empnum"  ""
+            "ssn"     ""
+            "account" ""
+        }dict
+    }dict classdata_employee !
+;
+
+
+...
+
+
+: main[arg -- ]
+   ...
+;
+
+
+: toplevel__init
+    classinit_person
+    classinit_employee
+    main
+;
+
+
+---------------------------------------------------------------------------
+
+

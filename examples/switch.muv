@@ -1,0 +1,22 @@
+func main(arg) {
+    switch(arg) {
+        case("greet") {
+            notify(me, "Hello.");
+        }
+        case("who") {
+            notify(me, "I'm called MUV.");
+        }
+        case("what") {
+            notify(me, "I'm a nicer language to use than MUF.");
+        }
+        default {
+            notify(me, "I don't understand.");
+        }
+    }
+    switch(arg) {
+        case(1) notify(me, "One.");
+        case(2) notify(me, "Two.");
+        case(3) notify(me, "Three.");
+    }
+}
+

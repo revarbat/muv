@@ -26,7 +26,10 @@ func arraydemo() {
     notify(me, myarr[23]);
 }
 
-func first_word(thing) { return split(thing, " ")[0]; }
+func first_word(thing) {
+    var words = split(thing, " ");
+    return words[0];
+}
 
 func submit(arg) {
     if (!strcmp(arg, "")) {

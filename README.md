@@ -173,7 +173,9 @@ Bitshift Right: `128 >> 3`
 
 Logical OR: `x == 2 || x == 10`
 Logical AND: `x > 2 && x < 10`
-Logical NOT: `!(x > 2)`
+Logical NOT: `!x`
+
+**WARNING: There is no shortcutting in logical expressions!**
 
 Grouping: `2 * (3 + 4)`
 
@@ -238,6 +240,92 @@ if (x < 0) {
 }
 ```
 
+If you need to compare a value against a lot of options, you can use the `switch` - `case` statement:
+
+```
+switch (val) {
+    case(1) {
+        notify(me, "One!");
+    }
+    case(2) {
+        notify(me, "Two!");
+    }
+    case(3) {
+        notify(me, "Three!");
+    }
+    default {
+        notify(me, "Something else!");
+    }
+}
+```
+
+The default clause is optional:
+
+```
+switch (val) {
+    case("one") {
+        notify(me, "First!");
+    }
+    case("two") {
+        notify(me, "Second!");
+    }
+    case("three") {
+        notify(me, "Third!");
+    }
+}
+```
+
+Unlike in C, `switch` statements do not fall-through from one case clause to
+the next. Also, you can actually use expressions in the case, not just
+constants.
+
+```
+switch(name(obj)) {
+    case(strcat(name(me), "'s Brush")) {
+        notify(me, "It's one of your brushes!");
+        brushcount += 1;
+    }
+    case(strcat(name(me), "'s Fiddle")) {
+        notify(me, "It's one of your fiddles!");
+        fiddlecount += 1;
+    }
+}
+```
+
+If you use the `break` statement inside a case clause, you can exit the case
+clause early, and execution resumes after the end of the switch.  If you use a
+`continue` statement inside a case clause, the entire switch statement is
+re-evaluated.  This can be useful for, perhaps, running a looping state machine.
+
+```
+var FIRST = 1, SECOND = 2, THIRD = 3, FOURTH = 4;
+var state = FIRST;
+switch(state) {
+    case(FIRST) {
+        state = SECOND;
+        do_something();
+        continue;
+    }
+    case(SECOND) {
+        state = THIRD;
+        do_something_else();
+        continue;
+    }
+    case(THIRD) {
+        if (do_something_more()) {
+            state = FOURTH;
+            continue;
+        }
+        break;
+    }
+    case(FOURTH) {
+        state = FIRST;
+        do_something_special()
+        continue;
+    }
+}
+```
+
 
 Loops
 -----
@@ -291,11 +379,53 @@ foreach (idx => letter in ["a", "b", "c", "d", "e"])
     notify(me, strcat(intostr(idx), letter));
 ```
 
+
+Exceptions
+----------
+
+You can trap errors with the `try` - `catch` construct:
+
+```
+try {
+    setname(obj, "Foobar");
+} catch (e) {
+    notify(me, e["error"]);
+}
+```
+
+The variable given to the `catch` command will, when an error is received, have a dictionary stored in it with the following values:
+
+- `error` The error string that was emitted by the MUF instruction that threw an error.
+- `instr` The name of the MUF instruction that threw the error.
+- `line` The MUF line that threw the error.
+- `program` The program that the error was thrown in.  This might not be the same as the current program, if the error occurred inside a call.
+
+If you don't care about the exception details, you can just not specify the variable:
+
+```
+try {
+    setname(obj, "Foobar");
+} catch () {
+    notify(me, "Could not set the name.");
+}
+```
+
+If you just want to trap any errors without doing anything, you can just do:
+
+```
+try {
+    setname(obj, "Foobar");
+} catch();
+```
+
+If you need to throw your own custom exception, you can do it with the `abort("MyError")` command.
+
+
 MUF Interaction
 ---------------
 
 Sometimes you need to interact with other MUF programs, by reading or storing data on the MUF stack.  You can do that with the `top` and `push(...)` constructs. Also, you can specify raw MUF code with the `muf("...")` command.
- 
+
 The special variable `top` refers to the top of the stack.  You can "pop" the top of the stack and store it in a variable like:
 
 ```
