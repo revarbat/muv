@@ -1,4 +1,5 @@
-var foo;
+var foo = 72;
+
 extern single desc(ref); 
 extern single osucc(ref); 
 

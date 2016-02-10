@@ -17,7 +17,7 @@ static char varsbuf[STRBUFSIZ];
 
 char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
-char *indent();
+char *indent(const char *);
 
 struct gettersetter {
     char *get;
@@ -28,7 +28,7 @@ struct str_list {
     const char** list;
     short count;
     short cmax;
-} lvars_list, fvars_list;
+} lvars_list, fvars_list, inits_list;
 
 void strlist_init(struct str_list *l);
 void strlist_free(struct str_list *l);
@@ -114,7 +114,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %type <str> comma_expr comma_expr_or_null
 %type <str> case_clause case_clauses default_clause
 %type <str> function_call primitive_call expr subscripts
-%type <str> lvarlist fvardef fvarlist
+%type <str> lvardef lvarlist fvardef fvarlist
 %type <list> arglist arglist_or_null argvarlist
 %type <num_int> ret_count_type opt_varargs
 
@@ -132,18 +132,24 @@ globalstatement:
       VAR lvarlist ';' { $$ = $2; }
     ;
 
-lvarlist:
-      proposed_varname {
-            $$ = savefmt("lvar %s", $1);
+lvardef: proposed_varname {
+            $$ = savefmt("lvar %s\n", $1);
             strlist_add(&lvars_list, $1);
             free($1);
         }
-    | lvarlist ',' proposed_varname {
-            $$ = savefmt("%s\nlvar %s", $1, $3);
-            strlist_add(&lvars_list, $3);
+    | proposed_varname ASGN expr {
+            $$ = savefmt("lvar %s\n", $1);
+            strlist_add(&lvars_list, $1);
+	    char *init = savefmt("%s %s !", $3, $1);
+            strlist_add(&inits_list, init);
+	    free(init);
             free($1);
             free($3);
         }
+    ;
+
+lvarlist: lvardef { $$ = $1; }
+    | lvarlist ',' lvardef { $$ = savefmt("%s\n%s", $1, $3); free($1); free($3); }
     ;
 
 funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
@@ -1116,11 +1122,12 @@ savefmt(const char *fmt, ...)
 
 
 char *
-indent(char *arg)
+indent(const char *arg)
 {
     const int indentlen = 4;
     char *buf;
-    char *ptr, *ptr2;
+    const char *ptr;
+    char *ptr2;
     int i, lines;
 
     if (!arg || !*arg) {
@@ -1196,6 +1203,7 @@ main()
     int res;
     yyin = stdin;
 
+    strlist_init(&inits_list);
     strlist_init(&lvars_list);
     strlist_init(&fvars_list);
     funclist_init(&funcs_list);
@@ -1209,6 +1217,17 @@ main()
         yyerror("Out of Memory");
     }
 
+    char *inits = strlist_join(&inits_list, "\n", 0, -1);
+    char *inits2 = indent(inits);
+    char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
+    char *initfunc = savefmt(": __inits\n%s\n%s\n;\n\n", inits2, mainfunc);
+    fprintf(stdout, "%s", initfunc);;
+    free(inits);
+    free(inits2);
+    free(mainfunc);
+    free(initfunc);
+
+    strlist_free(&inits_list);
     strlist_free(&lvars_list);
     strlist_free(&fvars_list);
     funclist_free(&funcs_list);

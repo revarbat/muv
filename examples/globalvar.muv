@@ -1,0 +1,14 @@
+var foo = 23, bar=43;
+var fee;
+
+extern single array_join(arr, delim);
+
+func cat(args*) {
+    return array_join(args, "");
+}
+
+func main(arg) {
+    notify(me, cat(intostr(foo), intostr(bar)));
+    return 0;
+}
+
