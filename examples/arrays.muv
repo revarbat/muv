@@ -1,0 +1,45 @@
+extern single fmtstring(args, fmt);
+
+
+func format(fmt, args*) {
+    var out = "";
+    try {
+	out = fmtstring(muf("args @ array_explode pop"), fmt);
+	throw("CleanUp!");
+    } catch();
+    return out;
+}
+
+
+func fmtnotify(player, fmt, args*) {
+    notify(player, format(fmt, muf("args @ array_explode pop")));
+}
+
+
+func main() {
+    var arr = [
+        "First",
+        "Second",
+        "Third",
+        "Forth"
+    ];
+    var idx;
+    var word;
+    for (word in arr) {
+        notify(me, arr[idx]);
+    }
+    for (idx => word in arr) {
+        fmtnotify(me, "%d: %s", idx, word);
+    }
+    var nested = [
+        [1, 2, 3, 4],
+	["a", "b", "c", "d"],
+	["One", "Two", "Three", "Four"]
+    ];
+    notify(me, nested[2][1]);
+    nested[1] = ["Fee", "Fie", "Foe", "Fum"];
+    nested[0][3] = 23;
+    nested[0][3] += 2;
+}
+
+

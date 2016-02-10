@@ -349,6 +349,14 @@ while (i > 0) {
 
 ```
 var i = 10;
+until (i == 0) {
+    notify(me, intostr(i));
+    i -= 1;
+}
+```
+
+```
+var i = 10;
 do {
     notify(me, intostr(i));
     i -= 1;
@@ -366,16 +374,16 @@ do {
 You can also iterate arrays/lists/dictionaries like this:
 
 ```
-var idx, letters = ["a", "b", "c", "d", "e"];
-foreach (idx in letters)
-    notify(me, letters[idx]);
+var letter, letters = ["a", "b", "c", "d", "e"];
+for (letter in letters)
+    notify(me, letter);
 ```
 
 or
 
 ```
 var idx, letter;
-foreach (idx => letter in ["a", "b", "c", "d", "e"])
+for (idx => letter in ["a", "b", "c", "d", "e"])
     notify(me, strcat(intostr(idx), letter));
 ```
 
@@ -418,7 +426,7 @@ try {
 } catch();
 ```
 
-If you need to throw your own custom exception, you can do it with the `abort("MyError")` command.
+If you need to throw your own custom exception, you can do it with the `throw("MyError")` command.
 
 
 MUF Interaction

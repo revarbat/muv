@@ -80,7 +80,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %token <str> STR IDENT DECLARED_VAR VAR
 %token <token> IF ELSE FUNC RETURN TRY CATCH
 %token <token> SWITCH CASE DEFAULT
-%token <token> DO WHILE FOR FOREACH IN
+%token <token> DO WHILE FOR IN
 %token <token> UNTIL CONTINUE BREAK
 %token <token> TOP PUSH MUF
 %token <token> UNARY EXTERN VOID SINGLE MULTIPLE
@@ -165,6 +165,7 @@ externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')
         funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
         free($3);
         strlist_free(&$5);
+        strlist_clear(&fvars_list);
     } ;
 
 bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
@@ -312,13 +313,13 @@ statement: ';' { $$ = savestring(""); }
             free($3); free($5); free($7); free($9);
             free(cond); free(next); free(body);
         }
-    | FOREACH '(' variable IN expr ')' statement {
+    | FOR '(' variable IN expr ')' statement {
             char *body = indent($7);
-            $$ = savefmt("%s\nforeach pop %s !\n%s\nrepeat", $5, $3, body);
+            $$ = savefmt("%s\nforeach %s ! pop\n%s\nrepeat", $5, $3, body);
             free($3); free($5); free($7);
             free(body);
         }
-    | FOREACH '(' variable KEYVAL variable IN expr ')' statement {
+    | FOR '(' variable KEYVAL variable IN expr ')' statement {
             char *body = indent($9);
             $$ = savefmt("%s\nforeach %s ! %s !\n%s\nrepeat", $7, $5, $3, body);
             free($3); free($5); free($7); free($9);
@@ -504,6 +505,10 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
+    | INCR lvalue { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | DECR lvalue { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | lvalue INCR %prec ASGN { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
+    | lvalue DECR %prec ASGN { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
     | lvalue ASGN expr       { $$ = savefmt("%s dup %s", $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue PLUSASGN expr   { $$ = savefmt("%s %s + dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue MINUSASGN expr  { $$ = savefmt("%s %s - dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
@@ -721,7 +726,6 @@ lookup(char *s, int *bval)
         "else",      ELSE,      -1,
         "extern",    EXTERN,    -1,
         "for",       FOR,       -1,
-        "foreach",   FOREACH,   -1,
         "func",      FUNC,      -1,
         "if",        IF,        -1,
         "in",        IN,        -1,
@@ -1058,6 +1062,8 @@ yylex()
             c = fgetc(yyin);
             if (c == '=') {
                 return EQ;
+            } else if (c == '>') {
+                return KEYVAL;
             } else {
                 (void)ungetc(c,yyin);
             }
@@ -1151,18 +1157,21 @@ yyerror(char *arg)
 
 
 struct prim_info_t prims_list[] = {
-    { "awake?",       "awake?",        1,  1,  0},
+    { "throw",        "abort",         1,  0,  0},
+    { "abort",        "abort",         1,  0,  0},
     { "array_notify", "array_notify",  2,  0,  0},
+    { "awake?",       "awake?",        1,  1,  0},
+    { "copyobj",      "copyobj",       1,  1,  0},
+    { "intostr",      "intostr",       1,  1,  0},
+    { "moveto",       "moveto",        2,  0,  0},
+    { "name",         "name",          1,  1,  0},
     { "notify",       "notify",        2,  0,  0},
     { "online",       "online_array",  0,  1,  0},
-    { "strcmp",       "strcmp",        2,  1,  0},
     { "read",         "read",          0,  1,  0},
-    { "copyobj",      "copyobj",       1,  1,  0},
-    { "strcat",       "strcat",        2,  1,  0},
-    { "name",         "name",          1,  1,  0},
-    { "setname",      "setname",       2,  0,  0},
     { "setdesc",      "setdesc",       2,  0,  0},
-    { "moveto",       "moveto",        2,  0,  0},
+    { "setname",      "setname",       2,  0,  0},
+    { "strcat",       "strcat",        2,  1,  0},
+    { "strcmp",       "strcmp",        2,  1,  0},
     {0, 0, 0, 0, 0}
 };
 
@@ -1207,9 +1216,3 @@ main()
 }
 
 
-
-/* TODO LIST:
- *   Floating point numbers.
- *   array/dict declaration via [] and {}
- *   Fix var[x][y] = 0;
- */

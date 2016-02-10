@@ -1,4 +1,6 @@
 var foo;
+extern single desc(ref); 
+extern single osucc(ref); 
 
 func tell(text)
 {
@@ -8,26 +10,26 @@ func tell(text)
 func arrrr()
 {
     var key, val;
-    var foo = list("one", "two", "three", "four", "five");
+    var bar = ["one", "two", "three", "four", "five"];
 
-    tell(foo[3]);
-    for (key, val in foo) {
+    tell(bar[3]);
+    for (key => val in bar) {
         tell(key + " = " + val);
     }
 }
 
 func trys()
 {
-    var err, foo;
+    var err, bar;
 
     try {
-        foo = desc(me);
+        bar = desc(me);
     } catch (err) {
         tell(err);
     }
 
     try {
-        foo = osucc(me);
+        bar = osucc(me);
     } catch();
 }
 
@@ -35,7 +37,10 @@ func loopy(count)
 {
     var i;
 
+    tell(intostr(count));
+
     foo = count;
+
     for (i = 1; i <= count; i++)
         tell(intostr(i));
 

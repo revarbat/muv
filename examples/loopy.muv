@@ -1,35 +1,47 @@
 var mylvar;
 
+func tell(str) { notify(me, str); }
+
+extern single array_join(arr, delim);
+func cat(args*) { return array_join(args, ""); }
+
+
 func loopy(count)
 {
     var i;
     for (i=1; i<=count; i+=1)
-	.tell(intostr(i));
+	tell(intostr(i));
 
     i = 1;
     do {
-	.tell(intostr(i));
+	tell(intostr(i));
 	i+=1;
     } while(i<=count);
 
     i = 1;
     do {
-	.tell(intostr(i));
+	tell(intostr(i));
 	i+=1;
     } until (i>count);
 
     i = 1;
     while (i <= count) {
-	.tell(intostr(i));
+	tell(intostr(i));
         i += 1;
     }
 
     var key, val;
 
-    foreach (key => val in online_array()) {
-        .tell(array_join(array_make(key, " = ", val, 3)));
+    for (val in online()) {
+	tell(val);
+    }
+
+    for (key => val in online()) {
+        tell(cat(key, " = ", val));
     }
 
     mylvar = 4;
-    .tell(intostr(mylvar));
+    tell(intostr(mylvar));
 }
+
+
