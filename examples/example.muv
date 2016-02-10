@@ -2,13 +2,11 @@ var foo;
 extern single desc(ref); 
 extern single osucc(ref); 
 
-func tell(text)
-{
-    return muf("me @ text @ notify \"\"");
+func tell(text) {
+    return notify(me, text);
 }
 
-func arrrr()
-{
+func arrrr() {
     var key, val;
     var bar = ["one", "two", "three", "four", "five"];
 
@@ -18,8 +16,7 @@ func arrrr()
     }
 }
 
-func trys()
-{
+func trys() {
     var err, bar;
 
     try {
@@ -33,8 +30,7 @@ func trys()
     } catch();
 }
 
-func loopy(count)
-{
+func loopy(count) {
     var i;
 
     tell(intostr(count));
