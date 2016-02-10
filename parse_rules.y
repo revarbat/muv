@@ -88,6 +88,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %right THEN ELSE
 %left ',' KEYVAL
 %right ASGN PLUSASGN MINUSASGN MULTASGN DIVASGN MODASGN BITLEFTASGN BITRIGHTASGN BITANDASGN BITORASGN BITXORASGN
+%left DECR INCR
 /* %right '?' ':' */
 %left OR
 %left AND
@@ -99,7 +100,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %left BITLEFT BITRIGHT
 %left PLUS MINUS
 %left MULT DIV MOD
-%right UNARY NOT BITNOT INCR DECR
+%right UNARY NOT BITNOT
 %left '[' ']' '(' ')'
 
 %type <str> globalstatement funcdef
@@ -505,10 +506,10 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | INCR lvalue { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | DECR lvalue { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | lvalue INCR %prec ASGN { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
-    | lvalue DECR %prec ASGN { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
+    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
+    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
     | lvalue ASGN expr       { $$ = savefmt("%s dup %s", $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue PLUSASGN expr   { $$ = savefmt("%s %s + dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue MINUSASGN expr  { $$ = savefmt("%s %s - dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
