@@ -91,7 +91,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %right ASGN PLUSASGN MINUSASGN MULTASGN DIVASGN MODASGN BITLEFTASGN BITRIGHTASGN BITANDASGN BITORASGN BITXORASGN
 %left DECR INCR
 /* %right '?' ':' */
-%left OR
+%left OR XOR
 %left AND
 %left BITOR
 %left BITXOR
@@ -526,6 +526,11 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
     | NOT expr    %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
     | BITNOT expr %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
+    | BITAND function %prec UNARY { $$ = savefmt("'%s", $2.name); }
+    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
+    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
+    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
     | expr PLUS expr  { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
     | expr MINUS expr { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
     | expr MULT expr  { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
@@ -539,15 +544,12 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | expr GTE expr   { $$ = savefmt("%s %s >=", $1, $3); free($1); free($3); }
     | expr AND expr   { $$ = savefmt("%s %s and", $1, $3); free($1); free($3); }
     | expr OR expr    { $$ = savefmt("%s %s or", $1, $3); free($1); free($3); }
+    | expr XOR expr   { $$ = savefmt("%s %s xor", $1, $3); free($1); free($3); }
     | expr BITOR expr    { $$ = savefmt("%s %s bitor", $1, $3); free($1); free($3); }
     | expr BITXOR expr   { $$ = savefmt("%s %s bitxor", $1, $3); free($1); free($3); }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
-    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
     | lvalue ASGN expr       { $$ = savefmt("%s dup %s", $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue PLUSASGN expr   { $$ = savefmt("%s %s + dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
     | lvalue MINUSASGN expr  { $$ = savefmt("%s %s - dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
@@ -1108,7 +1110,9 @@ yylex()
 
         case '^':
             c = fgetc(yyin);
-            if (c == '=') {
+            if (c == '^') {
+	        return XOR;
+            } else if (c == '=') {
                 return BITXORASGN;
             } else {
                 (void)ungetc(c,yyin);
@@ -1267,38 +1271,211 @@ yyerror(char *arg)
 
 
 struct prim_info_t prims_list[] = {
-    { "throw",        "abort",           1,  0,  0},
-    { "abort",        "abort",           1,  0,  0},
-    { "array_notify", "array_notify",    2,  0,  0},
-    { "awake?",       "awake?",          1,  1,  0},
-    { "copyobj",      "copyobj",         1,  1,  0},
-    { "intostr",      "intostr",         1,  1,  0},
-    { "moveto",       "moveto",          2,  0,  0},
-    { "name",         "name",            1,  1,  0},
-    { "notify",       "notify",          2,  0,  0},
-    { "online",       "online_array",    0,  1,  0},
-    { "read",         "read",            0,  1,  0},
-    { "setdesc",      "setdesc",         2,  0,  0},
-    { "setname",      "setname",         2,  0,  0},
-    { "strcat",       "strcat",          2,  1,  0},
-    { "strcmp",       "strcmp",          2,  1,  0},
-    { "strmatch",     "strmatch",        2,  1,  0},
-    { "tolower",      "tolower",         1,  1,  0},
-    { "toupper",      "toupper",         1,  1,  0},
-    { "int?",         "int?",            1,  1,  0},
-    { "number?",      "number?",         1,  1,  0},
-    { "float?",       "float?",          1,  1,  0},
-    { "string?",      "string?",         1,  1,  0},
-    { "dbref?",       "dbref?",          1,  1,  0},
-    { "desc",         "desc",            1,  1,  0},
-    { "succ",         "succ",            1,  1,  0},
-    { "osucc",        "osucc",           1,  1,  0},
-    { "fail",         "fail",            1,  1,  0},
-    { "ofail",        "ofail",           1,  1,  0},
-    { "drop",         "drop",            1,  1,  0},
-    { "odrop",        "odrop",           1,  1,  0},
-    { "split",        "split",           2,  2,  0},
-    { "rsplit",       "rsplit",          2,  2,  0},
+    { "throw",             "abort",             1,  0,  0},
+    { "abort",             "abort",             1,  0,  0},
+
+    { "awake",             "awake?",            1,  1,  0},
+    { "online",            "online_array",      0,  1,  0},
+
+    { "call",              "call",              1, 99,  0},
+    { "call_public",       "call",              2, 99,  0},
+    { "cancall",           "cancall?",          2,  1,  0},
+    { "interp",            "interp",            3,  1,  0},
+
+    { "notify",            "notify",            2,  0,  0},
+    { "notify_except",     "notify_except",     3,  0,  0},
+    { "notify_exclude", "swap array_explode dup 2 + rotate notify_exclude",  3,  0,  0},
+    { "array_notify",      "array_notify",      2,  0,  0},
+    { "user_log",          "user_log",          1,  0,  0},
+    { "read",              "read",              0,  1,  0},
+    { "tread",             "tread",             1,  2,  0},
+    { "read_wants_blanks", "read_wants_blanks", 0,  0,  0},
+
+    { "atoi",              "atoi",              1,  1,  0},
+    { "ctoi",              "ctoi",              1,  1,  0},
+    { "int",               "int",               1,  1,  0},
+    { "intostr",           "intostr",           1,  1,  0},
+    { "itoc",              "itoc",              1,  1,  0},
+    { "stod",              "stod",              1,  1,  0},
+
+    { "explode",           "explode_array",     2,  1,  0},
+    { "instr",             "instr",             2,  1,  0},
+    { "instring",          "instring",          2,  1,  0},
+    { "midstr",            "midstr",            3,  1,  0},
+    { "rinstr",            "rinstr",            2,  1,  0},
+    { "rinstring",         "rinstring",         2,  1,  0},
+    { "rsplit",            "rsplit",            2,  2,  0},
+    { "smatch",            "smatch",            2,  1,  0},
+    { "split",             "split",             2,  2,  0},
+    { "strcat",            "strcat",            2,  1,  0},
+    { "strcmp",            "strcmp",            2,  1,  0},
+    { "strcut",            "strcut",            2,  2,  0},
+    { "stringcmp",         "stringcmp",         2,  1,  0},
+    { "stringpfx",         "stringpfx",         2,  1,  0},
+    { "strip",             "strip",             1,  1,  0},
+    { "striplead",         "striplead",         1,  1,  0},
+    { "striptail",         "striptail",         1,  1,  0},
+    { "strlen",            "strlen",            1,  1,  0},
+    { "strmatch",          "strmatch",          2,  1,  0},
+    { "strncmp",           "strncmp",           3,  1,  0},
+    { "subst",             "subst",             3,  1,  0},
+    { "tolower",           "tolower",           1,  1,  0},
+    { "toupper",           "toupper",           1,  1,  0},
+
+    { "strencrypt",        "strencrypt",        2,  1,  0},
+    { "strdecrypt",        "strdecrypt",        2,  1,  0},
+
+    { "regexp",            "regexp",            3,  2,  0},
+    { "regsub",            "regsub",            4,  1,  0},
+
+    { "is_locked",         "is_locked",         2,  1,  0},
+    { "parselock",         "parselock",         1,  1,  0},
+    { "unparselock",       "unparselock",       1,  1,  0},
+    { "prettylock",        "prettylock",        1,  1,  0},
+    { "testlock",          "testlock",          2,  1,  0},
+    { "setlockstr",        "setlockstr",        2,  1,  0},
+    { "getlockstr",        "getlockstr",        1,  1,  0},
+
+    { "array_fmtstrings",  "array_fmtstrings",  2,  1,  0},
+    { "pronoun_sub",       "pronoun_sub",       2,  1,  0},
+    { "tokensplit",        "tokensplit",        3,  3,  0},
+
+    { "textattr",          "textattr",          2,  1,  0},
+    { "ansi_strip",        "ansi_strip",        1,  1,  0},
+    { "ansi_strlen",       "ansi_strlen",       1,  1,  0},
+    { "ansi_strcut",       "ansi_strcut",       2,  2,  0},
+    { "ansi_midstr",       "ansi_midstr",       3,  1,  0},
+
+    { "getseed",           "getseed",           0,  1,  0},
+    { "setseed",           "setseed",           1,  0,  0},
+    { "srand",             "srand",             0,  1,  0},
+    { "frand",             "frand",             0,  1,  0},
+    { "random",            "random",            0,  1,  0},
+    { "gaussian",          "gaussian",          2,  1,  0},
+
+    { "abs",               "abs",               1,  1,  0},
+    { "ceil",              "ceil",              1,  1,  0},
+    { "floor",             "floor",             1,  1,  0},
+    { "fmod",              "fmod",              2,  1,  0},
+    { "modf",              "modf",              1,  2,  0},
+    { "sign",              "sign",              1,  1,  0},
+
+    { "sqrt",              "sqrt",              1,  1,  0},
+    { "pow",               "pow",               2,  1,  0},
+    { "log",               "log",               1,  1,  0},
+    { "exp",               "exp",               1,  1,  0},
+    { "log10",             "log10",             1,  1,  0},
+    { "exp10",             "exp10",             1,  1,  0},
+
+    { "sin",               "sin",               1,  1,  0},
+    { "cos",               "cos",               1,  1,  0},
+    { "tan",               "tan",               1,  1,  0},
+    { "asin",              "asin",              1,  1,  0},
+    { "acos",              "acos",              1,  1,  0},
+    { "atan",              "atan",              1,  1,  0},
+    { "atan2",             "atan2",             2,  1,  0},
+
+    { "address?",          "address?",          1,  1,  0},
+    { "array?",            "array?",            1,  1,  0},
+    { "dbref?",            "dbref?",            1,  1,  0},
+    { "dictionary?",       "dictionary?",       1,  1,  0},
+    { "float?",            "float?",            1,  1,  0},
+    { "int?",              "int?",              1,  1,  0},
+    { "lock?",             "lock?",             1,  1,  0},
+    { "number?",           "number?",           1,  1,  0},
+    { "string?",           "string?",           1,  1,  0},
+
+    { "array_appenditem",  "swap array_appenditem",        2,  1,  0},
+    { "array_delitem",     "swap array_delitem",           2,  1,  0},
+    { "array_insertitem",  "rot rot array_insertitem",     3,  1,  0},
+    { "array_interpret",   "array_interpret",              1,  1,  0},
+    { "array_keys",        "{ swap array_keys pop }list",  2,  1,  0},
+    { "array_vals",        "{ swap array_vals pop }list",  2,  1,  0},
+
+    { "array_compare",      "array_compare",      2,  1,  0},
+    { "array_cut",          "array_cut",          2,  2,  0},
+    { "array_delrange",     "array_delrange",     3,  1,  0},
+    { "array_diff",         "array_diff",         2,  1,  0},
+    { "array_excludeval",   "array_excludeval",   2,  1,  0},
+    { "array_extract",      "array_extract",      2,  1,  0},
+    { "array_findval",      "array_findval",      2,  1,  0},
+    { "array_first",        "array_first",        1,  2,  0},
+    { "array_getrange",     "array_getrange",     2,  1,  0},
+    { "array_insertrange",  "array_insertrange",  3,  1,  0},
+    { "array_intersect",    "array_intersect",    2,  1,  0},
+    { "array_last",         "array_last",         1,  2,  0},
+    { "array_matchkey",     "array_matchkey",     2,  1,  0},
+    { "array_matchval",     "array_matchval",     2,  1,  0},
+    { "array_nested_del",   "array_nested_del",   2,  1,  0},
+    { "array_nested_get",   "array_nested_get",   2,  1,  0},
+    { "array_nested_set",   "array_nested_set",   3,  1,  0},
+    { "array_next",         "array_next",         2,  2,  0},
+    { "array_prev",         "array_prev",         2,  2,  0},
+    { "array_reverse",      "array_reverse",      1,  1,  0},
+    { "array_setrange",     "array_setrange",     3,  1,  0},
+    { "array_sort",         "array_sort",         2,  1,  0},
+    { "array_sort_indexed", "array_sort_indexed", 3,  1,  0},
+    { "array_union",        "array_union",        2,  1,  0},
+
+    { "match",             "match",             1,  1,  0},
+    { "rmatch",            "rmatch",            2,  1,  0},
+    { "pmatch",            "pmatch",            1,  1,  0},
+    { "part_pmatch",       "part_pmatch",       1,  1,  0},
+
+    { "name_ok",           "name-ok?",          1,  1,  0},
+    { "pname_ok",          "pname-ok?",         1,  1,  0},
+    { "ext_name_ok",       "ext_name-ok?",      2,  1,  0},
+
+    { "name",              "name",              1,  1,  0},
+    { "setname",           "setname",           2,  0,  0},
+    { "desc",              "desc",              1,  1,  0},
+    { "succ",              "succ",              1,  1,  0},
+    { "osucc",             "osucc",             1,  1,  0},
+    { "fail",              "fail",              1,  1,  0},
+    { "ofail",             "ofail",             1,  1,  0},
+    { "drop",              "drop",              1,  1,  0},
+    { "odrop",             "odrop",             1,  1,  0},
+    { "setdesc",           "setdesc",           2,  0,  0},
+    { "setsucc",           "setsucc",           2,  0,  0},
+    { "setosucc",          "setosucc",          2,  0,  0},
+    { "setfail",           "setfail",           2,  0,  0},
+    { "setofail",          "setofail",          2,  0,  0},
+    { "setdrop",           "setdrop",           2,  0,  0},
+    { "setodrop",          "setodrop",          2,  0,  0},
+    { "moveto",            "moveto",            2,  0,  0},
+    { "copyobj",           "copyobj",           1,  1,  0},
+
+    { "addprop",            "addprop",            4,  0,  0},
+    { "array_filter_flags", "array_filter_flags", 2,  1,  0},
+    { "array_filter_prop",  "array_filter_prop",  3,  1,  0},
+    { "array_get_propdirs", "array_get_propdirs", 2,  1,  0},
+    { "array_get_proplist", "array_get_proplist", 2,  1,  0},
+    { "array_get_propvals", "array_get_propvals", 2,  1,  0},
+    { "array_get_reflist",  "array_get_reflist",  2,  1,  0},
+    { "array_put_proplist", "array_put_proplist", 3,  0,  0},
+    { "array_put_propvals", "array_put_propvals", 3,  0,  0},
+    { "array_put_reflist",  "array_put_reflist",  3,  0,  0},
+    { "blessprop",          "blessprop",          2,  0,  0},
+    { "envprop",            "envprop",            2,  2,  0},
+    { "envpropstr",         "envpropstr",         2,  2,  0},
+    { "getprop",            "getprop",            2,  1,  0},
+    { "getpropfval",        "getpropfval",        2,  1,  0},
+    { "getpropstr",         "getpropstr",         2,  1,  0},
+    { "getpropval",         "getpropval",         2,  1,  0},
+    { "is_blessed",         "blessed?",           2,  1,  0},
+    { "is_propdir",         "propdir?",           2,  1,  0},
+    { "nextprop",           "nextprop",           2,  1,  0},
+    { "parseprop",          "parseprop",          4,  1,  0},
+    { "parsepropex",        "parsepropex",        4,  2,  0},
+    { "reflist_add",        "reflist_add",        3,  0,  0},
+    { "reflist_del",        "reflist_del",        3,  0,  0},
+    { "reflist_find",       "reflist_find",       3,  1,  0},
+    { "reflist_get",        "array_get_reflist",  2,  1,  0},
+    { "reflist_put",        "array_put_reflist",  3,  0,  0},
+    { "remove_prop",        "remove_prop",        2,  0,  0},
+    { "setprop",            "setprop",            3,  0,  0},
+    { "unblessprop",        "unblessprop",        2,  0,  0},
+
     {0, 0, 0, 0, 0}
 };
 
@@ -1334,12 +1511,18 @@ process_file(int do_headers)
     funclist_add(&funcs_list, "tell", "me @ swap notify 0", 1, 1, 0);
     funclist_add(&funcs_list, "cat", "\"\" array_join", 0, 1, 1);
     funclist_add(&funcs_list, "join", "swap array_join", 1, 1, 1);
+    funclist_add(&funcs_list, "array_join", "swap array_join", 1, 1, 1);
+    funclist_add(&funcs_list, "array_make", "0 pop", 0, 1, 1);
+    funclist_add(&funcs_list, "array_dict_make", "{ swap array_explode pop }dict", 0, 1, 1);
     funclist_add(&funcs_list, "fmtstring", "2 try array_explode 1 + rotate fmtstring abort catch endcatch", 1, 1, 1),
-    funclist_add(&funcs_list, "fmttell", "2 try array_explode 1 + rotate fmtstring me @ swap notify "" abort catch pop endcatch 0", 1, 1, 1),
+    funclist_add(&funcs_list, "fmttell", "2 try array_explode 1 + rotate fmtstring me @ swap notify \"\" abort catch pop endcatch 0", 1, 1, 1),
+    funclist_add(&funcs_list, "execute", "{ rot rot array_explode 1 + rotate execute }list", 1, 1, 1),
 
-    /* Reserve ME and LOC vars, even if they aren't really LVARS. */
+    /* Reserve standard global vars. */
     strlist_add(&lvars_list, "me");
     strlist_add(&lvars_list, "loc");
+    strlist_add(&lvars_list, "trigger");
+    strlist_add(&lvars_list, "command");
 
     res = yyparse();
     if (res == 2) {

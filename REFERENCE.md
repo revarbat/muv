@@ -137,6 +137,7 @@ Bitwise Math:
 Logical Operations:
 - Logical OR: `x == 2 || x == 10`
 - Logical AND: `x > 2 && x < 10`
+- Logical XOR: `x > 2 ^^ x < 10`
 - Logical NOT: `!x`
 
 **WARNING: There is no shortcutting in logical expressions!**

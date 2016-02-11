@@ -4,6 +4,8 @@ TODO
 Required
 --------
 
+- Array append
+- Array delete
 - Dictionary initializers.
 - Declare usable MUF primitive set. (Namespaces?)
 
@@ -11,6 +13,8 @@ Required
 Would Be Nice
 -------------
 
+- Array insert
+- Array get/set range
 - Allow var declaration in `for`, `while`, `until`
 - Reinstate ternary operator?
 - import/export?
