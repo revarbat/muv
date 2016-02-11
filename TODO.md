@@ -11,6 +11,7 @@ Required
 Would Be Nice
 -------------
 
+- Allow var declaration in `for`, `while`, `until`
 - Reinstate ternary operator?
 - import/export?
 - Multi-line strings:
