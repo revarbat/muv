@@ -28,12 +28,13 @@ struct str_list {
     const char** list;
     short count;
     short cmax;
-} lvars_list, fvars_list, inits_list;
+} lvars_list, fvars_list, inits_list, using_list;
 
 void strlist_init(struct str_list *l);
 void strlist_free(struct str_list *l);
 void strlist_clear(struct str_list *l);
 void strlist_add(struct str_list *l, const char *s);
+void strlist_pop(struct str_list *l);
 int strlist_find(struct str_list *l, const char *s);
 char *strlist_join(struct str_list *l, const char *s, int start, int end);
 
@@ -77,12 +78,12 @@ struct prim_info_t *prim_lookup(const char*s);
 
 %token <num_int> INTEGER
 %token <prim> PRIMITIVE DECLARED_FUNC
-%token <str> STR IDENT DECLARED_VAR VAR
+%token <str> FLOAT STR IDENT DECLARED_VAR VAR
 %token <token> IF ELSE FUNC RETURN TRY CATCH
-%token <token> SWITCH CASE DEFAULT
+%token <token> SWITCH USING CASE DEFAULT
 %token <token> DO WHILE FOR IN
 %token <token> UNTIL CONTINUE BREAK
-%token <token> TOP PUSH MUF
+%token <token> TOP PUSH MUF BOOLTRUE BOOLFALSE
 %token <token> UNARY EXTERN VOID SINGLE MULTIPLE
 
 %right THEN ELSE
@@ -112,9 +113,9 @@ struct prim_info_t *prim_lookup(const char*s);
 %type <str> variable undeclared_variable
 %type <str> externdef statement statements paren_expr
 %type <str> comma_expr comma_expr_or_null
-%type <str> case_clause case_clauses default_clause
 %type <str> function_call primitive_call expr subscripts
 %type <str> lvardef lvarlist fvardef fvarlist
+%type <str> using_clause case_clause case_clauses default_clause
 %type <list> arglist arglist_or_null argvarlist
 %type <num_int> ret_count_type opt_varargs
 
@@ -122,7 +123,7 @@ struct prim_info_t *prim_lookup(const char*s);
 
 %%
 
-program: /* nothing */ { printf("$def cmp dup string? if strcmp not else = then\n"); }
+program: /* nothing */ { }
     | program globalstatement { printf("%s\n", $2);  free($2); }
     | program funcdef { printf("%s\n", $2);  free($2); }
     | program externdef { }
@@ -140,9 +141,9 @@ lvardef: proposed_varname {
     | proposed_varname ASGN expr {
             $$ = savefmt("lvar %s\n", $1);
             strlist_add(&lvars_list, $1);
-	    char *init = savefmt("%s %s !", $3, $1);
+            char *init = savefmt("%s %s !", $3, $1);
             strlist_add(&inits_list, init);
-	    free(init);
+            free(init);
             free($1);
             free($3);
         }
@@ -348,27 +349,55 @@ statement: ';' { $$ = savestring(""); }
             free(trybody);
             free(catchbody);
         }
-    | SWITCH paren_expr '{' case_clauses default_clause '}' {
-            char *exp = indent($2);
-            char *body = indent($4);
-            char *dflt = indent($5);
+    | SWITCH '(' expr using_clause ')' '{' case_clauses default_clause '}' {
+            char *exp = indent($3);
+            char *body = indent($7);
+            char *dflt = indent($8);
             $$ = savefmt("0 begin pop (switch)\n%s\n%s%srepeat pop", exp, body, dflt);
+            strlist_pop(&using_list);
             free(exp); free(dflt); free(body);
-            free($2); free($4); free($5);
+            free($3); free($4); free($7); free($8);
         }
     | '{' statements '}' { $$ = $2; }
     ;
 
-case_clause: CASE paren_expr statement {
-        char *body = indent($3);
-        $$ = savefmt("(case)\ndup %s cmp if\n%s break\nthen\n", $2, body);
-        free(body);
-        free($3); free($3);
-    } ;
+using_clause: /* nothing */ {
+            $$ = savestring("=");
+            strlist_add(&using_list, $$);
+        }
+    | USING PRIMITIVE {
+            if ($2.expects != 2) {
+                yyerror("Using clause expects instruction or function that takes 2 args.");
+                YYERROR;
+            }
+            $$ = savestring($2.name);
+            if (!strcmp($$, "strcmp")) {
+                strlist_add(&using_list, "strcmp not");
+            } else {
+                strlist_add(&using_list, $$);
+            }
+        }
+    | USING function {
+            if ($2.expects != 2) {
+                yyerror("Using clause expects instruction or function that takes 2 args.");
+                YYERROR;
+            }
+            $$ = savestring($2.name);
+            strlist_add(&using_list, $2.name);
+        }
+    ;
 
 case_clauses: case_clause { $$ = $1; }
     | case_clauses case_clause { $$ = savefmt("%s%s", $1, $2); free($1); free($2); }
     ;
+
+case_clause: CASE paren_expr statement {
+        char *body = indent($3);
+        const char *comp = using_list.list[using_list.count-1];
+        $$ = savefmt("(case)\ndup %s %s if\n%s break\nthen\n", $2, comp, body);
+        free(body);
+        free($2); free($3);
+    } ;
 
 default_clause: /* nothing */ { $$ = savestring("break\n"); }
     | DEFAULT statement { $$ = savefmt("(default)\n%s break\n", $2); free($2); }
@@ -484,7 +513,10 @@ subscripts: expr ']' { $$ = $1; }
 expr: INTEGER { $$ = savefmt("%d", $1); }
     | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
     | '#' INTEGER { $$ = savefmt("#%d", $2); }
+    | FLOAT { $$ = $1; }
     | STR { $$ = savefmt("\"%s\"", $1); free($1); }
+    | BOOLTRUE { $$ = savestring("1"); }
+    | BOOLFALSE { $$ = savestring("0"); }
     | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
@@ -602,6 +634,15 @@ strlist_add(struct str_list *l, const char *s)
         l->list = (const char**)realloc(l->list, sizeof(const char*) * l->cmax);
     }
     l->list[l->count++] = savestring(s);
+}
+
+
+void
+strlist_pop(struct str_list *l)
+{
+    if (l->count > 0) {
+        free((void*) l->list[--l->count]);
+    }
 }
 
 
@@ -732,6 +773,7 @@ lookup(char *s, int *bval)
         "do",        DO,        -1,
         "else",      ELSE,      -1,
         "extern",    EXTERN,    -1,
+        "false",     BOOLFALSE, -1,
         "for",       FOR,       -1,
         "func",      FUNC,      -1,
         "if",        IF,        -1,
@@ -743,8 +785,10 @@ lookup(char *s, int *bval)
         "single",    SINGLE,    -1,
         "switch",    SWITCH,    -1,
         "top",       TOP,       -1,
+        "true",      BOOLTRUE,  -1,
         "try",       TRY,       -1,
         "until",     UNTIL,     -1,
+        "using",     USING,     -1,
         "var",       VAR,       -1,
         "void",      VOID,      -1,
         "while",     WHILE,     -1,
@@ -778,8 +822,9 @@ yylex()
 {
     char in[BUFSIZ];
     char *p = in;
-    int c;
+    int c, digit;
     struct prim_info_t* pinfo;
+    short base = 10;
 
     do {
         /* skip whitespace */
@@ -841,18 +886,75 @@ yylex()
     if (isdigit(c)) {
         int num;
 
-        num = c - '0';
-        while (isdigit(c = fgetc(yyin))) {
-            num = (num * 10) + (c - '0');
+        if (c == '0') {
+            c = fgetc(yyin);
+            *p++ = c;
+            if (!isdigit(c)) {
+                switch (c) {
+                    case 'x': base=16; break;
+                    case 'o': base=8; break;
+                    case 'b': base=2; break;
+                    case '.': base=10; p--; (void)ungetc(c,yyin); break;
+                    default: {
+                        (void)ungetc(c,yyin);
+                        yylval.num_int = 0;
+                        return(INTEGER);
+                    }
+                }
+                c = fgetc(yyin);
+                *p++ = c;
+            }
         }
 
+        num = 0;
+        while(1) {
+            char uc = toupper(c);
+            if (base == 10 && (uc == '.' || uc == 'E')) {
+                break;
+            }
+            if (uc < '0' || (uc > '9' && uc < 'A') || uc > 'Z') {
+                (void)ungetc(c,yyin);
+                yylval.num_int = num;
+                return(INTEGER);
+            }
+            if (uc > '9') {
+                digit = uc - 'A' + 10;
+            } else {
+                digit = uc - '0';
+            }
+            if (digit >= base) {
+                (void)ungetc(c,yyin);
+                yylval.num_int = num;
+                return(INTEGER);
+            }
+            num = (num * base) + digit;
+            c = fgetc(yyin);
+            *p++ = c;
+        }
+        if (c == '.') {
+            do {
+                c = fgetc(yyin);
+                *p++ = c;
+            } while (isdigit(c));
+        }
+        if (toupper(c) == 'E') {
+            c = fgetc(yyin);
+            *p++ = c;
+            if (c != '+' && c != '-' && !isdigit(c)) {
+                *(--p) = '\0';
+                (void)ungetc(c,yyin);
+                yylval.str = savestring(in);
+                return FLOAT;
+            }
+            do {
+                c = fgetc(yyin);
+                *p++ = c;
+            } while (isdigit(c));
+        }
+        *(--p) = '\0';
         (void)ungetc(c,yyin);
-        if (c == '\n') {
-            yylineno--;
-        }
-
-        yylval.num_int = num;
-        return(INTEGER);
+        yylval.str = savestring(in);
+        return FLOAT;
     }
 
     /* handle keywords or idents/builtins */
@@ -1165,21 +1267,38 @@ yyerror(char *arg)
 
 
 struct prim_info_t prims_list[] = {
-    { "throw",        "abort",         1,  0,  0},
-    { "abort",        "abort",         1,  0,  0},
-    { "array_notify", "array_notify",  2,  0,  0},
-    { "awake?",       "awake?",        1,  1,  0},
-    { "copyobj",      "copyobj",       1,  1,  0},
-    { "intostr",      "intostr",       1,  1,  0},
-    { "moveto",       "moveto",        2,  0,  0},
-    { "name",         "name",          1,  1,  0},
-    { "notify",       "notify",        2,  0,  0},
-    { "online",       "online_array",  0,  1,  0},
-    { "read",         "read",          0,  1,  0},
-    { "setdesc",      "setdesc",       2,  0,  0},
-    { "setname",      "setname",       2,  0,  0},
-    { "strcat",       "strcat",        2,  1,  0},
-    { "strcmp",       "strcmp",        2,  1,  0},
+    { "throw",        "abort",           1,  0,  0},
+    { "abort",        "abort",           1,  0,  0},
+    { "array_notify", "array_notify",    2,  0,  0},
+    { "awake?",       "awake?",          1,  1,  0},
+    { "copyobj",      "copyobj",         1,  1,  0},
+    { "intostr",      "intostr",         1,  1,  0},
+    { "moveto",       "moveto",          2,  0,  0},
+    { "name",         "name",            1,  1,  0},
+    { "notify",       "notify",          2,  0,  0},
+    { "online",       "online_array",    0,  1,  0},
+    { "read",         "read",            0,  1,  0},
+    { "setdesc",      "setdesc",         2,  0,  0},
+    { "setname",      "setname",         2,  0,  0},
+    { "strcat",       "strcat",          2,  1,  0},
+    { "strcmp",       "strcmp",          2,  1,  0},
+    { "strmatch",     "strmatch",        2,  1,  0},
+    { "tolower",      "tolower",         1,  1,  0},
+    { "toupper",      "toupper",         1,  1,  0},
+    { "int?",         "int?",            1,  1,  0},
+    { "number?",      "number?",         1,  1,  0},
+    { "float?",       "float?",          1,  1,  0},
+    { "string?",      "string?",         1,  1,  0},
+    { "dbref?",       "dbref?",          1,  1,  0},
+    { "desc",         "desc",            1,  1,  0},
+    { "succ",         "succ",            1,  1,  0},
+    { "osucc",        "osucc",           1,  1,  0},
+    { "fail",         "fail",            1,  1,  0},
+    { "ofail",        "ofail",           1,  1,  0},
+    { "drop",         "drop",            1,  1,  0},
+    { "odrop",        "odrop",           1,  1,  0},
+    { "split",        "split",           2,  2,  0},
+    { "rsplit",       "rsplit",          2,  2,  0},
     {0, 0, 0, 0, 0}
 };
 
@@ -1197,16 +1316,26 @@ prim_lookup(const char*s)
 }
 
 
-int
-main()
-{
-    int res;
-    yyin = stdin;
 
+int
+process_file(int do_headers)
+{
+    int res = 0;
+    if (do_headers) {
+        fprintf(stdout, "1 99999 d\n1 i\n");
+    }
     strlist_init(&inits_list);
+    strlist_init(&using_list);
     strlist_init(&lvars_list);
     strlist_init(&fvars_list);
     funclist_init(&funcs_list);
+
+    /* Declare some utility commands. */
+    funclist_add(&funcs_list, "tell", "me @ swap notify 0", 1, 1, 0);
+    funclist_add(&funcs_list, "cat", "\"\" array_join", 0, 1, 1);
+    funclist_add(&funcs_list, "join", "swap array_join", 1, 1, 1);
+    funclist_add(&funcs_list, "fmtstring", "2 try array_explode 1 + rotate fmtstring abort catch endcatch", 1, 1, 1),
+    funclist_add(&funcs_list, "fmttell", "2 try array_explode 1 + rotate fmtstring me @ swap notify "" abort catch pop endcatch 0", 1, 1, 1),
 
     /* Reserve ME and LOC vars, even if they aren't really LVARS. */
     strlist_add(&lvars_list, "me");
@@ -1217,20 +1346,58 @@ main()
         yyerror("Out of Memory");
     }
 
-    char *inits = strlist_join(&inits_list, "\n", 0, -1);
-    char *inits2 = indent(inits);
-    char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
-    char *initfunc = savefmt(": __inits\n%s\n%s\n;\n\n", inits2, mainfunc);
-    fprintf(stdout, "%s", initfunc);;
-    free(inits);
-    free(inits2);
-    free(mainfunc);
-    free(initfunc);
+    if (res == 0) {
+        char *inits = strlist_join(&inits_list, "\n", 0, -1);
+        char *inits2 = indent(inits);
+        char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
+        char *initfunc = savefmt(": __inits\n%s\n%s\n;\n\n", inits2, mainfunc);
+        fprintf(stdout, "%s", initfunc);;
+        free(inits);
+        free(inits2);
+        free(mainfunc);
+        free(initfunc);
+    }
 
     strlist_free(&inits_list);
+    strlist_free(&using_list);
     strlist_free(&lvars_list);
     strlist_free(&fvars_list);
     funclist_free(&funcs_list);
+    if (do_headers) {
+        fprintf(stdout, ".\n");
+    }
+    fclose(yyin);
+
+    return res;
+}
+
+
+int
+main(int argc, char **argv)
+{
+    int res;
+    int do_headers = 0;
+    int do_stdin = 1;
+
+    argc--; argv++;
+    while (argc > 0) {
+        if (!strcmp(argv[0], "-h")) {
+            do_headers = 1;
+        } else {
+            do_stdin = 0;
+            yyin = fopen(argv[0], "r");
+            res = process_file(do_headers);
+            if (res != 0) {
+                break;
+            }
+        }
+        argc--; argv++;
+    }
+
+    if (do_stdin) {
+        yyin = stdin;
+        res = process_file(do_headers);
+    }
 
     return -res;
 }

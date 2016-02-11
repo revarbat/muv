@@ -6,24 +6,12 @@ line
 comment
 */
 
-extern multiple split(str, delim);
-extern single array_interpret(arr);
-
-
-func array(args*) { return args; }
-
-// Varargs indicated by trailing '*'.  All extra args are passed as
-// an array in the last variable.  In this case, the one named 'data'.
-func cat(data*) {
-    return array_interpret(data);
-}
-
 func helloworld() { return "Hello World!"; }
 
 func arraydemo() {
-    var myarr = array();
+    var myarr = [];
     myarr[23] = 42;
-    notify(me, myarr[23]);
+    tell(myarr[23]);
 }
 
 func first_word(thing) {
@@ -33,7 +21,7 @@ func first_word(thing) {
 
 func submit(arg) {
     if (!strcmp(arg, "")) {
-        notify(me, "Enter your submission here:");
+        tell("Enter your submission here:");
         arg = read();
     }
     var new = copyobj(#1981);
@@ -42,6 +30,6 @@ func submit(arg) {
     setname(new, newname);
     setdesc(new, arg);
     moveto(new, #1976);
-    notify(me, "Thank you for the submission.");
+    tell("Thank you for the submission.");
 }
 

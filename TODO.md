@@ -5,8 +5,6 @@ Required
 --------
 
 - Dictionary initializers.
-- Global variable initializers.
-- Floating point numbers.
 - Declare usable MUF primitive set. (Namespaces?)
 
 
@@ -15,6 +13,13 @@ Would Be Nice
 
 - Reinstate ternary operator?
 - import/export?
+- Multi-line strings:
+
+    ```
+    var lines = """first line
+    second line
+    third line""";
+    ```
 
 
 Someday

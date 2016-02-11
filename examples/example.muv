@@ -1,19 +1,12 @@
 var foo = 72;
 
-extern single desc(ref); 
-extern single osucc(ref); 
-
-func tell(text) {
-    return notify(me, text);
-}
-
 func arrrr() {
     var key, val;
     var bar = ["one", "two", "three", "four", "five"];
 
     tell(bar[3]);
     for (key => val in bar) {
-        tell(key + " = " + val);
+        tell(cat(key + " = " + val));
     }
 }
 

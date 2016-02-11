@@ -25,10 +25,16 @@ make
 Usage
 -----
 
-The muv program expects the input MUV source file to by passed via the `STDIN` stream.  The MUF output will be printed to `STDOUT`, error messages will be printed to `STDERR`, and the return code will be non-zero if errors were found.
+The muv program expects the input MUV source file to be given on the command-line.  The MUF output will be printed to `STDOUT`, error messages will be printed to `STDERR`, and the return code will be non-zero if errors were found.
 
 ```bash
-./muv <sourcefile.muv >outfile.muf
+./muv sourcefile.muv >outfile.muf
+```
+
+or, using `-h` to force output of MUF editor commands:
+
+```bash
+./muv -h sourcefile.muv >outfile.muf
 ```
 
 
@@ -58,7 +64,9 @@ Literals
 
 Integer values are simply the number: `12345` or `-5`
 
-Floating point numbers are given like: `3.14` or `0.1` or `3.` or `6.022e23`
+You can actually enter integers in other bases like binary: `0b11010100`, octal: `0o4377`, or hexadecimal: `0xB1663F`
+
+Floating point numbers are given like: `3.14`, `0.1`, `3.`, `1e9`, `6.022e23` or `1.6e-35`
 
 DataBase Reference literals are given like: `#1234` or `#-1`
 
@@ -66,15 +74,6 @@ String literals are given like: `"Hello!"`
 
 List arrays have the syntax: `["first", "second", "third"]`
 or `[1, 2, 4, 8]`
-
-Dictionary literals have the syntax:
-```
-{
-    "name" => "John Doe",
-    "ssn" => "123-45-6789",
-    "city" => "Smallville"
-}
-```
 
 
 Global Variables
@@ -263,6 +262,25 @@ The default clause is optional:
 
 ```
 switch (val) {
+    case(1) {
+        notify(me, "One!");
+    }
+    case(2) {
+        notify(me, "Two!");
+    }
+    case(3) {
+        notify(me, "Three!");
+    }
+}
+```
+
+With the `using` clause, you can specify a primitive or function that takes
+two arguments to use for comparisons.  When the comparison function or
+primitive returns true, then a match is found.  When `using strcmp` it special
+cases the comparison to actually use `strcmp not`.
+
+```
+switch (val using strcmp) {
     case("one") {
         notify(me, "First!");
     }
@@ -280,7 +298,7 @@ the next. Also, you can actually use expressions in the case, not just
 constants.
 
 ```
-switch(name(obj)) {
+switch(name(obj) using strcmp) {
     case(strcat(name(me), "'s Brush")) {
         notify(me, "It's one of your brushes!");
         brushcount += 1;
@@ -483,4 +501,49 @@ will tell MUV that a function or primitive named `foobar` exists, that takes two
 ```
 extern multiple fleegul();
 ```
+
 will tell MUV that a function or primitive named `fleegul` exists, that takes no arguments, and returns two or more values on the stack.  When you call this function, it will return list containing those returned stack items, to the caller.
+
+
+Built-Ins
+---------
+MUV defines some convenience functions that MUF doesn't:
+
+- `tell(msg)` simply acts like `notify(me, msg)`
+
+- `cat(...)` takes any number of arguments, translates them into a basic string representation of each, and concatenates them together.
+
+    ```
+    cat(count, " items belong to ", me)
+    ```
+
+    will return a string like
+
+    ```
+    "23 items belong to John_Doe"
+    ```
+
+- `join(delim, ...)` will similarly translate and concatenate it's arguments, but it inserts the given `delim` string between each part.
+
+    ```
+    cat("_X_", count, " items belong to ", me)
+    ```
+
+    will return a string like:
+
+    ```
+    "23_X_ items belong to _X_John_Doe"
+    ```
+
+- `fmtstring(fmt, ...)` roughly implements the functionality of the MUF primitive with the same name.
+
+    ```
+    fmtstring("#%d: %s", int(me), name(me))
+    ```
+
+    will return a string like:
+
+    ```
+    "#1: Wizard"
+    ```
+
