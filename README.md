@@ -84,6 +84,7 @@ You can declare global variables at the toplevel scope like:
 ```
 var myglobal;
 var firstvar, secondvar, third;
+var foo = 23, bar = 72;
 ```
 
 The global variables `me` and `loc` are pre-defined for all programs.
