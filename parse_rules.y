@@ -1533,7 +1533,7 @@ process_file(int do_headers)
         char *inits = strlist_join(&inits_list, "\n", 0, -1);
         char *inits2 = indent(inits);
         char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
-        char *initfunc = savefmt(": __inits\n%s\n%s\n;\n\n", inits2, mainfunc);
+        char *initfunc = savefmt(": __start\n%s%s%s\n;\n\n", inits2, (*inits2?"\n":""), mainfunc);
         fprintf(stdout, "%s", initfunc);;
         free(inits);
         free(inits2);
