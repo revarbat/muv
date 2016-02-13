@@ -382,7 +382,9 @@ using_clause: /* nothing */ {
                 YYERROR;
             }
             $$ = savestring($2.name);
-            if (!strcmp($$, "strcmp")) {
+            if (!strcmp($$, "stringcmp")) {
+                strlist_add(&using_list, "stringcmp not");
+            } else if (!strcmp($$, "strcmp")) {
                 strlist_add(&using_list, "strcmp not");
             } else {
                 strlist_add(&using_list, $$);
