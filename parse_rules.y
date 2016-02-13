@@ -551,7 +551,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | '[' dictlist ']' {
             char *items = strlist_wrap(&$2, 0, -1);
             char *body = indent(items);
-	    $$ = savefmt("{\n%s}dict", body);
+            $$ = savefmt("{\n%s}dict", body);
             free(body); free(items);
             strlist_free(&$2);
         }
@@ -1222,7 +1222,7 @@ yylex()
         case '^':
             c = fgetc(yyin);
             if (c == '^') {
-	        return XOR;
+                return XOR;
             } else if (c == '=') {
                 return BITXORASGN;
             } else {
@@ -1614,11 +1614,23 @@ prim_lookup(const char*s)
 
 
 int
-process_file(int do_headers)
+process_file(const char *filename, int do_headers)
 {
     int res = 0;
     if (do_headers) {
+        /* Strip leading directory names. */
+        const char *ptr = filename;
+        while (*ptr) {
+            if (*ptr == '/' || *ptr == '\\') {
+                filename = ++ptr;
+            } else {
+                ptr++;
+            }
+        }
+        fprintf(stdout, "@program %s\n", filename);
         fprintf(stdout, "1 99999 d\n1 i\n");
+        fprintf(stdout, "( Generated from %s by the MUV compiler. )\n", filename);
+        fprintf(stdout, "(   https://github.com/revarbat/muv )\n\n");
     }
     strlist_init(&inits_list);
     strlist_init(&using_list);
@@ -1653,7 +1665,7 @@ process_file(int do_headers)
         char *inits = strlist_join(&inits_list, "\n", 0, -1);
         char *inits2 = indent(inits);
         char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
-        char *initfunc = savefmt(": __start\n%s%s%s\n;\n\n", inits2, (*inits2?"\n":""), mainfunc);
+        char *initfunc = savefmt(": __start\n%s%s%s\n;\n", inits2, (*inits2?"\n":""), mainfunc);
         fprintf(stdout, "%s", initfunc);;
         free(inits);
         free(inits2);
@@ -1668,7 +1680,7 @@ process_file(int do_headers)
     strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
     if (do_headers) {
-        fprintf(stdout, ".\n");
+        fprintf(stdout, ".\nc\nq\n");
     }
     fclose(yyin);
 
@@ -1682,15 +1694,22 @@ main(int argc, char **argv)
     int res;
     int do_headers = 0;
     int do_stdin = 1;
+    const char* progname = argv[0];
 
     argc--; argv++;
     while (argc > 0) {
-        if (!strcmp(argv[0], "-h")) {
+        if (!strcmp(argv[0], "-h") || ! strcmp(argv[0], "--help")) {
+            fprintf(stdout, "Usage: %s [-h] [-m] FILE\n", progname);
+            exit(0);
+        } else if (!strcmp(argv[0], "-m")) {
             do_headers = 1;
+        } else if (argv[0][0] == '-') {
+            fprintf(stdout, "Usage: %s [-h] [-m] FILE\n", progname);
+            exit(-3);
         } else {
             do_stdin = 0;
             yyin = fopen(argv[0], "r");
-            res = process_file(do_headers);
+            res = process_file(argv[0], do_headers);
             if (res != 0) {
                 break;
             }
@@ -1700,10 +1719,11 @@ main(int argc, char **argv)
 
     if (do_stdin) {
         yyin = stdin;
-        res = process_file(do_headers);
+        res = process_file("STDIN", do_headers);
     }
 
     return -res;
 }
 
+/* vim: set ts=4 sw=4 et ai hlsearch nowrap : */
 

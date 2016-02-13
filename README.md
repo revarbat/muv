@@ -31,8 +31,8 @@ The MUF output will be printed to `STDOUT`, error messages will be printed to
 
     ./muv sourcefile.muv >outfile.muf
 
-You can use `-h` to wrap the output in MUF editor commands:
+You can use `-m` to wrap the output in MUF editor commands:
 
-    ./muv -h sourcefile.muv >outfile.muf
+    ./muv -m sourcefile.muv >outfile.muf
 
 
