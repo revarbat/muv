@@ -4,7 +4,7 @@ TODO
 Required
 --------
 
-- Declare usable MUF primitive set. (Namespaces?)
+- Declare usable MUF primitive set. (60% done.)
 
 
 Would Be Nice
