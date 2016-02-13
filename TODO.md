@@ -4,7 +4,6 @@ TODO
 Required
 --------
 
-- Dictionary initializers.
 - Declare usable MUF primitive set. (Namespaces?)
 
 

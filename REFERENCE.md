@@ -191,8 +191,8 @@ These expressions can be combined in surprising ways:
     x = y[0][1] = 43 * (z += 1 << 3);
 
 
-Lists
------
+Arrays
+------
 
 Declaring a list array is easy:
 
@@ -267,6 +267,32 @@ you can just add subscripts to the expression.  For example:
 
     // nest now contains:
     // [ [8, 7, 23, 5],  [4, 3, 2],  ["Foo", "Baz", "Qux"] ]
+
+
+Dictionaries
+------------
+
+Dictionaries are a special type of array, where the keys are not necessarily
+numeric, and they don't have to be contiguous.  You can use many of the same
+functions and primitives with dictionaries that you use with list arrays.
+MUV Dictionaries are functionally like hash tables in other languages.
+
+Defining a dictionary is similar to defining a list array, except you also
+specify the keys:
+
+    var mydict = [
+        "one" => 1,
+        "two" => 2,
+        "three" => 3,
+        "four" => 4
+    ];
+
+Reading, setting and deleting dictionary elements are very similar to doing
+the same with a list array:
+
+    var myvar = mydict["three"];
+    mydict["six"] = 6;
+    del(mydict["one"]);
 
 
 Conditionals

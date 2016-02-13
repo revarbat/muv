@@ -121,7 +121,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %type <str> function_call primitive_call expr subscripts
 %type <str> lvardef lvarlist fvardef fvarlist
 %type <str> using_clause case_clause case_clauses default_clause
-%type <list> arglist arglist_or_null argvarlist
+%type <list> arglist arglist_or_null dictlist argvarlist
 %type <num_int> ret_count_type opt_varargs
 
 %start program
@@ -548,6 +548,13 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free(body); free(items);
             strlist_free(&$2);
         }
+    | '[' dictlist ']' {
+            char *items = strlist_wrap(&$2, 0, -1);
+            char *body = indent(items);
+	    $$ = savefmt("{\n%s}dict", body);
+            free(body); free(items);
+            strlist_free(&$2);
+        }
     | PLUS expr   %prec UNARY { $$ = $2; }
     | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
     | NOT expr    %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
@@ -591,7 +598,6 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     /* | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); } */
     ;
 
-
 arglist_or_null: /* nothing */ { strlist_init(&$$); }
     | arglist { $$ = $1; }
     ;
@@ -599,6 +605,23 @@ arglist_or_null: /* nothing */ { strlist_init(&$$); }
 arglist:
       expr { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
     | arglist ',' expr { $$ = $1;  strlist_add(&$$, $3); free($3); }
+    ;
+
+dictlist:
+      expr KEYVAL expr {
+            char *vals = savefmt("%s %s\n", $1, $3);
+            strlist_init(&$$);
+            strlist_add(&$$, vals);
+            free(vals);
+            free($1); free($3);
+        }
+    | dictlist ',' expr KEYVAL expr {
+            char *vals = savefmt("%s %s\n", $3, $5);
+            $$ = $1;
+            strlist_add(&$$, vals);
+            free(vals);
+            free($3); free($5);
+        }
     ;
 
 fvardef: proposed_varname {

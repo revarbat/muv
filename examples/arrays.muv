@@ -4,13 +4,29 @@ func fmtnotify(player, fmt, args*) {
 
 
 func dump(arr, indent) {
-    var item, out = "";
-    for (item in arr) {
-        tell(cat(indent, item));
-        if (array?(item)) {
-            dump(item, cat(indent, "  "));
-        }
+    var key, val, out = "";
+    for (key => val in arr) {
+        if (array?(val) || dictionary?(val)) {
+	    fmttell("%s%~ => [", indent, key);
+            dump(val, cat(indent, "  "));
+	    fmttell("%s]", indent);
+        } else {
+	    fmttell("%s%~ => %~", indent, key, val);
+	}
     }
+}
+
+func dictfunc() {
+    var mydict = [
+        "one" => "First",
+        "two" => "Second",
+        "three" => "Third"
+    ];
+    dump(mydict, "");
+    var myvar = mydict["two"];
+    tell(myvar);
+    mydict["five"] = "Fifth";
+    del(mydict["three"]);
 }
 
 func main() {
