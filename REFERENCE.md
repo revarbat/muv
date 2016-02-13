@@ -96,7 +96,7 @@ If you need a variable number of arguments for a function, you can put a `*`
 after the last argument, to indicate that all extra arguments will by passed
 as a list in the last argument variable.
 
-    func cat(args*) {
+    func concat(args*) {
         return array_interpret(args);
     }
 
@@ -553,8 +553,7 @@ function, it will return that single stack item to the caller.
 
 will tell MUV that a function or primitive named `fleegul` exists, that takes
 no arguments, and returns two or more values on the stack.  When you call this
-function, it will return list containing those returned stack items, to the
-caller.
+function, it will return a list containing the returned stack items.
 
 
 Built-Ins
@@ -572,10 +571,10 @@ will return a string like
 
     "23 items belong to John_Doe"
 
-`join(delim, ...)` will similarly translate and concatenate it's arguments,
+`join(delim, ...)` will similarly translate and concatenate its arguments,
 but it inserts the given `delim` string between each part.
 
-    cat("_X_", count, " items belong to ", me)
+    join("_X_", count, " items belong to ", me)
 
 will return a string like:
 
