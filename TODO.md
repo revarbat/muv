@@ -5,6 +5,9 @@ Required
 --------
 
 - Declare usable MUF primitive set. (60% done.)
+- cmd-line declaration of program name for -m muf headers.
+- cmd-line declaration of output muf filename via -o.
+- Change MUF editor header code to take program name from command-line.
 
 
 Would Be Nice
@@ -27,7 +30,8 @@ Would Be Nice
 Someday
 -------
 
-- simple object oriented classes.
+- Simple object oriented classes.
 - Standard libraries.
-
+- Upload to MUCK using -u:
+    `./muv -m cmd-foobar -u muck://John_Doe:mypass@muckhost.com:8888 foobar.muv`
 
