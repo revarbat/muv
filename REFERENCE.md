@@ -9,6 +9,8 @@ Comments can use either of the following syntaxes:
 
     // Single line comment.
 
+or
+
     /*
     multiple
     line
@@ -19,14 +21,47 @@ Comments can use either of the following syntaxes:
 Literals
 --------
 
-- Decimal integers are simple: `12345` or `-5`
-- Hexidecimal integers can be given like: `0x7f` or `0xB16613`
-- Octal integers can be given like: `0o377` or `0o1234567`
-- Binary integers can be given like: `0b11010100`
-- Floating point numbers are given like: `3.14`, `0.1`, `3.`, `1e9`, `6.022e23` or `1.6e-35`
-- DataBase References (dbrefs) are given like: `#1234` or `#-1`
-- String literals are given like: `"Hello!"`
-- List arrays can be declared like this: `["first", "second", "third"]` or `[1, 2, 4, 8]`
+Decimal integers are simple:
+
+    123456789
+
+Hexadecimal integers are prefixed with `0x`:
+
+    0x7ffc
+
+Octal integers are prefixed with `0o`:
+
+    0o1234567
+
+Binary integers are prefixed with `0b`:
+
+    0b11010100
+
+Floating point numbers are given like:
+
+    3.14
+    0.1
+    3.
+    1e9
+    6.022e23
+    1.6e-35
+
+DataBase References (dbrefs) are given like:
+
+    #12345
+    #-1
+
+String literals are given like:
+
+    "Hello!"
+
+List arrays can be declared like this:
+
+    ["first", "second", "third"]
+
+or
+
+    [1, 2, 4, 8]
 
 
 Global Variables
@@ -47,13 +82,13 @@ Functions
 You can declare a function like this:
 
     func helloworld() {
-	return "Hello World!";
+        return "Hello World!";
     }
 
 or
 
     func concatenate(var1, var2) {
-	return strcat(var1, var2);
+        return strcat(var1, var2);
     }
 
 
@@ -62,7 +97,7 @@ after the last argument, to indicate that all extra arguments will by passed
 as a list in the last argument variable.
 
     func cat(args*) {
-	return array_interpret(args);
+        return array_interpret(args);
     }
 
 Functions return the value given to the `return` command.  ie: `return 42;`
@@ -77,11 +112,11 @@ Function Variables
 You can declare extra variables in function scope like this:
 
     func myfunction() {
-	var myvar;
-	var firstvar, secondvar, third;
-	var forth = "Sally";
-	var fifth = "5th", sixth = 6;
-	...
+        var myvar;
+        var firstvar, secondvar, third;
+        var forth = "Sally";
+        var fifth = "5th", sixth = 6;
+        ...
     }
 
 Calls
@@ -240,52 +275,52 @@ Conditionals
 You can use the `if` statement for conditional code execution:
 
     if (x > 3)
-	tell("Greater!");
+        tell("Greater!");
 
 Which is the same as:
 
     if (x > 3) {
-	tell("Greater!");
+        tell("Greater!");
     }
 
 If you need an else clause, you can do this:
 
     if (x < 0) {
-	tell("Negative!");
+        tell("Negative!");
     } else {
-	tell("Positive!");
+        tell("Positive!");
     }
 
 If you need to compare a value against a lot of options, you can use the
 `switch` - `case` statement:
 
     switch (val) {
-	case(1) {
-	    tell("One!");
-	}
-	case(2) {
-	    tell("Two!");
-	}
-	case(3) {
-	    tell("Three!");
-	}
-	default {
-	    tell("Something else!");
-	}
+        case(1) {
+            tell("One!");
+        }
+        case(2) {
+            tell("Two!");
+        }
+        case(3) {
+            tell("Three!");
+        }
+        default {
+            tell("Something else!");
+        }
     }
 
 The default clause is optional:
 
     switch (val) {
-	case(1) {
-	    tell("One!");
-	}
-	case(2) {
-	    tell("Two!");
-	}
-	case(3) {
-	    tell("Three!");
-	}
+        case(1) {
+            tell("One!");
+        }
+        case(2) {
+            tell("Two!");
+        }
+        case(3) {
+            tell("Three!");
+        }
     }
 
 With the `using` clause, you can specify a primitive or function that takes
@@ -294,15 +329,15 @@ primitive returns true, then a match is found.  When `using strcmp` it special
 cases the comparison to actually be `strcmp not`.
 
     switch (val using strcmp) {
-	case("one") {
-	    tell("First!");
-	}
-	case("two") {
-	    tell("Second!");
-	}
-	case("three") {
-	    tell("Third!");
-	}
+        case("one") {
+            tell("First!");
+        }
+        case("two") {
+            tell("Second!");
+        }
+        case("three") {
+            tell("Third!");
+        }
     }
 
 Unlike in C, `switch` statements do not fall-through from one case clause to
@@ -310,14 +345,14 @@ the next. Also, you can actually use expressions in the case, not just
 constants.
 
     switch(name(obj) using strcmp) {
-	case(strcat(name(me), "'s Brush")) {
-	    tell("It's one of your brushes!");
-	    brushcount += 1;
-	}
-	case(strcat(name(me), "'s Fiddle")) {
-	    tell("It's one of your fiddles!");
-	    fiddlecount += 1;
-	}
+        case(strcat(name(me), "'s Brush")) {
+            tell("It's one of your brushes!");
+            brushcount += 1;
+        }
+        case(strcat(name(me), "'s Fiddle")) {
+            tell("It's one of your fiddles!");
+            fiddlecount += 1;
+        }
     }
 
 If you use the `break` statement inside a case clause, you can exit the case
@@ -328,28 +363,28 @@ re-evaluated.  This can be useful for, perhaps, running a looping state machine.
     var FIRST = 1, SECOND = 2, THIRD = 3, FOURTH = 4;
     var state = FIRST;
     switch(state) {
-	case(FIRST) {
-	    state = SECOND;
-	    do_something();
-	    continue;
-	}
-	case(SECOND) {
-	    state = THIRD;
-	    do_something_else();
-	    continue;
-	}
-	case(THIRD) {
-	    if (do_something_more()) {
-		state = FOURTH;
-		continue;
-	    }
-	    break;
-	}
-	case(FOURTH) {
-	    state = FIRST;
-	    do_something_special()
-	    continue;
-	}
+        case(FIRST) {
+            state = SECOND;
+            do_something();
+            continue;
+        }
+        case(SECOND) {
+            state = THIRD;
+            do_something_else();
+            continue;
+        }
+        case(THIRD) {
+            if (do_something_more()) {
+                state = FOURTH;
+                continue;
+            }
+            break;
+        }
+        case(FOURTH) {
+            state = FIRST;
+            do_something_special()
+            continue;
+        }
     }
 
 
@@ -360,44 +395,44 @@ There are several types of loops available:
 
     var i;
     for (i = 1; i <= 10; i+=1) {
-	tell(intostr(i));
+        tell(intostr(i));
     }
 
     var i = 10;
     while (i > 0) {
-	tell(intostr(i));
-	i -= 1;
+        tell(intostr(i));
+        i -= 1;
     }
 
     var i = 10;
     until (i == 0) {
-	tell(intostr(i));
-	i -= 1;
+        tell(intostr(i));
+        i -= 1;
     }
 
     var i = 10;
     do {
-	tell(intostr(i));
-	i -= 1;
+        tell(intostr(i));
+        i -= 1;
     } while(i > 0);
 
     var i = 10;
     do {
-	tell(intostr(i));
-	i -= 1;
+        tell(intostr(i));
+        i -= 1;
     } until(i == 0);
 
 You can also iterate arrays/lists/dictionaries like this:
 
     var letter, letters = ["a", "b", "c", "d", "e"];
     for (letter in letters)
-	tell(letter);
+        tell(letter);
 
 or
 
     var idx, letter;
     for (idx => letter in ["a", "b", "c", "d", "e"])
-	tell(cat(intostr(idx), letter));
+        tell(cat(intostr(idx), letter));
 
 
 Exceptions
@@ -406,9 +441,9 @@ Exceptions
 You can trap errors with the `try` - `catch` construct:
 
     try {
-	setname(obj, "Foobar");
+        setname(obj, "Foobar");
     } catch (e) {
-	tell(e["error"]);
+        tell(e["error"]);
     }
 
 The variable given to the `catch` command will, when an error is received,
@@ -428,15 +463,15 @@ If you don't care about the exception details, you can just not specify the
 variable:
 
     try {
-	setname(obj, "Foobar");
+        setname(obj, "Foobar");
     } catch () {
-	tell("Could not set the name.");
+        tell("Could not set the name.");
     }
 
 If you just want to trap any errors without doing anything, you can just do:
 
     try {
-	setname(obj, "Foobar");
+        setname(obj, "Foobar");
     } catch();
 
 If you need to throw your own custom exception, you can do it with the `throw("MyError")` command.
