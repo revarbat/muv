@@ -20,15 +20,18 @@ char *savestring(const char *);
 char *indent(const char *);
 
 struct gettersetter {
-    char *get;
-    char *set;
+    const char *get;
+    const char *set;
+    const char *del;
 };
+
+void getset_free(struct gettersetter *x);
 
 struct str_list {
     const char** list;
     short count;
     short cmax;
-} lvars_list, fvars_list, inits_list, using_list;
+} lvars_list, fvars_list, vardecl_list, inits_list, using_list;
 
 void strlist_init(struct str_list *l);
 void strlist_free(struct str_list *l);
@@ -37,6 +40,7 @@ void strlist_add(struct str_list *l, const char *s);
 void strlist_pop(struct str_list *l);
 int strlist_find(struct str_list *l, const char *s);
 char *strlist_join(struct str_list *l, const char *s, int start, int end);
+char *strlist_wrap(struct str_list *l, int start, int end);
 
 struct prim_info_t {
     const char *name;
@@ -83,7 +87,8 @@ struct prim_info_t *prim_lookup(const char*s);
 %token <token> SWITCH USING CASE DEFAULT
 %token <token> DO WHILE FOR IN
 %token <token> UNTIL CONTINUE BREAK
-%token <token> TOP PUSH MUF BOOLTRUE BOOLFALSE
+%token <token> TOP PUSH MUF DEL
+%token <token> BOOLTRUE BOOLFALSE
 %token <token> UNARY EXTERN VOID SINGLE MULTIPLE
 
 %right THEN ELSE
@@ -102,7 +107,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %left PLUS MINUS
 %left MULT DIV MOD
 %right UNARY NOT BITNOT
-%left '[' ']' '(' ')'
+%left '[' ']' '(' ')' INSERT
 
 %type <str> globalstatement funcdef
 %type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
@@ -160,13 +165,18 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
     } '{' statements '}' {
         char *body = indent($9);
         char *vars = strlist_join(&$4, " ", 0, -1);
-        $$ = savefmt(": %s[ %s -- ret ]\n%s 0\n;\n\n", $2, vars, body);
+        char *decls = strlist_join(&vardecl_list, "", 0, -1);
+        char *idecls = indent(decls);
+        free(decls);
+        $$ = savefmt(": %s[ %s -- ret ]\n%s%s 0\n;\n\n", $2, vars, idecls, body);
+        free(idecls);
         free($2);
         strlist_free(&$4);
         free($9);
         free(body);
         free(vars);
         strlist_clear(&fvars_list);
+        strlist_clear(&vardecl_list);
     } ;
 
 externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
@@ -174,6 +184,7 @@ externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')
         free($3);
         strlist_free(&$5);
         strlist_clear(&fvars_list);
+        strlist_clear(&vardecl_list);
     } ;
 
 bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
@@ -448,14 +459,14 @@ function_call: function '(' arglist_or_null ')' {
             }
         }
         if ($1.hasvarargs) {
-            char* fargs = strlist_join(&$3, " ", 0, $1.expects);
-            char* vargs = strlist_join(&$3, " ", $1.expects, -1);
+            char* fargs = strlist_wrap(&$3, 0, $1.expects);
+            char* vargs = strlist_wrap(&$3, $1.expects, -1);
             $$ = savefmt("%s%s{ %s }list %s", fargs, (*fargs? " ":""), vargs, $1.code);
             free(fargs);
             free(vargs);
         } else {
-            char* funcargs = strlist_join(&$3, " ", 0, -1);
-            $$ = savefmt("%s %s", funcargs, $1.code);
+            char* funcargs = strlist_wrap(&$3, 0, -1);
+            $$ = savefmt("%s%s%s", funcargs, (*funcargs?" ":""), $1.code);
             free(funcargs);
         }
         strlist_free(&$3);
@@ -463,8 +474,9 @@ function_call: function '(' arglist_or_null ')' {
 
 primitive_call:
       TOP { $$ = savestring(""); }
-    | PUSH '(' arglist ')' { $$ = strlist_join(&$3, " ", 0, -1); strlist_free(&$3); }
+    | PUSH '(' arglist ')' { $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
     | MUF '(' STR ')' { $$ = $3; }
+    | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
     | PRIMITIVE '(' arglist_or_null ')' {
             if ($3.count != $1.expects) {
                 char buf[1024];
@@ -476,7 +488,7 @@ primitive_call:
                 yyerror(buf);
                 YYERROR;
             }
-            char *args = strlist_join(&$3, " ", 0, -1);
+            char *args = strlist_wrap(&$3, 0, -1);
             if ($1.returns == 0) {
                 $$ = savefmt("%s%s%s 0", args, (*args?" ":""), $1.code);
             } else if ($1.returns == 1) {
@@ -492,16 +504,19 @@ primitive_call:
 lvalue: variable {
             $$.get = savefmt("%s @", $1);
             $$.set = savefmt("%s !", $1);
+            $$.del = savefmt("0 %s !", $1);
             free($1);
         }
     | variable '[' expr ']' {
             $$.get = savefmt("%s @ %s []", $1, $3);
             $$.set = savefmt("%s @ %s ->[] %s !", $1, $3, $1);
+            $$.del = savefmt("%s @ %s array_delitem %s !", $1, $3, $1);
             free($1); free($3);
         }
     | variable '[' expr ']' '[' subscripts {
             $$.get = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
             $$.set = savefmt("%s @ { %s %s }list array_nested_set %s !", $1, $3, $6, $1);
+            $$.del = savefmt("%s @ { %s %s }list array_nested_del %s !", $1, $3, $6, $1);
             free($1); free($3); free($6);
         }
     ;
@@ -520,17 +535,28 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
-    | lvalue { $$ = $1.get; free($1.set); }
-    | '[' arglist_or_null ']' { char *items = strlist_join(&$2, " ", 0, -1); $$ = savefmt("{ %s }list", items); free(items); strlist_free(&$2); }
+    | lvalue { $$ = savestring($1.get); getset_free(&$1); }
+    | INSERT { $$ = savestring("{ }list"); }
+    | '[' arglist_or_null ']' {
+            char *items = strlist_wrap(&$2, 0, -1);
+            char *body = indent(items);
+            if ($2.count == 0) {
+                $$ = savestring("{ }list");
+            } else {
+                $$ = savefmt("{\n%s\n}list", body);
+            }
+            free(body); free(items);
+            strlist_free(&$2);
+        }
     | PLUS expr   %prec UNARY { $$ = $2; }
     | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
     | NOT expr    %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
     | BITNOT expr %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
     | BITAND function %prec UNARY { $$ = savefmt("'%s", $2.name); }
-    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); free($2.get); free($2.set); }
-    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); free($1.get); free($1.set); }
-    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); free($1.get); free($1.set); }
+    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); getset_free(&$2); }
+    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); getset_free(&$2); }
+    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); getset_free(&$1); }
+    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); getset_free(&$1); }
     | expr PLUS expr  { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
     | expr MINUS expr { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
     | expr MULT expr  { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
@@ -550,17 +576,18 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | lvalue ASGN expr       { $$ = savefmt("%s dup %s", $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue PLUSASGN expr   { $$ = savefmt("%s %s + dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue MINUSASGN expr  { $$ = savefmt("%s %s - dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue MULTASGN expr   { $$ = savefmt("%s %s * dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue DIVASGN expr    { $$ = savefmt("%s %s / dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue MODASGN expr    { $$ = savefmt("%s %s %% dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue BITORASGN expr  { $$ = savefmt("%s %s bitor dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue BITXORASGN expr { $$ = savefmt("%s %s bitxor dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue BITANDASGN expr { $$ = savefmt("%s %s bitand dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue BITLEFTASGN expr { $$ = savefmt("%s %s bitshift dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
-    | lvalue BITRIGHTASGN expr { $$ = savefmt("%s 0 %s - bitshift dup %s", $1.get, $3, $1.set); free($1.get); free($1.set); free($3); }
+    | lvalue ASGN expr        { $$ = savefmt("%s\ndup %s", $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue INSERT ASGN expr { $$ = savefmt("%s\ndup %s []<-\n%s", $4, $1.get, $1.set); getset_free(&$1); free($4); }
+    | lvalue PLUSASGN expr   { $$ = savefmt("%s\n%s +\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MINUSASGN expr  { $$ = savefmt("%s\n%s -\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MULTASGN expr   { $$ = savefmt("%s\n%s *\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue DIVASGN expr    { $$ = savefmt("%s\n%s /\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MODASGN expr    { $$ = savefmt("%s\n%s %%\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITORASGN expr  { $$ = savefmt("%s\n%s bitor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITXORASGN expr { $$ = savefmt("%s\n%s bitxor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITANDASGN expr { $$ = savefmt("%s\n%s bitand\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITLEFTASGN expr { $$ = savefmt("%s\n%s bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITRIGHTASGN expr { $$ = savefmt("%s\n0 %s - bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
     /* | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); } */
     ;
 
@@ -575,13 +602,19 @@ arglist:
     ;
 
 fvardef: proposed_varname {
-            $$ = savefmt("var %s", $1);
+            char *vardecl = savefmt("var %s\n", $1);
+            $$ = savestring("");
             strlist_add(&fvars_list, $1);
+            strlist_add(&vardecl_list, vardecl);
+            free(vardecl);
             free($1);
         }
     | proposed_varname ASGN expr {
-            $$ = savefmt("%s var! %s", $3, $1);
+            char *vardecl = savefmt("var %s\n", $1);
+            $$ = savefmt("%s %s !", $3, $1);
             strlist_add(&fvars_list, $1);
+            strlist_add(&vardecl_list, vardecl);
+            free(vardecl);
             free($1);
             free($3);
         }
@@ -596,6 +629,17 @@ fvarlist: fvardef { $$ = $1; }
 
 FILE *yyin=NULL;
 int yylineno = 1;
+
+
+void getset_free(struct gettersetter *x)
+{
+    free((char*)x->get);
+    free((char*)x->set);
+    free((char*)x->del);
+    x->get = NULL;
+    x->set = NULL;
+    x->del = NULL;
+}
 
 
 void
@@ -667,7 +711,7 @@ strlist_join(struct str_list *l, const char *s, int start, int end)
     const char *ptr;
     char *ptr2;
     int i;
-    char totlen = 0;
+    size_t totlen = 0;
     if (end == -1) {
         end = l->count;
     }
@@ -681,6 +725,49 @@ strlist_join(struct str_list *l, const char *s, int start, int end)
             for(ptr = s; *ptr; ) *ptr2++ = *ptr++;
         }
         for(ptr = l->list[i]; *ptr; ) *ptr2++ = *ptr++;
+    }
+    *ptr2 = '\0';
+    return buf;
+}
+
+
+char *
+strlist_wrap(struct str_list *l, int start, int end)
+{
+    char *buf;
+    const char *ptr;
+    char *ptr2;
+    int i;
+    size_t totlen = 0;
+    size_t currlen = 0;
+    if (end == -1) {
+        end = l->count;
+    }
+    for (i = start; i < l->count && i < end; i++) {
+        for (ptr = l->list[i]; *ptr++; totlen++);
+    }
+    totlen += l->count;
+    ptr2 = buf = (char*)malloc(totlen+1);
+    for (i = start; i < l->count && i < end; i++) {
+        if (i > 0) {
+            if (currlen > 0) {
+                if (currlen + strlen(l->list[i]) > 80) {
+                    *ptr2++ = '\n';
+                    currlen = 0;
+                } else {
+                    *ptr2++ = ' ';
+                    currlen++;
+                }
+            }
+        }
+        for(ptr = l->list[i]; *ptr; ) {
+            if (*ptr == '\n') {
+                currlen = 0;
+            } else {
+                currlen++;
+            }
+            *ptr2++ = *ptr++;
+        }
     }
     *ptr2 = '\0';
     return buf;
@@ -772,6 +859,7 @@ lookup(char *s, int *bval)
         "catch",     CATCH,     -1,
         "continue",  CONTINUE,  -1,
         "default",   DEFAULT,   -1,
+        "del",       DEL,       -1,
         "do",        DO,        -1,
         "else",      ELSE,      -1,
         "extern",    EXTERN,    -1,
@@ -1191,6 +1279,14 @@ yylex()
             }
             return NOT;
 
+        case '[':
+            c = fgetc(yyin);
+            if (c == ']') {
+                return INSERT;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return '[';
     }
 
     /* punt */
@@ -1505,6 +1601,7 @@ process_file(int do_headers)
     strlist_init(&using_list);
     strlist_init(&lvars_list);
     strlist_init(&fvars_list);
+    strlist_init(&vardecl_list);
     funclist_init(&funcs_list);
 
     /* Declare some utility commands. */
@@ -1545,6 +1642,7 @@ process_file(int do_headers)
     strlist_free(&using_list);
     strlist_free(&lvars_list);
     strlist_free(&fvars_list);
+    strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
     if (do_headers) {
         fprintf(stdout, ".\n");

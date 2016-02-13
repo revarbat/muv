@@ -4,8 +4,6 @@ TODO
 Required
 --------
 
-- Array append
-- Array delete
 - Dictionary initializers.
 - Declare usable MUF primitive set. (Namespaces?)
 
@@ -13,9 +11,9 @@ Required
 Would Be Nice
 -------------
 
-- Array insert
-- Array get/set range
-- Allow var declaration in `for`, `while`, `until`
+- Array insert.  foo = array_insertitem(foo, "bar") for now.
+- Allow var declaration in `for`, `while`, `until`. (harder than it should be!)
+- Array slicing (foo[2:4]) or array get/set range.
 - Reinstate ternary operator?
 - import/export?
 - Multi-line strings:

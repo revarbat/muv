@@ -1,5 +1,12 @@
 var mylvar;
 
+func loopy2() {
+    var i;
+    for (i = 0; i < 10; i++)
+        tell(intostr(i));
+}
+
+
 func loopy(count)
 {
     var i;
@@ -36,6 +43,8 @@ func loopy(count)
 
     mylvar = 4;
     tell(intostr(mylvar));
+
+    loopy2();
 }
 
 

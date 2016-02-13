@@ -3,30 +3,56 @@ func fmtnotify(player, fmt, args*) {
 }
 
 
+func dump(arr, indent) {
+    var item, out = "";
+    for (item in arr) {
+        tell(cat(indent, item));
+        if (array?(item)) {
+            dump(item, cat(indent, "  "));
+        }
+    }
+}
+
 func main() {
     var arr = [
         "First",
         "Second",
         "Third",
-        "Forth"
+        "Forth",
+        "Fifth",
+        "Sixth",
+        "Seventh",
+        "Eighth",
+        "Ninth",
+        "Tenth",
+        "Eleventh"
     ];
-    var idx;
-    var word;
+    var idx, word;
     for (word in arr) {
         tell(arr[idx]);
     }
+    var empty = [];  // initialize 'empty' with an empty array/list.
     for (idx => word in arr) {
         fmtnotify(me, "%d: %s", idx, word);
     }
     var nested = [
         [1, 2, 3, 4],
         ["a", "b", "c", "d"],
-        ["One", "Two", "Three", "Four"]
+        ["One", "Two", "Three", "Four"],
+        [
+            [ 3, 1,   4],
+            [ 9, 1,  16],
+            [81, 1, 256]
+        ]
     ];
     tell(nested[2][1]);
     nested[1] = ["Fee", "Fie", "Foe", "Fum"];
     nested[0][3] = 23;
     nested[0][3] += 2;
+    nested[0][] = "foo"; // append "foo" to the list in nexted[0];
+    nested[3][1][] = "foo"; // append "foo" to the list in nexted[3][1];
+    del(nested[2]);  // Removes the second list item from nested.
+    dump(nested, "");
 }
 
 
