@@ -38,5 +38,5 @@ You can use `-m` to wrap the output in MUF editor commands:
 
 Links
 -----
-Language reference: <https://github.com/revarbat/muv/blob/master/REFERENCE.md>
-TODO List: https://github.com/revarbat/muv/blob/master/TODO.md
+- Language reference: <https://github.com/revarbat/muv/blob/master/REFERENCE.md>
+- TODO List: <https://github.com/revarbat/muv/blob/master/TODO.md>
