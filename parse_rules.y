@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <strings.h>
+#include <string.h>
 
 int yylex(void);
 void yyerror(char *s);
