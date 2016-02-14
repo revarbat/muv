@@ -41,8 +41,8 @@ You can write:
 Code Status
 -----------
 
-Alpha code.  It compiles and runs on 32 and 64bit systems, but the language is
-still being developed.  Output code could use a lot of optimization.
+This code is in Beta.  It compiles and runs cleanly on 32bit and 64bit systems, but the language
+needs thorough testing.  The output code could use optimization.
 
 
 Compiling
