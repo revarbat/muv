@@ -1,0 +1,15 @@
+func showspecies() {
+    me = match("me");
+    loc = location(me);
+    var obj;
+    for (obj in contents_array(loc)) {
+	if(player?(obj)) {
+	    fmttell("%-30s %-10s %-30s",
+		name(obj),
+		getpropstr(obj, "sex"),
+		getpropstr(obj, "species")
+	    );
+	}
+    }
+}
+

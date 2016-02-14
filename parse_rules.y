@@ -96,7 +96,7 @@ struct prim_info_t *prim_lookup(const char*s);
 %left ',' KEYVAL
 %right ASGN PLUSASGN MINUSASGN MULTASGN DIVASGN MODASGN BITLEFTASGN BITRIGHTASGN BITANDASGN BITORASGN BITXORASGN
 %left DECR INCR
-/* %right '?' ':' */
+%right '?' ':'
 %left OR XOR
 %left AND
 %left BITOR
@@ -602,7 +602,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | lvalue BITANDASGN expr { $$ = savefmt("%s\n%s bitand\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
     | lvalue BITLEFTASGN expr { $$ = savefmt("%s\n%s bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
     | lvalue BITRIGHTASGN expr { $$ = savefmt("%s\n0 %s - bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    /* | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); } */
+    | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); }
     ;
 
 arglist_or_null: /* nothing */ { strlist_init(&$$); }

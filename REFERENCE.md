@@ -182,6 +182,7 @@ Assignment:
 
 Miscellaneous:
 - Grouping: `2 * (3 + 4)`
+- Ternary operator: `x>0 ? 1 : 2` Returns 1 if x > 0, otherwise returns 2.
 - Array subscript: `x[2]` returns the third item of the given array in `x`.
 - Array subscript assignment: `x[2] = 42` sets the third element of the array in `x` to `42`.
 
