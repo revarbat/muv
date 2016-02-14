@@ -10,16 +10,16 @@ track of stack items, when you can write code in a more modern, readable languag
 Instead of writing cryptic code like:
 
     : showspecies[  -- ret ]
+        var obj
         loc @ contents_array
-        foreach swap pop
-            dup player? if
-                dup "_species" getpropstr
-                over name
+        foreach obj ! pop
+            obj @ player? if
+                obj @ "_species" getpropstr
+                obj @ name
                 "%-30s %30s"
                 fmtstring
                 me @ swap notify
             then
-            pop
         repeat 
     ;
 
