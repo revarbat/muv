@@ -137,6 +137,7 @@ program: /* nothing */ { }
 
 globalstatement:
       VAR lvarlist ';' { $$ = $2; }
+    | MUF '(' STR ')' ';' { $$ = $3; }
     ;
 
 lvardef: proposed_varname {
