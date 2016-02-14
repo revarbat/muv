@@ -1564,6 +1564,21 @@ struct prim_info_t prims_list[] = {
     { "atan",              "atan",              1,  1,  0},
     { "atan2",             "atan2",             2,  1,  0},
 
+    { "diff3",             "diff3",             6,  3,  0},
+    { "dist3d",            "dist3d",            3,  1,  0},
+    { "xyz_to_polar",      "xyz_to_polar",      3,  3,  0},
+    { "polar_to_xyz",      "polar_to_xyz",      3,  3,  0},
+
+    { "clear",             "clear",             0,  0,  0},
+    { "clear_error",       "clear_error",       1,  1,  0},
+    { "error?",            "error?",            0,  1,  0},
+    { "error_bit",         "error_bit",         1,  1,  0},
+    { "error_name",        "error_name",        1,  1,  0},
+    { "error_num",         "error_num",         0,  1,  0},
+    { "error_str",         "error_str",         1,  1,  0},
+    { "is_set?",           "is_set?",           1,  1,  0},
+    { "set_error",         "set_error",         1,  1,  0},
+
     { "array_keys",        "{ swap array_keys pop }list",  2,  1,  0},
     { "array_vals",        "{ swap array_vals pop }list",  2,  1,  0},
 
