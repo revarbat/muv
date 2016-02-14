@@ -15,7 +15,6 @@ Would Be Nice
 - Array insert.  foo = array_insertitem(foo, "bar") for now.
 - Allow var declaration in `for`, `while`, `until`. (harder than it should be!)
 - Array slicing (foo[2:4]) or array get/set range.
-- Reinstate ternary operator?
 - Import/export?
 - Multi-line strings
 
