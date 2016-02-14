@@ -16,7 +16,7 @@ Instead of writing cryptic code like:
             obj @ player? if
                 obj @ "_species" getpropstr
                 obj @ name
-                "%-30s %30s"
+                "%-30s %-30s"
                 fmtstring
                 me @ swap notify
             then
@@ -29,7 +29,7 @@ You can write:
         var obj;
         for (obj in contents_array(loc)) {
             if (player?(obj)) {
-                fmttell("%-30s %30s",
+                fmttell("%-30s %-30s",
                     name(obj),
                     getpropstr(obj, "_species")
                 );
