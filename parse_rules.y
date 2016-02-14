@@ -1825,8 +1825,8 @@ process_file(const char *filename, int do_headers)
     funclist_add(&funcs_list, "cat", "array_interpret", 0, 1, 1);
     funclist_add(&funcs_list, "array_make", "", 0, 1, 1);
     funclist_add(&funcs_list, "array_dict_make", "{ swap array_explode pop }dict", 0, 1, 1);
-    funclist_add(&funcs_list, "fmtstring", "2 try array_explode 1 + rotate fmtstring abort catch endcatch", 1, 1, 1),
-    funclist_add(&funcs_list, "fmttell", "2 try array_explode 1 + rotate fmtstring me @ swap notify \"\" abort catch pop endcatch 0", 1, 1, 1),
+    funclist_add(&funcs_list, "fmtstring", "\n2 try\n    array_explode 1 + rotate fmtstring\n    abort\ncatch\nendcatch", 1, 1, 1),
+    funclist_add(&funcs_list, "fmttell", "\n2 try\n    array_explode 1 + rotate fmtstring\n    me @ swap notify\n    \"\" abort\ncatch pop\nendcatch 0", 1, 1, 1),
     funclist_add(&funcs_list, "execute", "{ rot rot array_explode 1 + rotate execute }list", 1, 1, 1),
 
     /* End of compiler defined funcs */
