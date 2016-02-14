@@ -562,6 +562,7 @@ MUV defines some convenience functions that MUF doesn't:
 
 `tell(msg)` simply acts like `notify(me, msg)`
 
+
 `cat(...)` takes any number of arguments, translates them into a basic
 string representation of each, and concatenates them together.
 
@@ -571,14 +572,6 @@ will return a string like
 
     "23 items belong to John_Doe"
 
-`join(delim, ...)` will similarly translate and concatenate its arguments,
-but it inserts the given `delim` string between each part.
-
-    join("_X_", count, " items belong to ", me)
-
-will return a string like:
-
-    "23_X_ items belong to _X_John_Doe"
 
 `fmtstring(fmt, ...)` roughly implements the functionality of the MUF
 primitive `fmtstring`.  The format string is similar to C's printf function.
@@ -589,6 +582,7 @@ For full details, see the documentation for the `fmtstring` MUF primitive.
 will return a string like:
 
     "#1: Wizard"
+
 
 `fmttell(fmt, ...)` is roughly the same as `tell(fmtstring(fmt, ...))`
 
