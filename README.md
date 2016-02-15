@@ -57,18 +57,24 @@ To build:
 Usage
 -----
 
-The muv program expects the input MUV source file to be given on the command-line.
-The MUF output will be printed to `STDOUT`, error messages will be printed to
-`STDERR`, and the return code will be non-zero if errors were found.
+The `muv` program expects the input MUV source file to be given on the command-line.
+The MUF output will, by default, be written to `STDOUT`.  Error messages will be
+printed to `STDERR`, and the return code will be non-zero if errors were found.
 
-    ./muv sourcefile.muv >outfile.muf
+    muv sourcefile.muv >outfile.muf
 
-You can use `-m` to wrap the output in MUF editor commands:
+You can use `-w PROGNAME` to wrap the output in MUF editor commands.
 
-    ./muv -m sourcefile.muv >outfile.muf
+    muv -w cmd-whospecies whospecies.muv >whospecies.muf
+
+Using `-o OUTFILE` will write the output MUF code to OUTFILE instead of STDOUT.
+
+    muv -o whospecies.muf whospecies.muv
 
 
 Links
 -----
 - Language reference: <https://github.com/revarbat/muv/blob/master/REFERENCE.md>
 - TODO List: <https://github.com/revarbat/muv/blob/master/TODO.md>
+
+

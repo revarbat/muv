@@ -1,12 +1,6 @@
 TODO
 ====
 
-Required for Beta
------------------
-
-- cmd-line declaration of program name for -m muf headers.
-- cmd-line declaration of output muf filename via -o.
-
 
 Would Be Nice
 -------------
@@ -31,5 +25,5 @@ Someday
 - Simple object oriented classes.
 - Standard libraries.
 - Upload to MUCK using -u:
-    `./muv -m cmd-foobar -u muck://John_Doe:mypass@muckhost.com:8888 foobar.muv`
+    `./muv -w cmd-foobar -u muck://John_Doe:mypass@muckhost.com:8888 foobar.muv`
 

@@ -9,6 +9,10 @@
 #include <ctype.h>
 #include <string.h>
 
+FILE *yyin=NULL;
+FILE *outf;
+int yylineno = 1;
+
 int yylex(void);
 void yyerror(char *s);
 
@@ -130,8 +134,8 @@ struct prim_info_t *prim_lookup(const char*s);
 %%
 
 program: /* nothing */ { }
-    | program globalstatement { printf("%s\n", $2);  free($2); }
-    | program funcdef { printf("%s\n", $2);  free($2); }
+    | program globalstatement { fprintf(outf, "%s\n", $2);  free($2); }
+    | program funcdef { fprintf(outf, "%s\n", $2);  free($2); }
     | program externdef { }
     ;
 
@@ -467,10 +471,12 @@ function_call: function '(' arglist_or_null ')' {
         }
         if ($1.hasvarargs) {
             char* fargs = strlist_wrap(&$3, 0, $1.expects);
-            char* vargs = strlist_wrap(&$3, $1.expects, -1);
-            $$ = savefmt("%s%s{ %s }list %s", fargs, (*fargs? " ":""), vargs, $1.code);
+            char* vargs = strlist_join(&$3, "\n", $1.expects, -1);
+            char* ivargs = indent(vargs);
+            $$ = savefmt("%s%s{%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
             free(fargs);
             free(vargs);
+            free(ivargs);
         } else {
             char* funcargs = strlist_wrap(&$3, 0, -1);
             $$ = savefmt("%s%s%s", funcargs, (*funcargs?" ":""), $1.code);
@@ -656,10 +662,6 @@ fvarlist: fvardef { $$ = $1; }
     ;
 
 %%
-
-
-FILE *yyin=NULL;
-int yylineno = 1;
 
 
 void getset_free(struct gettersetter *x)
@@ -1811,10 +1813,10 @@ prim_lookup(const char*s)
 
 
 int
-process_file(const char *filename, int do_headers)
+process_file(const char *filename, const char *progname)
 {
     int res = 0;
-    if (do_headers) {
+    if (progname) {
         /* Strip leading directory names. */
         const char *ptr = filename;
         while (*ptr) {
@@ -1824,10 +1826,10 @@ process_file(const char *filename, int do_headers)
                 ptr++;
             }
         }
-        fprintf(stdout, "@program %s\n", filename);
-        fprintf(stdout, "1 99999 d\n1 i\n");
-        fprintf(stdout, "( Generated from %s by the MUV compiler. )\n", filename);
-        fprintf(stdout, "(   https://github.com/revarbat/muv )\n\n");
+        fprintf(outf, "@program %s\n", progname);
+        fprintf(outf, "1 99999 d\n1 i\n");
+        fprintf(outf, "( Generated from %s by the MUV compiler. )\n", filename);
+        fprintf(outf, "(   https://github.com/revarbat/muv )\n\n");
     }
     strlist_init(&inits_list);
     strlist_init(&using_list);
@@ -1888,7 +1890,7 @@ process_file(const char *filename, int do_headers)
         const char *initfunc;
         mainfunc = indent(mainfunc);
         initfunc = savefmt(": __start\n%s%s%s\n;\n", inits2, ((*inits2 && *mainfunc)?"\n":""), mainfunc);
-        fprintf(stdout, "%s", initfunc);;
+        fprintf(outf, "%s", initfunc);;
         free(inits);
         free(inits2);
         free((void*)mainfunc);
@@ -1902,8 +1904,8 @@ process_file(const char *filename, int do_headers)
     strlist_free(&fvars_list);
     strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
-    if (do_headers) {
-        fprintf(stdout, ".\nc\nq\n");
+    if (progname) {
+        fprintf(outf, ".\nc\nq\n");
     }
     fclose(yyin);
 
@@ -1911,40 +1913,59 @@ process_file(const char *filename, int do_headers)
 }
 
 
+void
+usage(const char* execname)
+{
+    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE] FILE\n", execname);
+}
+
+
 int
 main(int argc, char **argv)
 {
     int res;
-    int do_headers = 0;
-    int do_stdin = 1;
-    const char* progname = argv[0];
+    const char *execname = argv[0];
+    const char *filename = "STDIN";
+    const char *progname = NULL;
+
+    yyin = stdin;
+    outf = stdout;
 
     argc--; argv++;
     while (argc > 0) {
-        if (!strcmp(argv[0], "-h") || ! strcmp(argv[0], "--help")) {
-            fprintf(stdout, "Usage: %s [-h] [-m] FILE\n", progname);
+        if (!strcmp(argv[0], "-w") || !strcmp(argv[0], "--wrapper")) {
+            if (argc < 2) {
+                usage(execname);
+                exit(-3);
+            }
+            argc--; argv++;
+            progname = argv[0];
+        } else if (!strcmp(argv[0], "-o") || !strcmp(argv[0], "--outfile")) {
+            if (argc < 2) {
+                usage(execname);
+                exit(-3);
+            }
+            argc--; argv++;
+            outf = fopen(argv[0], "w");
+        } else if (!strcmp(argv[0], "-h") || !strcmp(argv[0], "--help")) {
+            usage(execname);
             exit(0);
-        } else if (!strcmp(argv[0], "-m")) {
-            do_headers = 1;
         } else if (argv[0][0] == '-') {
-            fprintf(stdout, "Usage: %s [-h] [-m] FILE\n", progname);
+            usage(execname);
             exit(-3);
         } else {
-            do_stdin = 0;
-            yyin = fopen(argv[0], "r");
-            res = process_file(argv[0], do_headers);
-            if (res != 0) {
-                break;
+            if (argc > 1) {
+                usage(execname);
+                exit(-3);
             }
+            yyin = fopen(argv[0], "r");
+            filename = argv[0];
+            break;
         }
         argc--; argv++;
     }
 
-    if (do_stdin) {
-        yyin = stdin;
-        res = process_file("STDIN", do_headers);
-    }
-
+    res = process_file(filename, progname);
     return -res;
 }
 
