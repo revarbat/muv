@@ -18,5 +18,12 @@ func main(arg) {
     var squarevals = [k => v*v for (k => v in mydict)];
     var foo = [k => v*v for (k => v in mydict) if (strcmp(k,"b") > 0)];
     var bar = [k => v*v for (k => v in mydict) unless (v > 2)];
+
+    var obj;
+    var listeners = [
+        name(obj)
+	for (obj in contents_array(loc))
+	if (player?(obj) && awake?(obj))
+    ];
 }
 
