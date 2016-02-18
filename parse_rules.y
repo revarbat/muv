@@ -88,7 +88,8 @@ struct prim_info_t *prim_lookup(const char*s);
 %token <prim> PRIMITIVE DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR
 %token <str> DECLARED_VAR DECLARED_CONST
-%token <token> IF ELSE FUNC RETURN TRY CATCH
+%token <token> IF ELSE UNLESS
+%token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
 %token <token> DO WHILE FOR IN
 %token <token> UNTIL CONTINUE BREAK
@@ -121,8 +122,8 @@ struct prim_info_t *prim_lookup(const char*s);
 %type <str> undeclared_function
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> variable undeclared_variable
-%type <str> externdef statement statements paren_expr
-%type <str> comma_expr comma_expr_or_null
+%type <str> externdef simple_statement statement statements paren_expr
+%type <str> comma_expr comma_expr_or_null compr_loop compr_cond
 %type <str> function_call primitive_call expr subscripts
 %type <str> lvardef lvarlist fvardef fvarlist
 %type <str> using_clause case_clause case_clauses default_clause
@@ -285,12 +286,28 @@ argvarlist:
         }
     ;
 
+simple_statement:
+      comma_expr { $$ = savefmt("%s pop", $1); free($1); }
+    | RETURN { $$ = savestring("0 exit"); }
+    | RETURN expr { $$ = savefmt("%s exit", $2); free($2); }
+    | BREAK { $$ = savestring("break"); }
+    | CONTINUE { $$ = savestring("continue"); }
+    ;
+
 statement: ';' { $$ = savestring(""); }
-    | comma_expr ';' { $$ = savefmt("%s pop", $1); free($1); }
-    | RETURN ';' { $$ = savestring("0 exit"); }
-    | RETURN expr ';' { $$ = savefmt("%s exit", $2); free($2); }
-    | BREAK ';' { $$ = savestring("break"); }
-    | CONTINUE ';' { $$ = savestring("continue"); }
+    | simple_statement ';' { $$ = $1; }
+    | simple_statement IF paren_expr ';' {
+            char *body = indent($1);
+            $$ = savefmt("%s if\n%s\nthen", $3, body);
+            free($1); free($3);
+            free(body);
+        }
+    | simple_statement UNLESS paren_expr ';' {
+            char *body = indent($1);
+            $$ = savefmt("%s not if\n%s\nthen", $3, body);
+            free($1); free($3);
+            free(body);
+        }
     | VAR fvarlist ';' { $$ = $2; }
     | IF paren_expr statement %prec THEN {
             char *body = indent($3);
@@ -538,6 +555,27 @@ subscripts: expr ']' { $$ = $1; }
     | subscripts '[' expr ']' { $$ = savefmt("%s %s", $1, $3); free($1); free($3); }
     ;
 
+compr_cond: /* nothing */ { $$ = savestring(""); }
+    | IF paren_expr {
+            $$ = savefmt("%s\nif", $2);
+            free($2);
+        }
+    | UNLESS paren_expr {
+            $$ = savefmt("%s\nnot if", $2);
+            free($2);
+        }
+    ;
+
+compr_loop:
+      '(' variable IN expr ')' {
+            $$ = savefmt("%s\nforeach %s ! pop", $4, $2);
+            free($2); free($4);
+        }
+    | '(' variable KEYVAL variable IN expr ')' {
+            $$ = savefmt("%s\nforeach %s ! %s !", $6, $4, $2);
+            free($2); free($4);
+        }
+      
 expr: INTEGER { $$ = savefmt("%d", $1); }
     | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
     | '#' INTEGER { $$ = savefmt("#%d", $2); }
@@ -562,12 +600,46 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free(body); free(items);
             strlist_free(&$2);
         }
+    | '[' expr FOR compr_loop compr_cond ']' {
+            /* list comprehension */
+            char *body = indent($2);
+            if (*$5) {
+                char *cond = indent($5);
+                char *ibody = indent(body);
+                $$ = savefmt("[] %s\n%s\n%s swap []<-\n    then\nrepeat", $4, cond, ibody);
+                free(ibody);
+                free(cond);
+            } else {
+                $$ = savefmt("[] %s\n%s swap []<-\nrepeat", $4, body);
+            }
+            free(body);
+            free($2); free($4); free($5);
+        }
     | '[' dictlist ']' {
             char *items = strlist_wrap(&$2, 0, -1);
             char *body = indent(items);
             $$ = savefmt("{\n%s}dict", body);
             free(body); free(items);
             strlist_free(&$2);
+        }
+    | '[' expr KEYVAL expr FOR compr_loop compr_cond ']' {
+            /* list comprehension */
+            char *kexpr = indent($2);
+            char *vexpr = indent($4);
+            if (*$7) {
+                char *cond = indent($7);
+                char *ikexpr = indent(kexpr);
+                char *ivexpr = indent(vexpr);
+                $$ = savefmt("[] %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $6, cond, ivexpr, ikexpr);
+                free(cond);
+                free(ikexpr);
+                free(ivexpr);
+            } else {
+                $$ = savefmt("[] %s\n%s swap\n%s ->[]\nrepeat", $6, vexpr, kexpr);
+            }
+            free(kexpr);
+            free(vexpr);
+            free($2); free($4); free($6); free($7);
         }
     | PLUS expr   %prec UNARY { $$ = $2; }
     | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
@@ -910,6 +982,7 @@ lookup(char *s, int *bval)
         "top",       TOP,       -1,
         "true",      BOOLTRUE,  -1,
         "try",       TRY,       -1,
+        "unless",    UNLESS,    -1,
         "until",     UNTIL,     -1,
         "using",     USING,     -1,
         "var",       VAR,       -1,

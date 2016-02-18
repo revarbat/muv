@@ -63,6 +63,10 @@ or
 
     [1, 2, 4, 8]
 
+Dictionaries are declared like:
+
+    [ "key1" => "val1", "key2" => "val2", "key3" => "val3" ]
+
 
 Global Variables
 ----------------
@@ -310,13 +314,22 @@ Which is the same as:
         tell("Greater!");
     }
 
-If you need an else clause, you can do this:
+If you need an else clause, you can write it like this:
 
     if (x < 0) {
         tell("Negative!");
     } else {
         tell("Positive!");
     }
+
+For a single statement, you can conditionally execute it using a trailing
+conditional `if` or `unless` clause like:
+
+    tell("Even!") unless(x%2);
+
+or:
+
+    tell("Odd!") if (x%2);
 
 If you need to compare a value against a lot of options, you can use the
 `switch` - `case` statement:
@@ -350,10 +363,10 @@ The default clause is optional:
         }
     }
 
-With the `using` clause, you can specify a primitive or function that takes
-two arguments to use for comparisons.  When the comparison function or
-primitive returns true, then a match is found.  When `using strcmp` it special
-cases the comparison to actually be `strcmp not`.
+With the `using` clause, you can specify a primitive or function that takes two
+arguments to use for comparisons.  When the comparison function or primitive
+returns true, then a match is found.  When `using strcmp` it special cases the
+comparison to actually be `strcmp not`.  The same applies for `stringcmp`.
 
     switch (val using strcmp) {
         case("one") {
@@ -460,6 +473,40 @@ or
     var idx, letter;
     for (idx => letter in ["a", "b", "c", "d", "e"])
         tell(cat(intostr(idx), letter));
+
+
+Comprehensions
+-------------
+
+Using a variation on loops and conditionals, you can quickly create lists
+and dictionaries that are mutations of already existing lists and dictionaries.
+The original list or dictionary is untouched.
+
+For example, if you have a list of words in the variable `words`, you can create
+a list of uppercased versions of those words like this:
+
+    var word;
+    var words = ["fee", "fie", "foe", "fum"]
+    var uppers = [toupper(word) for (word in words)]
+
+Similarly, you can mutate a dictionary:
+
+    var prims = [
+        "notify" => 2,
+        "pop" => 1,
+        "swap" => 1,
+        "setpropstr" => 3
+    ];
+    var k, v;
+    var keywords = [cat("KW_", toupper(k)) => v for (k => v in prims)];
+
+You can also filter a list or dictionary by adding an `if` or `unless` clause:
+
+    var nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    var x;
+    var odds = [x for (x in nums) if (x % 2)]
+    var evens = [x for (x in nums) unless (x % 2)]
+
 
 
 Exceptions

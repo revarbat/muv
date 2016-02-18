@@ -1,0 +1,22 @@
+func main(arg) {
+    var k;
+    var v;
+
+    var mylist = [3, 4, 5, 6, 7, 8, 9];
+
+    var squares = [v*v for (v in mylist)];
+    var odds = [v for (v in mylist) if (v % 2)];
+    var evens = [v for (v in mylist) unless (v % 2)];
+
+    var mydict = [
+        "a" => 1,
+        "b" => 2,
+        "c" => 3,
+        "d" => 4
+    ];
+
+    var squarevals = [k => v*v for (k => v in mydict)];
+    var foo = [k => v*v for (k => v in mydict) if (strcmp(k,"b") > 0)];
+    var bar = [k => v*v for (k => v in mydict) unless (v > 2)];
+}
+
