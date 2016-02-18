@@ -14,10 +14,8 @@ FILE *outf;
 int yylineno = 1;
 
 int yylex(void);
+int yyparse(void);
 void yyerror(char *s);
-
-static int stringoff;
-static char varsbuf[STRBUFSIZ];
 
 char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
