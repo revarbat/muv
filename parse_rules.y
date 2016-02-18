@@ -1,7 +1,6 @@
 %{
 
 #define MAXIDENTLEN 128
-#define STRBUFSIZ 2048
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -1422,13 +1421,23 @@ char *
 savefmt(const char *fmt, ...)
 {
     va_list aptr;
-    char buf[STRBUFSIZ];
+    size_t buflen = 2048;
+    char *buf = (char*)malloc(buflen);
+    int len;
 
     va_start(aptr, fmt);
-    vsprintf(buf, fmt, aptr);
+    len = vsnprintf(buf, buflen, fmt, aptr);
     va_end(aptr);
 
-    return savestring(buf);
+    if (len >= buflen-1) {
+        buflen = len + 2;
+        buf = (char*)realloc(buf, buflen);
+        va_start(aptr, fmt);
+        len = vsnprintf(buf, buflen, fmt, aptr);
+        va_end(aptr);
+    }
+
+    return buf;
 }
 
 

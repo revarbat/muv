@@ -1,27 +1,19 @@
 TODO
 ====
 
+Short List
+----------
 
-Would Be Nice
--------------
+- Constant declarations:  `const pi = 3.14159;`
+- Allow var declaration expr:  `for (var item in arr) ...`
+- Tuple assignment:  `x, y = [y, x];`
+- Array slicing:  `s = foo[2:4];`
 
-- Constant declarations.  const pi = 3.14159;
-- Array insert.  foo = array_insertitem(foo, "bar") for now.
-- Allow var declaration in `for`, `while`, `until`. (harder than it should be!)
-- Array slicing (foo[2:4]) or array get/set range.
+
+Future
+------
+
 - Import/export?
-- Multi-line strings
-
-    ```
-    var lines = """first line
-    second line
-    third line""";
-    ```
-
-
-Someday
--------
-
 - Simple object oriented classes.
 - Standard libraries.
 - Upload to MUCK using -u:
