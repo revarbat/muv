@@ -589,7 +589,8 @@ know about how to call it.
     extern void tell(msg);
 
 will tell MUV that a function or primitive named `tell` exists that takes one
-argument, and returns nothing on the stack.
+argument, and returns nothing on the stack.  A call to this will return the
+value 0, if it is used in an expression.
 
     extern single foobar(baz, qux);
 
@@ -601,7 +602,41 @@ function, it will return that single stack item to the caller.
 
 will tell MUV that a function or primitive named `fleegul` exists, that takes
 no arguments, and returns two or more values on the stack.  When you call this
-function, it will return a list containing the returned stack items.
+function, it will return a list containing all the returned stack items.
+
+If you need to create an extern for a primitive or function that is
+problematic to describe with a normal extern, you can give raw custom MUF
+code at the end of the extern to coerce it to a normal form:
+
+    extern single concat(args*) = "array_interpret";
+
+    extern single fmtstring(fmt, args*) = "
+        2 try
+            array_explode 1 + rotate fmtstring
+            depth 0 swap - rotate depth 1 - popn
+        catch abort
+        endcatch
+    ";
+
+The arguments for the extern will be the topmost stack items, with the first
+argument being deepest on the stack.  In the case of varargs, like above,
+the topmost stack item will be a list containing all the remaining args.
+If the extern is `void`, then nothing is expected to be left on the stack.
+If the extern is `single`, then one item is expected to be left on the stack.
+If the extern is `multiple`, then all items left on the stack will be
+bundled into a list to be returned to the caller.
+
+The raw MUF code given is used INSTEAD of a call to the name of the declared
+extern.  A normal extern:
+
+    extern single foo();
+    
+will insert `foo` into the output code where a call to `foo()` is made.
+An extern with raw MUF like:
+
+    extern single foo() = "bar";
+
+will insert `bar` into the output code where a call to `foo()` is made.
 
 
 Built-Ins

@@ -183,13 +183,23 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         strlist_clear(&vardecl_list);
     } ;
 
-externdef: EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
-        funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
-        free($3);
-        strlist_free(&$5);
-        strlist_clear(&fvars_list);
-        strlist_clear(&vardecl_list);
-    } ;
+externdef:
+      EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
+            funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
+            free($3);
+            strlist_free(&$5);
+            strlist_clear(&fvars_list);
+            strlist_clear(&vardecl_list);
+        }
+    | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ASGN STR ';' {
+            funclist_add(&funcs_list, $3, $9, $5.count - ($6?1:0), $2, $6);
+            free($3);
+            strlist_free(&$5);
+            free($9);
+            strlist_clear(&fvars_list);
+            strlist_clear(&vardecl_list);
+        }
+    ;
 
 bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
     | DECLARED_CONST { $$ = $1; }
@@ -204,7 +214,7 @@ proposed_funcname:
       good_proposed_funcname { $$ = $1; }
     | bad_proposed_funcname {
         char buf[1024];
-        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared", $1);
+        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared.", $1);
         yyerror(buf);
         YYERROR;
     }
@@ -218,7 +228,7 @@ undeclared_function: IDENT { $$ = $1; }
 function: DECLARED_FUNC { $$ = $1; }
     | undeclared_function {
             char buf[1024];
-            snprintf(buf, sizeof(buf), "Undeclared function '%s'", $1);
+            snprintf(buf, sizeof(buf), "Undeclared function '%s'.", $1);
             yyerror(buf);
             YYERROR;
         }
@@ -236,7 +246,7 @@ good_proposed_varname: IDENT { $$ = $1; }
 proposed_varname: good_proposed_varname { $$ = $1; }
     | bad_proposed_varname {
         char buf[1024];
-        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared", $1);
+        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared.", $1);
         yyerror(buf);
         YYERROR;
     }
@@ -251,7 +261,7 @@ variable: DECLARED_VAR { $$ = $1; }
     | undeclared_variable {
             char buf[1024];
             $$ = $1;
-            snprintf(buf, sizeof(buf), "Undeclared variable '%s'", $1);
+            snprintf(buf, sizeof(buf), "Undeclared variable '%s'.", $1);
             yyerror(buf);
             YYERROR;
         }
@@ -260,7 +270,7 @@ variable: DECLARED_VAR { $$ = $1; }
 ret_count_type:
       VOID { $$ = 0; }
     | SINGLE  { $$ = 1; }
-    | MULTIPLE { $$ = 999; }
+    | MULTIPLE { $$ = 99; }
     ;
 
 opt_varargs: /* nothing */ { $$ = 0; }
@@ -460,11 +470,12 @@ comma_expr: expr { $$ = $1; }
     ;
 
 function_call: function '(' arglist_or_null ')' {
+        char *basecall;
         if ($1.hasvarargs) {
             if ($3.count < $1.expects) {
                 char buf[1024];
                 snprintf(buf, sizeof(buf),
-                    "Function '%s' expects at least %d args, but was provided %d args",
+                    "Function '%s' expects at least %d args, but was provided %d args.",
                     $1.name, $1.expects, $3.count
                 );
                 strlist_free(&$3);
@@ -475,7 +486,7 @@ function_call: function '(' arglist_or_null ')' {
             if ($3.count != $1.expects) {
                 char buf[1024];
                 snprintf(buf, sizeof(buf),
-                    "Function '%s' expects %d args, but was provided %d args",
+                    "Function '%s' expects %d args, but was provided %d args.",
                     $1.name, $1.expects, $3.count
                 );
                 strlist_free(&$3);
@@ -487,15 +498,23 @@ function_call: function '(' arglist_or_null ')' {
             char* fargs = strlist_wrap(&$3, 0, $1.expects);
             char* vargs = strlist_join(&$3, "\n", $1.expects, -1);
             char* ivargs = indent(vargs);
-            $$ = savefmt("%s%s{%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
+            basecall = savefmt("%s%s{%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
             free(fargs);
             free(vargs);
             free(ivargs);
         } else {
             char* funcargs = strlist_wrap(&$3, 0, -1);
-            $$ = savefmt("%s%s%s", funcargs, (*funcargs?" ":""), $1.code);
+            basecall = savefmt("%s%s%s", funcargs, (*funcargs?" ":""), $1.code);
             free(funcargs);
         }
+        if ($1.returns == 0) {
+            $$ = savefmt("%s 0", basecall);
+        } else if ($1.returns == 1) {
+            $$ = savestring(basecall);
+        } else {
+            $$ = savefmt("{ %s }list", basecall);
+        }
+        free(basecall);
         strlist_free(&$3);
     } ;
 
@@ -508,7 +527,7 @@ primitive_call:
             if ($3.count != $1.expects) {
                 char buf[1024];
                 snprintf(buf, sizeof(buf),
-                    "Built-in primitive '%s' expects %d args, but was provided %d args",
+                    "Built-in primitive '%s' expects %d args, but was provided %d args.",
                     $1.name, $1.expects, $3.count
                 );
                 strlist_free(&$3);
@@ -1158,7 +1177,7 @@ yylex()
 
         while ((c = fgetc(yyin)) != EOF && (isalnum(c) || c == '_' || c == '?')) {
             if (++cnt + 1 >= MAXIDENTLEN) {
-                yyerror("identifier too long");
+                yyerror("Identifier too long.");
             }
             *p++ = c;
         }
@@ -1221,7 +1240,7 @@ yylex()
             }
 
             if (++cnt + 1 >= sizeof(in)) {
-                yyerror("string too long");
+                yyerror("string too long.");
             }
 
             /* we have to guard the line count */
@@ -1239,7 +1258,7 @@ yylex()
         }
 
         if (c == EOF) {
-            yyerror("EOF in quoted string");
+            yyerror("EOF in quoted string.");
         }
 
         *p = '\0';
@@ -1480,7 +1499,7 @@ indent(const char *arg)
 void
 yyerror(char *arg)
 {
-    fprintf(stderr, "%s in line %d\n", arg, yylineno);
+    fprintf(stderr, "ERROR in line %d: %s\n", yylineno, arg);
 }
 
 
@@ -1960,7 +1979,7 @@ process_file(const char *filename, const char *progname)
 
     res = yyparse();
     if (res == 2) {
-        yyerror("Out of Memory");
+        yyerror("Out of Memory.");
     }
 
     if (res == 0) {
@@ -1985,7 +2004,9 @@ process_file(const char *filename, const char *progname)
     strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
     if (progname) {
-        fprintf(outf, ".\nc\nq\n");
+        fprintf(outf, ".\n");
+        fprintf(outf, "c\n");
+        fprintf(outf, "q\n");
     }
     fclose(yyin);
 
