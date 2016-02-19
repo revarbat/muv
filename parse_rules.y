@@ -8,6 +8,22 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "strlist.h"
+#include "keyval.h"
+#include "funcinfo.h"
+#include "strutils.h"
+#include "mufprims.h"
+
+
+struct kvmap global_consts;
+struct kvmap function_consts;
+struct strlist lvars_list;
+struct strlist fvars_list;
+struct strlist vardecl_list;
+struct strlist inits_list;
+struct strlist using_list;
+struct funclist funcs_list;
+
 FILE *yyin=NULL;
 FILE *outf;
 int yylineno = 1;
@@ -16,55 +32,6 @@ int yylex(void);
 int yyparse(void);
 void yyerror(char *s);
 
-char *savefmt(const char *fmt, ...);
-char *savestring(const char *);
-char *indent(const char *);
-
-struct gettersetter {
-    const char *get;
-    const char *set;
-    const char *del;
-};
-
-void getset_free(struct gettersetter *x);
-
-struct str_list {
-    const char** list;
-    short count;
-    short cmax;
-} lvars_list, sconst_list, fvars_list, vardecl_list, inits_list, using_list;
-
-void strlist_init(struct str_list *l);
-void strlist_free(struct str_list *l);
-void strlist_clear(struct str_list *l);
-void strlist_add(struct str_list *l, const char *s);
-void strlist_pop(struct str_list *l);
-int strlist_find(struct str_list *l, const char *s);
-char *strlist_join(struct str_list *l, const char *s, int start, int end);
-char *strlist_wrap(struct str_list *l, int start, int end);
-
-struct prim_info_t {
-    const char *name;
-    const char *code;
-    short expects;
-    short returns;
-    short hasvarargs;
-};
-
-void priminfo_free(struct prim_info_t *l);
-
-struct prim_list_t {
-    struct prim_info_t* list;
-    short count;
-    short cmax;
-} funcs_list;
-
-void funclist_init(struct prim_list_t *l);
-void funclist_free(struct prim_list_t *l);
-void funclist_add(struct prim_list_t *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs);
-struct prim_info_t *funclist_find(struct prim_list_t *l, const char *s);
-
-struct prim_info_t *prim_lookup(const char*s);
 
 /* compiler state exception flag */
 %}
@@ -75,16 +42,18 @@ struct prim_info_t *prim_lookup(const char*s);
     char *str;
     int num_int;
     double num_float;
-    struct str_list list;
-    struct prim_info_t prim;
+    struct strlist list;
+    struct keyval_t keyval;
+    struct funcinfo_t prim;
     struct gettersetter getset;
 }
 
 
 %token <num_int> INTEGER
 %token <prim> PRIMITIVE DECLARED_FUNC
-%token <str> FLOAT STR IDENT VAR
-%token <str> DECLARED_VAR DECLARED_CONST
+%token <str> FLOAT STR IDENT VAR CONST
+%token <str> DECLARED_VAR
+%token <keyval> DECLARED_CONST
 %token <token> IF ELSE UNLESS
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
@@ -139,6 +108,11 @@ program: /* nothing */ { }
 
 globalstatement:
       VAR lvarlist ';' { $$ = $2; }
+    | CONST proposed_varname ASGN expr ';' {
+            $$ = savestring("");
+            kvmap_add(&global_consts, $2, $4);
+            free($2); free($4);
+        }
     | MUF '(' STR ')' ';' { $$ = $3; }
     ;
 
@@ -181,6 +155,7 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         free(vars);
         strlist_clear(&fvars_list);
         strlist_clear(&vardecl_list);
+        kvmap_clear(&function_consts);
     } ;
 
 externdef:
@@ -202,7 +177,7 @@ externdef:
     ;
 
 bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
-    | DECLARED_CONST { $$ = $1; }
+    | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
@@ -222,7 +197,7 @@ proposed_funcname:
 
 undeclared_function: IDENT { $$ = $1; }
     | DECLARED_VAR { $$ = $1; }
-    | DECLARED_CONST { $$ = $1; }
+    | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     ;
 
 function: DECLARED_FUNC { $$ = $1; }
@@ -235,7 +210,7 @@ function: DECLARED_FUNC { $$ = $1; }
     ;
 
 bad_proposed_varname: DECLARED_VAR { $$ = $1; }
-    | DECLARED_CONST { $$ = $1; }
+    | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
@@ -316,6 +291,11 @@ statement: ';' { $$ = savestring(""); }
             free(body);
         }
     | VAR fvarlist ';' { $$ = $2; }
+    | CONST proposed_varname ASGN expr ';' {
+            $$ = savestring("");
+            kvmap_add(&function_consts, $2, $4);
+            free($2); free($4);
+        }
     | IF paren_expr statement %prec THEN {
             char *body = indent($3);
             $$ = savefmt("%s if\n%s\nthen", $2, body);
@@ -599,7 +579,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | STR { $$ = savefmt("\"%s\"", $1); free($1); }
     | BOOLTRUE { $$ = savestring("1"); }
     | BOOLFALSE { $$ = savestring("0"); }
-    | DECLARED_CONST { $$ = $1; }
+    | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
     | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
@@ -752,208 +732,6 @@ fvarlist: fvardef { $$ = $1; }
 %%
 
 
-void getset_free(struct gettersetter *x)
-{
-    free((char*)x->get);
-    free((char*)x->set);
-    free((char*)x->del);
-    x->get = NULL;
-    x->set = NULL;
-    x->del = NULL;
-}
-
-
-void
-strlist_init(struct str_list *l)
-{
-    l->count = 0;
-    l->cmax = 8;
-    l->list = (const char**)malloc(sizeof(const char*) * l->cmax);
-}
-
-
-void
-strlist_free(struct str_list *l)
-{
-    for (int i = 0; i < l->count; i++) {
-        free((void*) l->list[i]);
-    }
-    free(l->list);
-    l->list = 0;
-    l->count = 0;
-    l->cmax = 0;
-}
-
-
-void
-strlist_clear(struct str_list *l)
-{
-    strlist_free(l);
-    strlist_init(l);
-}
-
-
-void
-strlist_add(struct str_list *l, const char *s)
-{
-    if (l->count >= l->cmax) {
-        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
-        l->list = (const char**)realloc(l->list, sizeof(const char*) * l->cmax);
-    }
-    l->list[l->count++] = savestring(s);
-}
-
-
-void
-strlist_pop(struct str_list *l)
-{
-    if (l->count > 0) {
-        free((void*) l->list[--l->count]);
-    }
-}
-
-
-int
-strlist_find(struct str_list *l, const char *s)
-{
-    for (int i = 0; i < l->count; i++) {
-        if (!strcmp(l->list[i], s)) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-
-char *
-strlist_join(struct str_list *l, const char *s, int start, int end)
-{
-    char *buf;
-    const char *ptr;
-    char *ptr2;
-    int i;
-    size_t totlen = 0;
-    if (end == -1) {
-        end = l->count;
-    }
-    for (i = start; i < l->count && i < end; i++) {
-        for (ptr = l->list[i]; *ptr++; totlen++);
-    }
-    totlen += strlen(s) * l->count;
-    ptr2 = buf = (char*)malloc(totlen+1);
-    for (i = start; i < l->count && i < end; i++) {
-        if (i > 0) {
-            for(ptr = s; *ptr; ) *ptr2++ = *ptr++;
-        }
-        for(ptr = l->list[i]; *ptr; ) *ptr2++ = *ptr++;
-    }
-    *ptr2 = '\0';
-    return buf;
-}
-
-
-char *
-strlist_wrap(struct str_list *l, int start, int end)
-{
-    char *buf;
-    const char *ptr;
-    char *ptr2;
-    int i;
-    size_t totlen = 0;
-    size_t currlen = 0;
-    if (end == -1) {
-        end = l->count;
-    }
-    for (i = start; i < l->count && i < end; i++) {
-        for (ptr = l->list[i]; *ptr++; totlen++);
-    }
-    totlen += l->count;
-    ptr2 = buf = (char*)malloc(totlen+1);
-    for (i = start; i < l->count && i < end; i++) {
-        if (i > 0) {
-            if (currlen > 0) {
-                if (currlen + strlen(l->list[i]) > 80) {
-                    *ptr2++ = '\n';
-                    currlen = 0;
-                } else {
-                    *ptr2++ = ' ';
-                    currlen++;
-                }
-            }
-        }
-        for(ptr = l->list[i]; *ptr; ) {
-            if (*ptr == '\n') {
-                currlen = 0;
-            } else {
-                currlen++;
-            }
-            *ptr2++ = *ptr++;
-        }
-    }
-    *ptr2 = '\0';
-    return buf;
-}
-
-
-void
-priminfo_free(struct prim_info_t *l)
-{
-    free((void*) l->name);
-    free((void*) l->code);
-}
-
-
-void
-funclist_init(struct prim_list_t *l)
-{
-    l->count = 0;
-    l->cmax = 8;
-    l->list = (struct prim_info_t*)malloc(sizeof(struct prim_info_t) * l->cmax);
-}
-
-
-void
-funclist_free(struct prim_list_t *l)
-{
-    for (int i = 0; i < l->count; i++) {
-        priminfo_free(&l->list[i]);
-    }
-    free(l->list);
-    l->list = 0;
-    l->count = 0;
-    l->cmax = 0;
-}
-
-
-void
-funclist_add(struct prim_list_t *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs)
-{
-    struct prim_info_t *p;
-    if (l->count >= l->cmax) {
-        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
-        l->list = (struct prim_info_t*)realloc(l->list, sizeof(struct prim_info_t) * l->cmax);
-    }
-    p = &l->list[l->count];
-    p->name = savestring(name);
-    p->code = savestring(code);
-    p->expects = argcnt;
-    p->returns = retcnt;
-    p->hasvarargs = hasvarargs;
-    l->count++;
-}
-
-
-struct prim_info_t *
-funclist_find(struct prim_list_t *l, const char *s)
-{
-    for (int i = 0; i < l->count; i++) {
-        if (!strcmp(l->list[i].name, s)) {
-            return &l->list[i];
-        }
-    }
-    return NULL;
-}
-
 
 void
 setyyinput(FILE *f)
@@ -975,36 +753,37 @@ lookup(char *s, int *bval)
         int bltin;  /* # of builtin if builtin */
     } keyz[] = {
         /* MUST BE IN LEXICAL SORT ORDER !!!!!! */
-        "break",     BREAK,     -1,
-        "case",      CASE,      -1,
-        "catch",     CATCH,     -1,
-        "continue",  CONTINUE,  -1,
-        "default",   DEFAULT,   -1,
-        "del",       DEL,       -1,
-        "do",        DO,        -1,
-        "else",      ELSE,      -1,
-        "extern",    EXTERN,    -1,
-        "false",     BOOLFALSE, -1,
-        "for",       FOR,       -1,
-        "func",      FUNC,      -1,
-        "if",        IF,        -1,
-        "in",        IN,        -1,
-        "muf",       MUF,       -1,
-        "multiple",  MULTIPLE,  -1,
-        "push",      PUSH,      -1,
-        "return",    RETURN,    -1,
-        "single",    SINGLE,    -1,
-        "switch",    SWITCH,    -1,
-        "top",       TOP,       -1,
-        "true",      BOOLTRUE,  -1,
-        "try",       TRY,       -1,
-        "unless",    UNLESS,    -1,
-        "until",     UNTIL,     -1,
-        "using",     USING,     -1,
-        "var",       VAR,       -1,
-        "void",      VOID,      -1,
-        "while",     WHILE,     -1,
-        0, 0, 0
+        {"break",     BREAK,     -1},
+        {"case",      CASE,      -1},
+        {"catch",     CATCH,     -1},
+        {"const",     CONST,     -1},
+        {"continue",  CONTINUE,  -1},
+        {"default",   DEFAULT,   -1},
+        {"del",       DEL,       -1},
+        {"do",        DO,        -1},
+        {"else",      ELSE,      -1},
+        {"extern",    EXTERN,    -1},
+        {"false",     BOOLFALSE, -1},
+        {"for",       FOR,       -1},
+        {"func",      FUNC,      -1},
+        {"if",        IF,        -1},
+        {"in",        IN,        -1},
+        {"muf",       MUF,       -1},
+        {"multiple",  MULTIPLE,  -1},
+        {"push",      PUSH,      -1},
+        {"return",    RETURN,    -1},
+        {"single",    SINGLE,    -1},
+        {"switch",    SWITCH,    -1},
+        {"top",       TOP,       -1},
+        {"true",      BOOLTRUE,  -1},
+        {"try",       TRY,       -1},
+        {"unless",    UNLESS,    -1},
+        {"until",     UNTIL,     -1},
+        {"using",     USING,     -1},
+        {"var",       VAR,       -1},
+        {"void",      VOID,      -1},
+        {"while",     WHILE,     -1},
+        {NULL, 0, 0}
     };
 
     int end = (sizeof(keyz) / sizeof(struct kwordz)) - 2;
@@ -1035,7 +814,7 @@ yylex()
     char in[BUFSIZ];
     char *p = in;
     int c, digit;
-    struct prim_info_t* pinfo;
+    struct funcinfo_t* pinfo;
     short base = 10;
 
     do {
@@ -1174,6 +953,7 @@ yylex()
         int cnt = 0;
         int rv;
         int bltin;
+        const char *cp;
 
         while ((c = fgetc(yyin)) != EOF && (isalnum(c) || c == '_' || c == '?')) {
             if (++cnt + 1 >= MAXIDENTLEN) {
@@ -1208,14 +988,24 @@ yylex()
             return DECLARED_FUNC;
         }
 
-        /* Server constants */
-        if (strlist_find(&sconst_list, in) >= 0) {
-            yylval.str = savestring(in);
+        /* function constants */
+        cp = kvmap_get(&function_consts, in);
+        if (cp) {
+            yylval.keyval.key = savestring(in);
+            yylval.keyval.val = savestring(cp);
+            return DECLARED_CONST;
+        }
+
+        /* global constants */
+        cp = kvmap_get(&global_consts, in);
+        if (cp) {
+            yylval.keyval.key = savestring(in);
+            yylval.keyval.val = savestring(cp);
             return DECLARED_CONST;
         }
 
         /* primitives match after everything else. */
-        if ((pinfo = prim_lookup(in))) {
+        if ((pinfo = funclookup(in))) {
             yylval.prim = *pinfo;
             return PRIMITIVE;
         }
@@ -1426,487 +1216,10 @@ yylex()
 
 
 
-char *
-savestring(const char *arg)
-{
-    char *tmp = (char *)malloc(strlen(arg) + 1);
-    strcpy(tmp, arg);
-    return(tmp);
-}
-
-
-
-char *
-savefmt(const char *fmt, ...)
-{
-    va_list aptr;
-    size_t buflen = 2048;
-    char *buf = (char*)malloc(buflen);
-    int len;
-
-    va_start(aptr, fmt);
-    len = vsnprintf(buf, buflen, fmt, aptr);
-    va_end(aptr);
-
-    if (len >= buflen-1) {
-        buflen = len + 2;
-        buf = (char*)realloc(buf, buflen);
-        va_start(aptr, fmt);
-        len = vsnprintf(buf, buflen, fmt, aptr);
-        va_end(aptr);
-    }
-
-    return buf;
-}
-
-
-
-char *
-indent(const char *arg)
-{
-    const int indentlen = 4;
-    char *buf;
-    const char *ptr;
-    char *ptr2;
-    int i, lines;
-
-    if (!arg || !*arg) {
-        return savestring("");
-    }
-    for (ptr = arg, lines = 1; *ptr; ptr++) {
-        if (*ptr == '\n') {
-            lines++;
-        }
-    }
-    buf = (char *)malloc(strlen(arg) + 1 + indentlen*lines);
-    ptr = arg;
-    ptr2 = buf;
-    while (*ptr) {
-        for (i = 0; *ptr != '\n' && i < indentlen; i++) {
-            *ptr2++ = ' ';
-        }
-        while (*ptr) {
-            *ptr2++ = *ptr;
-            if (*ptr++ == '\n') break;
-        }
-    }
-    *ptr2 = '\0';
-    return buf;
-}
-
-
-
 void
 yyerror(char *arg)
 {
     fprintf(stderr, "ERROR in line %d: %s\n", yylineno, arg);
-}
-
-
-
-struct prim_info_t prims_list[] = {
-    { "throw",             "abort",             1,  0,  0},
-    { "abort",             "abort",             1,  0,  0},
-
-    { "awake?",            "awake?",            1,  1,  0},
-    { "online",            "online_array",      0,  1,  0},
-    { "online_array",      "online_array",      0,  1,  0},
-
-    { "conboot",           "conboot",           1,  1,  0},
-    { "concount",          "concount",          0,  1,  0},
-    { "condbref",          "condbref",          1,  1,  0},
-    { "condescr",          "condescr",          1,  1,  0},
-    { "conhost",           "conhost",           1,  1,  0},
-    { "conidle",           "conidle",           1,  1,  0},
-    { "connotify",         "connotify",         2,  0,  0},
-    { "contime",           "contime",           1,  1,  0},
-    { "conuser",           "conuser",           1,  1,  0},
-
-    { "descr",             "descr",             0,  1,  0},
-    { "descr_array",       "descr_array",       1,  1,  0},
-    { "descr_setuser",     "descr_setuser",     3,  1,  0},
-    { "descrboot",         "descrboot",         1,  1,  0},
-    { "descrbufsize",      "descrbufsize",      1,  1,  0},
-    { "descrcon",          "descrcon",          1,  1,  0},
-    { "descrdbref",        "descrdbref",        1,  1,  0},
-    { "descrflush",        "descrflush",        1,  0,  0},
-    { "descrhost",         "descrhost",         1,  1,  0},
-    { "descridle",         "descridle",         1,  1,  0},
-    { "descriptors",       "descriptors pop",   1, 99,  0},
-    { "descrleastidle",    "descrleastidle",    1,  1,  0},
-    { "descrmostidle",     "descrmostidle",     1,  1,  0},
-    { "descrnotify",       "descrnotify",       2,  0,  0},
-    { "descrsecure?",      "descrsecure?",      1,  1,  0},
-    { "descrtime",         "descrtime",         1,  1,  0},
-    { "descruser",         "descruser",         1,  1,  0},
-    { "firstdescr",        "firstdescr",        1,  1,  0},
-    { "lastdescr",         "lastdescr",         1,  1,  0},
-    { "nextdescr",         "nextdescr",         1,  1,  0},
-
-    { "call",              "call",              1, 99,  0},
-    { "call_public",       "call",              2, 99,  0},
-    { "cancall",           "cancall?",          2,  1,  0},
-    { "interp",            "interp",            3,  1,  0},
-
-    { "event_count",       "event_count",       0,  1,  0},
-    { "event_exists",      "event_exists",      1,  1,  0},
-    { "event_wait",        "event_wait",        0,  2,  0},
-    { "event_waitfor",     "event_waitfor",     1,  2,  0},
-    { "event_send",        "event_send",        3,  0,  0},
-    { "timer_start",       "timer_start",       2,  0,  0},
-    { "timer_stop",        "timer_stop",        1,  0,  0},
-    { "watchpid",          "watchpid",          1,  0,  0},
-
-    { "tell",              "me @ swap notify",  1,  0,  0},
-    { "notify",            "notify",            2,  0,  0},
-    { "notify_except",     "notify_except",     3,  0,  0},
-    { "notify_exclude", "swap array_explode dup 2 + rotate notify_exclude",  3,  0,  0},
-    { "array_notify",      "array_notify",      2,  0,  0},
-    { "user_log",          "user_log",          1,  0,  0},
-    { "read",              "read",              0,  1,  0},
-    { "tread",             "tread",             1,  2,  0},
-    { "read_wants_blanks", "read_wants_blanks", 0,  0,  0},
-
-    { "atoi",              "atoi",              1,  1,  0},
-    { "ctoi",              "ctoi",              1,  1,  0},
-    { "int",               "int",               1,  1,  0},
-    { "intostr",           "intostr",           1,  1,  0},
-    { "itoc",              "itoc",              1,  1,  0},
-    { "stod",              "stod",              1,  1,  0},
-    { "dbref",             "dbref",             1,  1,  0},
-
-    { "prog",              "prog",              0,  1,  0},
-    { "trig",              "trig",              0,  1,  0},
-    { "caller",            "caller",            0,  1,  0},
-
-    { "address?",          "address?",          1,  1,  0},
-    { "array?",            "array?",            1,  1,  0},
-    { "dbref?",            "dbref?",            1,  1,  0},
-    { "dictionary?",       "dictionary?",       1,  1,  0},
-    { "float?",            "float?",            1,  1,  0},
-    { "int?",              "int?",              1,  1,  0},
-    { "lock?",             "lock?",             1,  1,  0},
-    { "number?",           "number?",           1,  1,  0},
-    { "string?",           "string?",           1,  1,  0},
-
-    { "explode",           "explode_array",     2,  1,  0},
-    { "instr",             "instr",             2,  1,  0},
-    { "instring",          "instring",          2,  1,  0},
-    { "midstr",            "midstr",            3,  1,  0},
-    { "rinstr",            "rinstr",            2,  1,  0},
-    { "rinstring",         "rinstring",         2,  1,  0},
-    { "rsplit",            "rsplit",            2,  2,  0},
-    { "smatch",            "smatch",            2,  1,  0},
-    { "split",             "split",             2,  2,  0},
-    { "strcat",            "strcat",            2,  1,  0},
-    { "strcmp",            "strcmp",            2,  1,  0},
-    { "strcut",            "strcut",            2,  2,  0},
-    { "stringcmp",         "stringcmp",         2,  1,  0},
-    { "stringpfx",         "stringpfx",         2,  1,  0},
-    { "strip",             "strip",             1,  1,  0},
-    { "striplead",         "striplead",         1,  1,  0},
-    { "striptail",         "striptail",         1,  1,  0},
-    { "strlen",            "strlen",            1,  1,  0},
-    { "strmatch",          "strmatch",          2,  1,  0},
-    { "strncmp",           "strncmp",           3,  1,  0},
-    { "subst",             "subst",             3,  1,  0},
-    { "tolower",           "tolower",           1,  1,  0},
-    { "toupper",           "toupper",           1,  1,  0},
-
-    { "strencrypt",        "strencrypt",        2,  1,  0},
-    { "strdecrypt",        "strdecrypt",        2,  1,  0},
-
-    { "regexp",            "regexp",            3,  2,  0},
-    { "regsub",            "regsub",            4,  1,  0},
-
-    { "locked?",           "locked?",           2,  1,  0},
-    { "parselock",         "parselock",         1,  1,  0},
-    { "unparselock",       "unparselock",       1,  1,  0},
-    { "prettylock",        "prettylock",        1,  1,  0},
-    { "testlock",          "testlock",          2,  1,  0},
-    { "setlockstr",        "setlockstr",        2,  1,  0},
-    { "getlockstr",        "getlockstr",        1,  1,  0},
-
-    { "array_fmtstrings",  "array_fmtstrings",  2,  1,  0},
-    { "pronoun_sub",       "pronoun_sub",       2,  1,  0},
-    { "tokensplit",        "tokensplit",        3,  3,  0},
-
-    { "textattr",          "textattr",          2,  1,  0},
-    { "ansi_strip",        "ansi_strip",        1,  1,  0},
-    { "ansi_strlen",       "ansi_strlen",       1,  1,  0},
-    { "ansi_strcut",       "ansi_strcut",       2,  2,  0},
-    { "ansi_midstr",       "ansi_midstr",       3,  1,  0},
-
-    { "getseed",           "getseed",           0,  1,  0},
-    { "setseed",           "setseed",           1,  0,  0},
-    { "srand",             "srand",             0,  1,  0},
-    { "frand",             "frand",             0,  1,  0},
-    { "random",            "random",            0,  1,  0},
-    { "gaussian",          "gaussian",          2,  1,  0},
-
-    { "abs",               "abs",               1,  1,  0},
-    { "ceil",              "ceil",              1,  1,  0},
-    { "floor",             "floor",             1,  1,  0},
-    { "fmod",              "fmod",              2,  1,  0},
-    { "modf",              "modf",              1,  2,  0},
-    { "sign",              "sign",              1,  1,  0},
-
-    { "sqrt",              "sqrt",              1,  1,  0},
-    { "pow",               "pow",               2,  1,  0},
-    { "log",               "log",               1,  1,  0},
-    { "exp",               "exp",               1,  1,  0},
-    { "log10",             "log10",             1,  1,  0},
-    { "exp10",             "exp10",             1,  1,  0},
-
-    { "sin",               "sin",               1,  1,  0},
-    { "cos",               "cos",               1,  1,  0},
-    { "tan",               "tan",               1,  1,  0},
-    { "asin",              "asin",              1,  1,  0},
-    { "acos",              "acos",              1,  1,  0},
-    { "atan",              "atan",              1,  1,  0},
-    { "atan2",             "atan2",             2,  1,  0},
-
-    { "diff3",             "diff3",             6,  3,  0},
-    { "dist3d",            "dist3d",            3,  1,  0},
-    { "xyz_to_polar",      "xyz_to_polar",      3,  3,  0},
-    { "polar_to_xyz",      "polar_to_xyz",      3,  3,  0},
-
-    { "clear",             "clear",             0,  0,  0},
-    { "clear_error",       "clear_error",       1,  1,  0},
-    { "error?",            "error?",            0,  1,  0},
-    { "error_bit",         "error_bit",         1,  1,  0},
-    { "error_name",        "error_name",        1,  1,  0},
-    { "error_num",         "error_num",         0,  1,  0},
-    { "error_str",         "error_str",         1,  1,  0},
-    { "is_set?",           "is_set?",           1,  1,  0},
-    { "set_error",         "set_error",         1,  1,  0},
-
-    { "array_keys",        "{ swap array_keys pop }list",  2,  1,  0},
-    { "array_vals",        "{ swap array_vals pop }list",  2,  1,  0},
-
-    { "array_appenditem",   "array_appenditem",   2,  1,  0},
-    { "array_compare",      "array_compare",      2,  1,  0},
-    { "array_cut",          "array_cut",          2,  2,  0},
-    { "array_delitem",      "array_delitem",      2,  1,  0},
-    { "array_delrange",     "array_delrange",     3,  1,  0},
-    { "array_diff",         "array_diff",         2,  1,  0},
-    { "array_excludeval",   "array_excludeval",   2,  1,  0},
-    { "array_extract",      "array_extract",      2,  1,  0},
-    { "array_findval",      "array_findval",      2,  1,  0},
-    { "array_first",        "array_first",        1,  2,  0},
-    { "array_getrange",     "array_getrange",     2,  1,  0},
-    { "array_insertitem",   "array_insertitem",   3,  1,  0},
-    { "array_insertrange",  "array_insertrange",  3,  1,  0},
-    { "array_interpret",    "array_interpret",    1,  1,  0},
-    { "array_intersect",    "array_intersect",    2,  1,  0},
-    { "array_join",         "array_join",         2,  1,  0},
-    { "array_last",         "array_last",         1,  2,  0},
-    { "array_matchkey",     "array_matchkey",     2,  1,  0},
-    { "array_matchval",     "array_matchval",     2,  1,  0},
-    { "array_nested_del",   "array_nested_del",   2,  1,  0},
-    { "array_nested_get",   "array_nested_get",   2,  1,  0},
-    { "array_nested_set",   "array_nested_set",   3,  1,  0},
-    { "array_next",         "array_next",         2,  2,  0},
-    { "array_prev",         "array_prev",         2,  2,  0},
-    { "array_reverse",      "array_reverse",      1,  1,  0},
-    { "array_setrange",     "array_setrange",     3,  1,  0},
-    { "array_sort",         "array_sort",         2,  1,  0},
-    { "array_sort_indexed", "array_sort_indexed", 3,  1,  0},
-    { "array_union",        "array_union",        2,  1,  0},
-
-    { "dbtop",             "dbtop",             0,  1,  0},
-    { "dbcmp",             "dbcmp",             2,  1,  0},
-    { "unparseobj",        "unparseobj",        1,  1,  0},
-    { "owner",             "owner",             1,  1,  0},
-    { "setown",            "setown",            2,  0,  0},
-    { "location",          "location",          1,  1,  0},
-    { "moveto",            "moveto",            2,  0,  0},
-    { "contents",          "contents",          1,  1,  0},
-    { "contents_array",    "contents_array",    1,  1,  0},
-    { "exits",             "exits",             1,  1,  0},
-    { "exits_array",       "exits_array",       1,  1,  0},
-    { "next",              "next",              1,  1,  0},
-    { "nextowned",         "nextowned",         1,  1,  0},
-    { "findnext",          "findnext",          4,  1,  0},
-    { "nextentrance",      "nextentrance",      2,  1,  0},
-    { "controls",          "controls",          2,  1,  0},
-
-    { "copyobj",           "copyobj",           1,  1,  0},
-    { "copyplayer",        "copyplayer",        3,  1,  0},
-    { "toadplayer",        "toadplayer",        2,  0,  0},
-    { "newplayer",         "newplayer",         2,  1,  0},
-    { "newroom",           "newroom",           2,  1,  0},
-    { "newobject",         "newobject",         2,  1,  0},
-    { "newexit",           "newexit",           2,  1,  0},
-    { "newprogram",        "newprogram",        2,  1,  0},
-    { "recycle",           "recycle",           1,  0,  0},
-
-    { "ignoring?",         "ignoring?",         2,  1,  0},
-    { "ignore_add",        "ignore_add",        2,  0,  0},
-    { "ignore_del",        "ignore_del",        2,  0,  0},
-    { "array_get_ignorelist", "array_get_ignorelist", 1, 1, 0},
-
-    { "match",             "match",             1,  1,  0},
-    { "rmatch",            "rmatch",            2,  1,  0},
-    { "pmatch",            "pmatch",            1,  1,  0},
-    { "part_pmatch",       "part_pmatch",       1,  1,  0},
-
-    { "name_ok?",          "name_ok?",          1,  1,  0},
-    { "pname_ok?",         "pname_ok?",         1,  1,  0},
-    { "ext_name_ok?",      "ext_name_ok?",      2,  1,  0},
-
-    { "pennies",           "pennies",           1,  1,  0},
-    { "addpennies",        "addpennies",        2,  0,  0},
-    { "movepennies",       "movepennies",       3,  0,  0},
-
-    { "checkpassword",     "checkpassword",     2,  1,  0},
-    { "newpassword",       "newpassword",       2,  0,  0},
-    { "set",               "set",               2,  0,  0},
-    { "flag?",             "flag?",             2,  1,  0},
-    { "mlevel",            "mlevel",            1,  1,  0},
-
-    { "ok?",               "ok?",               1,  1,  0},
-    { "player?",           "player?",           1,  1,  0},
-    { "room?",             "room?",             1,  1,  0},
-    { "thing?",            "thing?",            1,  1,  0},
-    { "exit?",             "exit?",             1,  1,  0},
-    { "program?",          "program?",          1,  1,  0},
-
-    { "sysparm",           "sysparm",           1,  1,  0},
-    { "sysparm_array",     "sysparm_array",     1,  1,  0},
-    { "setsysparm",        "setsysparm",        2,  0,  0},
-
-    { "desc",              "desc",              1,  1,  0},
-    { "drop",              "drop",              1,  1,  0},
-    { "fail",              "fail",              1,  1,  0},
-    { "name",              "name",              1,  1,  0},
-    { "odrop",             "odrop",             1,  1,  0},
-    { "ofail",             "ofail",             1,  1,  0},
-    { "osucc",             "osucc",             1,  1,  0},
-    { "setdesc",           "setdesc",           2,  0,  0},
-    { "setdrop",           "setdrop",           2,  0,  0},
-    { "setfail",           "setfail",           2,  0,  0},
-    { "setname",           "setname",           2,  0,  0},
-    { "setodrop",          "setodrop",          2,  0,  0},
-    { "setofail",          "setofail",          2,  0,  0},
-    { "setosucc",          "setosucc",          2,  0,  0},
-    { "setsucc",           "setsucc",           2,  0,  0},
-    { "succ",              "succ",              1,  1,  0},
-    { "truename",          "truename",          1,  1,  0},
-
-    { "getlink",           "getlink",           1,  1,  0},
-    { "setlink",           "setlink",           2,  0,  0},
-    { "getlinks",          "getlinks pop",      1, 99,  0},
-    { "getlinks_array",    "getlinks_array",    1,  1,  0},
-    { "setlinks_array",    "setlinks_array",    2,  0,  0},
-    { "entrances_array",   "entrances_array",   1,  1,  0},
-    { "timestamps",        "timestamps",        1,  4,  0},
-    { "timestamps",        "timestamps",        1,  4,  0},
-    { "stats",             "stats",             1,  7,  0},
-    { "objmem",            "objmem",            1,  1,  0},
-    { "objmem",            "objmem",            1,  1,  0},
-
-    { "addprop",            "addprop",            4,  0,  0},
-    { "array_filter_flags", "array_filter_flags", 2,  1,  0},
-    { "array_filter_prop",  "array_filter_prop",  3,  1,  0},
-    { "array_get_propdirs", "array_get_propdirs", 2,  1,  0},
-    { "array_get_proplist", "array_get_proplist", 2,  1,  0},
-    { "array_get_propvals", "array_get_propvals", 2,  1,  0},
-    { "array_get_reflist",  "array_get_reflist",  2,  1,  0},
-    { "array_put_proplist", "array_put_proplist", 3,  0,  0},
-    { "array_put_propvals", "array_put_propvals", 3,  0,  0},
-    { "array_put_reflist",  "array_put_reflist",  3,  0,  0},
-    { "blessprop",          "blessprop",          2,  0,  0},
-    { "envprop",            "envprop",            2,  2,  0},
-    { "envpropstr",         "envpropstr",         2,  2,  0},
-    { "getprop",            "getprop",            2,  1,  0},
-    { "getpropfval",        "getpropfval",        2,  1,  0},
-    { "getpropstr",         "getpropstr",         2,  1,  0},
-    { "getpropval",         "getpropval",         2,  1,  0},
-    { "blessed?",           "blessed?",           2,  1,  0},
-    { "propdir?",           "propdir?",           2,  1,  0},
-    { "nextprop",           "nextprop",           2,  1,  0},
-    { "parseprop",          "parseprop",          4,  1,  0},
-    { "parsepropex",        "parsepropex",        4,  2,  0},
-    { "reflist_add",        "reflist_add",        3,  0,  0},
-    { "reflist_del",        "reflist_del",        3,  0,  0},
-    { "reflist_find",       "reflist_find",       3,  1,  0},
-    { "reflist_get",        "array_get_reflist",  2,  1,  0},
-    { "reflist_put",        "array_put_reflist",  3,  0,  0},
-    { "remove_prop",        "remove_prop",        2,  0,  0},
-    { "setprop",            "setprop",            3,  0,  0},
-    { "unblessprop",        "unblessprop",        2,  0,  0},
-
-    { "time",               "time",               0,  3,  0},
-    { "date",               "date",               0,  3,  0},
-    { "datetime",           "time date",          0,  6,  0},
-    { "systime",            "systime",            0,  1,  0},
-    { "systime_precise",    "systime_precise",    0,  1,  0},
-    { "gmtoffset",          "gmtoffset",          0,  1,  0},
-    { "timesplit",          "timesplit",          1,  8,  0},
-    { "timefmt",            "timefmt",            2,  1,  0},
-    { "sleep",              "sleep",              1,  0,  0},
-
-    { "mode",               "mode",               0,  1,  0},
-    { "setmode",            "setmode",            1,  0,  0},
-    { "preempt",            "preempt",            0,  0,  0},
-    { "foreground",         "foreground",         0,  0,  0},
-    { "background",         "background",         0,  0,  0},
-    { "queue",              "queue",              3,  1,  0},
-    { "fork",               "fork",               0,  1,  0},
-    { "kill",               "kill",               1,  1,  0},
-    { "pid",                "pid",                0,  1,  0},
-    { "ispid?",             "ispid?",             1,  1,  0},
-    { "getpids",            "getpids",            1,  1,  0},
-    { "getpidinfo",         "getpidinfo",         1,  1,  0},
-    { "instances",          "instances",          1,  1,  0},
-    { "compile",            "compile",            2,  1,  0},
-    { "uncompile",          "uncompile",          1,  0,  0},
-    { "compiled?",          "compiled?",          1,  1,  0},
-    { "program_getlines",   "program_getlines",   3,  1,  0},
-    { "program_setlines",   "program_setlines",   2,  0,  0},
-
-    { "mcp_register",       "mcp_register",       3,  0,  0},
-    { "mcp_register_event", "mcp_register_event", 3,  0,  0},
-    { "mcp_bind",           "mcp_bind",           3,  0,  0},
-    { "mcp_supports",       "mcp_supports",       2,  1,  0},
-    { "mcp_send",           "mcp_send",           4,  0,  0},
-
-    { "gui_available",      "gui_available",      1,  1,  0},
-    { "gui_dlog_create",    "gui_dlog_create",    4,  1,  0},
-    { "gui_dlog_simple",    "gui_dlog_simple",    2,  1,  0},
-    { "gui_dlog_helper",    "gui_dlog_helper",    3,  1,  0},
-    { "gui_dlog_show",      "gui_dlog_show",      1,  0,  0},
-    { "gui_dlog_close",     "gui_dlog_close",     1,  0,  0},
-    { "gui_ctrl_create",    "gui_ctrl_create",    4,  0,  0},
-    { "gui_ctrl_command",   "gui_ctrl_command",   4,  0,  0},
-    { "gui_values_get",     "gui_values_get",     1,  1,  0},
-    { "gui_value_get",      "gui_value_get",      2,  1,  0},
-    { "gui_value_set",      "gui_value_set",      3,  0,  0},
-
-    { "debug_on",           "debug_on",           0,  0,  0},
-    { "debug_off",          "debug_off",          0,  0,  0},
-    { "debug_line",         "debug_line",         0,  0,  0},
-    { "debugger_break",     "debugger_break",     0,  0,  0},
-
-    { "version",            "version",            0,  1,  0},
-    { "force",              "force",              2,  0,  0},
-    { "force_level",        "force_level",        0,  1,  0},
-
-    {0, 0, 0, 0, 0}
-};
-
-
-struct prim_info_t *
-prim_lookup(const char*s)
-{
-    int i;
-    for (i = 0; prims_list[i].name; i++) {
-        if (!strcmp(prims_list[i].name, s)) {
-            return &prims_list[i];
-        }
-    }
-    return NULL;
 }
 
 
@@ -1933,10 +1246,11 @@ process_file(const char *filename, const char *progname)
     strlist_init(&inits_list);
     strlist_init(&using_list);
     strlist_init(&lvars_list);
-    strlist_init(&sconst_list);
     strlist_init(&fvars_list);
     strlist_init(&vardecl_list);
     funclist_init(&funcs_list);
+    kvmap_init(&global_consts);
+    kvmap_init(&function_consts);
 
     /* Declare some utility commands. */
     funclist_add(&funcs_list, "cat", "array_interpret", 0, 1, 1);
@@ -1956,26 +1270,29 @@ process_file(const char *filename, const char *progname)
     strlist_add(&lvars_list, "command");
 
     /* Server defined constants. */
-    strlist_add(&sconst_list, "pr_mode");
-    strlist_add(&sconst_list, "fg_mode");
-    strlist_add(&sconst_list, "bg_mode");
-    strlist_add(&sconst_list, "c_datum");
-    strlist_add(&sconst_list, "c_menu");
-    strlist_add(&sconst_list, "c_label");
-    strlist_add(&sconst_list, "c_image");
-    strlist_add(&sconst_list, "c_hrule");
-    strlist_add(&sconst_list, "c_vrule");
-    strlist_add(&sconst_list, "c_button");
-    strlist_add(&sconst_list, "c_checkbox");
-    strlist_add(&sconst_list, "c_radiobtn");
-    strlist_add(&sconst_list, "c_edit");
-    strlist_add(&sconst_list, "c_multiedit");
-    strlist_add(&sconst_list, "c_combobox");
-    strlist_add(&sconst_list, "c_listbox");
-    strlist_add(&sconst_list, "c_spinner");
-    strlist_add(&sconst_list, "c_scale");
-    strlist_add(&sconst_list, "c_frame");
-    strlist_add(&sconst_list, "c_notebook");
+    kvmap_add(&global_consts, "REG_ICASE",    "reg_icase");
+    kvmap_add(&global_consts, "REG_ALL",      "reg_all");
+    kvmap_add(&global_consts, "REG_EXTENDED", "reg_extended");
+    kvmap_add(&global_consts, "PR_MODE",      "pr_mode");
+    kvmap_add(&global_consts, "FG_MODE",      "fg_mode");
+    kvmap_add(&global_consts, "BG_MODE",      "bg_mode");
+    kvmap_add(&global_consts, "C_DATUM",      "c_datum");
+    kvmap_add(&global_consts, "C_MENU",       "c_menu");
+    kvmap_add(&global_consts, "C_LABEL",      "c_label");
+    kvmap_add(&global_consts, "C_IMAGE",      "c_image");
+    kvmap_add(&global_consts, "C_HRULE",      "c_hrule");
+    kvmap_add(&global_consts, "C_VRULE",      "c_vrule");
+    kvmap_add(&global_consts, "C_BUTTON",     "c_button");
+    kvmap_add(&global_consts, "C_CHECKBOX",   "c_checkbox");
+    kvmap_add(&global_consts, "C_RADIOBTN",   "c_radiobtn");
+    kvmap_add(&global_consts, "C_EDIT",       "c_edit");
+    kvmap_add(&global_consts, "C_MULTIEDIT",  "c_multiedit");
+    kvmap_add(&global_consts, "C_COMBOBOX",   "c_combobox");
+    kvmap_add(&global_consts, "C_LISTBOX",    "c_listbox");
+    kvmap_add(&global_consts, "C_SPINNER",    "c_spinner");
+    kvmap_add(&global_consts, "C_SCALE",      "c_scale");
+    kvmap_add(&global_consts, "C_FRAME",      "c_frame");
+    kvmap_add(&global_consts, "C_NOTEBOOK",   "c_notebook");
 
     res = yyparse();
     if (res == 2) {
@@ -1999,10 +1316,12 @@ process_file(const char *filename, const char *progname)
     strlist_free(&inits_list);
     strlist_free(&using_list);
     strlist_free(&lvars_list);
-    strlist_free(&sconst_list);
     strlist_free(&fvars_list);
     strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
+    kvmap_free(&global_consts);
+    kvmap_free(&function_consts);
+
     if (progname) {
         fprintf(outf, ".\n");
         fprintf(outf, "c\n");

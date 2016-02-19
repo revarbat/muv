@@ -1,17 +1,17 @@
-CLIBS = 
-CFLAGS = -O
-YFLAGS = -d
-YACC = yacc
-CC = cc
+CLIBS= 
+CFLAGS=-O -Wall
+YFLAGS=-d
+YACC=yacc
+CC=cc
 
-OBJECTS = parse_rules.o
-TARGET = muv
+OBJECTS=y.tab.o keyval.o strlist.o funcinfo.o mufprims.o strutils.o
+TARGET=muv
 
 muv: ${OBJECTS}
 	${CC} ${CFLAGS} -o $@ ${OBJECTS} ${CLIBS}
 
-parse_rules.o: y.tab.c
-	${CC} ${CFLAGS} -c y.tab.c -o parse_rules.o
+*.o: *.c
+	${CC} ${CFLAGS} -c $< -o $@
 
 y.tab.c: parse_rules.y
 	${YACC} ${YFLAGS} parse_rules.y
