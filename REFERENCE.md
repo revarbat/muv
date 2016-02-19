@@ -478,16 +478,16 @@ or
 Comprehensions
 -------------
 
-Using a variation on loops and conditionals, you can quickly create lists
-and dictionaries that are mutations of already existing lists and dictionaries.
-The original list or dictionary is untouched.
+Using a variation on loops and conditionals, you can quickly create lists and
+dictionaries that are mutations of already existing arrays.  The original
+array is untouched.
 
-For example, if you have a list of words in the variable `words`, you can create
+For example, if you have a list of strings in the variable `words`, you can create
 a list of uppercased versions of those words like this:
 
     var word;
-    var words = ["fee", "fie", "foe", "fum"]
-    var uppers = [toupper(word) for (word in words)]
+    var words = ["fee", "fie", "foe", "fum"];
+    var uppers = [for (word in words) toupper(word)]
 
 Similarly, you can mutate a dictionary:
 
@@ -498,14 +498,14 @@ Similarly, you can mutate a dictionary:
         "setpropstr" => 3
     ];
     var k, v;
-    var keywords = [cat("KW_", toupper(k)) => v for (k => v in prims)];
+    var keywords = [for (k => v in prims) cat("KW_", toupper(k)) => v];
 
 You can also filter a list or dictionary by adding an `if` or `unless` clause:
 
     var nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     var x;
-    var odds = [x for (x in nums) if (x % 2)]
-    var evens = [x for (x in nums) unless (x % 2)]
+    var odds = [for (x in nums) if (x % 2) x]
+    var evens = [for (x in nums) unless (x % 2) x]
 
 
 

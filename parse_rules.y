@@ -596,20 +596,20 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free(body); free(items);
             strlist_free(&$2);
         }
-    | '[' expr FOR compr_loop compr_cond ']' {
+    | '[' FOR compr_loop compr_cond expr ']' {
             /* list comprehension */
-            char *body = indent($2);
-            if (*$5) {
-                char *cond = indent($5);
+            char *body = indent($5);
+            if (*$4) {
+                char *cond = indent($4);
                 char *ibody = indent(body);
-                $$ = savefmt("[] %s\n%s\n%s swap []<-\n    then\nrepeat", $4, cond, ibody);
+                $$ = savefmt("[] %s\n%s\n%s swap []<-\n    then\nrepeat", $3, cond, ibody);
                 free(ibody);
                 free(cond);
             } else {
-                $$ = savefmt("[] %s\n%s swap []<-\nrepeat", $4, body);
+                $$ = savefmt("[] %s\n%s swap []<-\nrepeat", $3, body);
             }
             free(body);
-            free($2); free($4); free($5);
+            free($3); free($4); free($5);
         }
     | '[' dictlist ']' {
             char *items = strlist_wrap(&$2, 0, -1);
@@ -618,24 +618,24 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free(body); free(items);
             strlist_free(&$2);
         }
-    | '[' expr KEYVAL expr FOR compr_loop compr_cond ']' {
+    | '[' FOR compr_loop compr_cond expr KEYVAL expr ']' {
             /* list comprehension */
-            char *kexpr = indent($2);
-            char *vexpr = indent($4);
-            if (*$7) {
-                char *cond = indent($7);
+            char *kexpr = indent($5);
+            char *vexpr = indent($7);
+            if (*$4) {
+                char *cond = indent($4);
                 char *ikexpr = indent(kexpr);
                 char *ivexpr = indent(vexpr);
-                $$ = savefmt("[] %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $6, cond, ivexpr, ikexpr);
+                $$ = savefmt("[] %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $3, cond, ivexpr, ikexpr);
                 free(cond);
                 free(ikexpr);
                 free(ivexpr);
             } else {
-                $$ = savefmt("[] %s\n%s swap\n%s ->[]\nrepeat", $6, vexpr, kexpr);
+                $$ = savefmt("[] %s\n%s swap\n%s ->[]\nrepeat", $3, vexpr, kexpr);
             }
             free(kexpr);
             free(vexpr);
-            free($2); free($4); free($6); free($7);
+            free($3); free($4); free($5); free($7);
         }
     | PLUS expr   %prec UNARY { $$ = $2; }
     | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
