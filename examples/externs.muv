@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 extern void voidfoo();
 
 extern single singlefoo();

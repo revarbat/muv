@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 var foo = 23, bar=43;
 var fee;
 

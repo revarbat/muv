@@ -8,11 +8,11 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "configs.h"
 #include "strlist.h"
 #include "keyval.h"
 #include "funcinfo.h"
 #include "strutils.h"
-#include "mufprims.h"
 
 
 struct kvmap global_consts;
@@ -27,6 +27,19 @@ struct funclist funcs_list;
 FILE *yyin=NULL;
 FILE *outf;
 int yylineno = 1;
+const char *yydirname = ".";
+const char *yyfilename = "STDIN";
+
+struct bookmark_t {
+    const char *dname;
+    const char *fname;
+    long pos;
+    long lineno;
+} bookmarks[64];
+int bookmark_count = 0;
+
+int bookmark_push(const char *fname);
+int bookmark_pop();
 
 int yylex(void);
 int yyparse(void);
@@ -50,18 +63,18 @@ void yyerror(char *s);
 
 
 %token <num_int> INTEGER
-%token <prim> PRIMITIVE DECLARED_FUNC
+%token <prim> DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR CONST
 %token <str> DECLARED_VAR
 %token <keyval> DECLARED_CONST
+%token <token> INCLUDE UNARY
 %token <token> IF ELSE UNLESS
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
-%token <token> DO WHILE FOR IN
-%token <token> UNTIL CONTINUE BREAK
+%token <token> DO WHILE UNTIL FOR IN
+%token <token> CONTINUE BREAK
 %token <token> TOP PUSH MUF DEL
-%token <token> BOOLTRUE BOOLFALSE
-%token <token> UNARY EXTERN VOID SINGLE MULTIPLE
+%token <token> EXTERN VOID SINGLE MULTIPLE
 
 %right THEN ELSE
 %left ',' KEYVAL
@@ -89,7 +102,7 @@ void yyerror(char *s);
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> variable undeclared_variable
 %type <str> externdef simple_statement statement statements paren_expr
-%type <str> comma_expr comma_expr_or_null compr_loop compr_cond
+%type <str> compr_loop compr_cond
 %type <str> function_call primitive_call expr subscripts
 %type <str> lvardef lvarlist fvardef fvarlist
 %type <str> using_clause case_clause case_clauses default_clause
@@ -101,19 +114,25 @@ void yyerror(char *s);
 %%
 
 program: /* nothing */ { }
-    | program globalstatement { fprintf(outf, "%s\n", $2);  free($2); }
-    | program funcdef { fprintf(outf, "%s\n", $2);  free($2); }
+    | program globalstatement { fprintf(outf, "%s", $2);  free($2); }
+    | program funcdef { fprintf(outf, "%s", $2);  free($2); }
     | program externdef { }
     ;
 
 globalstatement:
-      VAR lvarlist ';' { $$ = $2; }
+      VAR lvarlist ';' { $$ = savefmt("%s\n", $2); free($2); }
     | CONST proposed_varname ASGN expr ';' {
             $$ = savestring("");
             kvmap_add(&global_consts, $2, $4);
             free($2); free($4);
         }
-    | MUF '(' STR ')' ';' { $$ = $3; }
+    | INCLUDE STR ';' {
+            if (!bookmark_push($2))
+                YYERROR;
+            $$ = savestring("");
+            free($2);
+        }
+    | MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
     ;
 
 lvardef: proposed_varname {
@@ -182,7 +201,6 @@ bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
     ;
 
 good_proposed_funcname: IDENT { $$ = $1; }
-    | PRIMITIVE { $$ = savestring($1.name); } /* allow overriding primitives */
     ;
 
 proposed_funcname:
@@ -215,7 +233,6 @@ bad_proposed_varname: DECLARED_VAR { $$ = $1; }
     ;
 
 good_proposed_varname: IDENT { $$ = $1; }
-    | PRIMITIVE { $$ = savestring($1.name); } /* allow overriding primitives */
     ;
 
 proposed_varname: good_proposed_varname { $$ = $1; }
@@ -229,7 +246,6 @@ proposed_varname: good_proposed_varname { $$ = $1; }
 
 undeclared_variable: IDENT { $$ = $1; }
     | DECLARED_FUNC { $$ = savestring($1.name); }
-    | PRIMITIVE { $$ = savestring($1.name); }
     ;
 
 variable: DECLARED_VAR { $$ = $1; }
@@ -269,7 +285,7 @@ argvarlist:
     ;
 
 simple_statement:
-      comma_expr { $$ = savefmt("%s pop", $1); free($1); }
+      expr { $$ = savefmt("%s pop", $1); free($1); }
     | RETURN { $$ = savestring("0 exit"); }
     | RETURN expr { $$ = savefmt("%s exit", $2); free($2); }
     | BREAK { $$ = savestring("break"); }
@@ -337,14 +353,6 @@ statement: ';' { $$ = savestring(""); }
             free($2); free($4);
             free(cond); free(body);
         }
-    | FOR '(' comma_expr_or_null ';' comma_expr_or_null ';' comma_expr_or_null ')' statement {
-            char *cond = indent($5);
-            char *next = indent($7);
-            char *body = indent($9);
-            $$ = savefmt("%s pop\nbegin\n%s\nwhile\n%s\n%s pop\nrepeat", $3, cond, body, next);
-            free($3); free($5); free($7); free($9);
-            free(cond); free(next); free(body);
-        }
     | FOR '(' variable IN expr ')' statement {
             char *body = indent($7);
             $$ = savefmt("%s\nforeach %s ! pop\n%s\nrepeat", $5, $3, body);
@@ -389,7 +397,7 @@ using_clause: /* nothing */ {
             $$ = savestring("=");
             strlist_add(&using_list, $$);
         }
-    | USING PRIMITIVE {
+    | USING function {
             if ($2.expects != 2) {
                 yyerror("Using clause expects instruction or function that takes 2 args.");
                 YYERROR;
@@ -402,14 +410,6 @@ using_clause: /* nothing */ {
             } else {
                 strlist_add(&using_list, $$);
             }
-        }
-    | USING function {
-            if ($2.expects != 2) {
-                yyerror("Using clause expects instruction or function that takes 2 args.");
-                YYERROR;
-            }
-            $$ = savestring($2.name);
-            strlist_add(&using_list, $2.name);
         }
     ;
 
@@ -439,14 +439,6 @@ statements: /* nothing */ { $$ = savestring(""); }
                 $$ = $2;
             }
         }
-    ;
-
-comma_expr_or_null: /* nothing */ { $$ = savestring(""); }
-    | comma_expr { $$ = $1; }
-    ;
-
-comma_expr: expr { $$ = $1; }
-    | comma_expr ',' expr { $$ = savefmt("%s pop\n%s", $1, $3); free($1); free($3); }
     ;
 
 function_call: function '(' arglist_or_null ')' {
@@ -503,28 +495,6 @@ primitive_call:
     | PUSH '(' arglist ')' { $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
     | MUF '(' STR ')' { $$ = $3; }
     | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
-    | PRIMITIVE '(' arglist_or_null ')' {
-            if ($3.count != $1.expects) {
-                char buf[1024];
-                snprintf(buf, sizeof(buf),
-                    "Built-in primitive '%s' expects %d args, but was provided %d args.",
-                    $1.name, $1.expects, $3.count
-                );
-                strlist_free(&$3);
-                yyerror(buf);
-                YYERROR;
-            }
-            char *args = strlist_wrap(&$3, 0, -1);
-            if ($1.returns == 0) {
-                $$ = savefmt("%s%s%s 0", args, (*args?" ":""), $1.code);
-            } else if ($1.returns == 1) {
-                $$ = savefmt("%s%s%s", args, (*args?" ":""), $1.code);
-            } else {
-                $$ = savefmt("{ %s%s%s }list", args, (*args?" ":""), $1.code);
-            }
-            free(args);
-            strlist_free(&$3);
-        }
     ;
 
 lvalue: variable {
@@ -571,19 +541,23 @@ compr_loop:
             $$ = savefmt("%s\nforeach %s ! %s !", $6, $4, $2);
             free($2); free($4);
         }
-      
+    ;
+
 expr: INTEGER { $$ = savefmt("%d", $1); }
     | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
     | '#' INTEGER { $$ = savefmt("#%d", $2); }
     | FLOAT { $$ = $1; }
     | STR { $$ = savefmt("\"%s\"", $1); free($1); }
-    | BOOLTRUE { $$ = savestring("1"); }
-    | BOOLFALSE { $$ = savestring("0"); }
-    | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
     | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
-    | lvalue { $$ = savestring($1.get); getset_free(&$1); }
+    | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
+    | variable { $$ = savefmt("%s @", $1); free($1); }
+    | variable '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
+    | variable '[' expr ']' '[' subscripts {
+            $$ = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
+            free($1); free($3); free($6);
+        }
     | INSERT { $$ = savestring("{ }list"); }
     | '[' arglist_or_null ']' {
             char *items = strlist_wrap(&$2, 0, -1);
@@ -733,6 +707,111 @@ fvarlist: fvardef { $$ = $1; }
 
 
 
+int
+bookmark_push(const char *fname)
+{
+    char buf[1024];
+    const char *ptr, *dirmk;
+    char *ptr2;
+
+    bookmarks[bookmark_count].dname = savestring(yydirname);
+    bookmarks[bookmark_count].fname = savestring(yyfilename);
+    bookmarks[bookmark_count].lineno = yylineno;
+    if (yyin) {
+        bookmarks[bookmark_count].pos = ftell(yyin);
+    } else {
+        bookmarks[bookmark_count].pos = 0;
+    }
+    bookmark_count++;
+
+    // If file to include starts with '!', it's a global include file.
+    if (*fname == '!') {
+        fname++;
+        snprintf(buf, sizeof(buf), "%s/", MUV_INCLUDES_DIR);
+    } else if (*fname != '/') {
+        snprintf(buf, sizeof(buf), "%s/", yydirname);
+    }
+
+    /* find last '/' in path to file */
+    for (ptr = dirmk = fname; *ptr; ptr++) {
+        if (*ptr == '/') {
+            dirmk = ptr;
+        }
+    }
+    while (dirmk > fname && dirmk[-1] == '/')
+        dirmk--;
+
+    ptr = fname;
+    ptr2 = buf;
+    ptr2 += strlen(buf);
+    while (ptr < dirmk)
+        *ptr2++ = *ptr++;
+    *ptr2 = '\0';
+    yydirname = savestring(buf);
+
+    while (*dirmk == '/')
+        dirmk++;
+    ptr2 = buf;
+    while (*dirmk)
+        *ptr2++ = *dirmk++;
+    *ptr2 = '\0';
+    yyfilename = savestring(buf);
+
+    if (yyin != NULL)
+        fclose(yyin);
+    if (*yyfilename) {
+        snprintf(buf, sizeof(buf), "%s/%s", yydirname, yyfilename);
+        yyin = fopen(buf, "r");
+        if (!yyin) {
+            free((void*)yydirname);
+            free((void*)yyfilename);
+            bookmark_count--;
+            yydirname = bookmarks[bookmark_count].dname;
+            yyfilename = bookmarks[bookmark_count].fname;
+            yylineno = bookmarks[bookmark_count].lineno;
+            char *errstr = savefmt("Could not include file %s", buf);
+            yyerror(errstr);
+            free(errstr);
+            return 0;
+        }
+    } else {
+        yyin = stdin;
+    }
+    yylineno = 1;
+    return 1;
+}
+
+
+int
+bookmark_pop()
+{
+    char buf[1024];
+    long pos;
+    
+    if (bookmark_count < 1) {
+        return 0;
+    }
+    free((void*)yydirname);
+    free((void*)yyfilename);
+    bookmark_count--;
+    yydirname = bookmarks[bookmark_count].dname;
+    yyfilename = bookmarks[bookmark_count].fname;
+    yylineno = bookmarks[bookmark_count].lineno;
+    pos = bookmarks[bookmark_count].pos;
+
+    fclose(yyin);
+    if (*yyfilename) {
+        snprintf(buf, sizeof(buf), "%s/%s", yydirname, yyfilename);
+        yyin = fopen(buf, "r");
+        fseek(yyin, pos, SEEK_SET);
+    } else {
+        yyin = stdin;
+    }
+
+    return 1;
+}
+
+
 void
 setyyinput(FILE *f)
 {
@@ -763,11 +842,11 @@ lookup(char *s, int *bval)
         {"do",        DO,        -1},
         {"else",      ELSE,      -1},
         {"extern",    EXTERN,    -1},
-        {"false",     BOOLFALSE, -1},
         {"for",       FOR,       -1},
         {"func",      FUNC,      -1},
         {"if",        IF,        -1},
         {"in",        IN,        -1},
+        {"include",   INCLUDE,   -1},
         {"muf",       MUF,       -1},
         {"multiple",  MULTIPLE,  -1},
         {"push",      PUSH,      -1},
@@ -775,7 +854,6 @@ lookup(char *s, int *bval)
         {"single",    SINGLE,    -1},
         {"switch",    SWITCH,    -1},
         {"top",       TOP,       -1},
-        {"true",      BOOLTRUE,  -1},
         {"try",       TRY,       -1},
         {"unless",    UNLESS,    -1},
         {"until",     UNTIL,     -1},
@@ -1004,12 +1082,6 @@ yylex()
             return DECLARED_CONST;
         }
 
-        /* primitives match after everything else. */
-        if ((pinfo = funclookup(in))) {
-            yylval.prim = *pinfo;
-            return PRIMITIVE;
-        }
-
         /* If identifier isn't already claimed, return as an undeclared identifier. */
         yylval.str = savestring(in);
         return IDENT;
@@ -1219,30 +1291,14 @@ yylex()
 void
 yyerror(char *arg)
 {
-    fprintf(stderr, "ERROR in line %d: %s\n", yylineno, arg);
+    fprintf(stderr, "ERROR in %s/%s line %d: %s\n", yydirname, yyfilename, yylineno, arg);
 }
 
 
 
-int
-process_file(const char *filename, const char *progname)
+void
+parser_data_init()
 {
-    int res = 0;
-    if (progname) {
-        /* Strip leading directory names. */
-        const char *ptr = filename;
-        while (*ptr) {
-            if (*ptr == '/' || *ptr == '\\') {
-                filename = ++ptr;
-            } else {
-                ptr++;
-            }
-        }
-        fprintf(outf, "@program %s\n", progname);
-        fprintf(outf, "1 99999 d\n1 i\n");
-        fprintf(outf, "( Generated from %s by the MUV compiler. )\n", filename);
-        fprintf(outf, "(   https://github.com/revarbat/muv )\n\n");
-    }
     strlist_init(&inits_list);
     strlist_init(&using_list);
     strlist_init(&lvars_list);
@@ -1252,67 +1308,23 @@ process_file(const char *filename, const char *progname)
     kvmap_init(&global_consts);
     kvmap_init(&function_consts);
 
-    /* Declare some utility commands. */
-    funclist_add(&funcs_list, "cat", "array_interpret", 0, 1, 1);
-    funclist_add(&funcs_list, "array_make", "", 0, 1, 1);
-    funclist_add(&funcs_list, "array_dict_make", "{ swap array_explode pop }dict", 0, 1, 1);
-    funclist_add(&funcs_list, "fmtstring", "\n2 try\n    array_explode 1 + rotate fmtstring\n    abort\ncatch\nendcatch", 1, 1, 1),
-    funclist_add(&funcs_list, "fmttell", "\n2 try\n    array_explode 1 + rotate fmtstring\n    me @ swap notify\n    \"\" abort\ncatch pop\nendcatch 0", 1, 1, 1),
-    funclist_add(&funcs_list, "execute", "{ rot rot array_explode 1 + rotate execute }list", 1, 1, 1),
-
-    /* End of compiler defined funcs */
-    funclist_add(&funcs_list, " ", "", 0, 0, 0),
-
     /* Reserve standard global vars. */
     strlist_add(&lvars_list, "me");
     strlist_add(&lvars_list, "loc");
     strlist_add(&lvars_list, "trigger");
     strlist_add(&lvars_list, "command");
 
-    /* Server defined constants. */
-    kvmap_add(&global_consts, "REG_ICASE",    "reg_icase");
-    kvmap_add(&global_consts, "REG_ALL",      "reg_all");
-    kvmap_add(&global_consts, "REG_EXTENDED", "reg_extended");
-    kvmap_add(&global_consts, "PR_MODE",      "pr_mode");
-    kvmap_add(&global_consts, "FG_MODE",      "fg_mode");
-    kvmap_add(&global_consts, "BG_MODE",      "bg_mode");
-    kvmap_add(&global_consts, "C_DATUM",      "c_datum");
-    kvmap_add(&global_consts, "C_MENU",       "c_menu");
-    kvmap_add(&global_consts, "C_LABEL",      "c_label");
-    kvmap_add(&global_consts, "C_IMAGE",      "c_image");
-    kvmap_add(&global_consts, "C_HRULE",      "c_hrule");
-    kvmap_add(&global_consts, "C_VRULE",      "c_vrule");
-    kvmap_add(&global_consts, "C_BUTTON",     "c_button");
-    kvmap_add(&global_consts, "C_CHECKBOX",   "c_checkbox");
-    kvmap_add(&global_consts, "C_RADIOBTN",   "c_radiobtn");
-    kvmap_add(&global_consts, "C_EDIT",       "c_edit");
-    kvmap_add(&global_consts, "C_MULTIEDIT",  "c_multiedit");
-    kvmap_add(&global_consts, "C_COMBOBOX",   "c_combobox");
-    kvmap_add(&global_consts, "C_LISTBOX",    "c_listbox");
-    kvmap_add(&global_consts, "C_SPINNER",    "c_spinner");
-    kvmap_add(&global_consts, "C_SCALE",      "c_scale");
-    kvmap_add(&global_consts, "C_FRAME",      "c_frame");
-    kvmap_add(&global_consts, "C_NOTEBOOK",   "c_notebook");
+    /* Global initializations */
+    strlist_add(&inits_list, "\"me\" match me !");
+    strlist_add(&inits_list, "me @ location loc !");
+    strlist_add(&inits_list, "trig trigger !");
+}
 
-    res = yyparse();
-    if (res == 2) {
-        yyerror("Out of Memory.");
-    }
 
-    if (res == 0) {
-        char *inits = strlist_join(&inits_list, "\n", 0, -1);
-        char *inits2 = indent(inits);
-        const char *mainfunc = funcs_list.list[funcs_list.count-1].name;
-        const char *initfunc;
-        mainfunc = indent(mainfunc);
-        initfunc = savefmt(": __start\n%s%s%s\n;\n", inits2, ((*inits2 && *mainfunc)?"\n":""), mainfunc);
-        fprintf(outf, "%s", initfunc);;
-        free(inits);
-        free(inits2);
-        free((void*)mainfunc);
-        free((void*)initfunc);
-    }
 
+void
+parser_data_free()
+{
     strlist_free(&inits_list);
     strlist_free(&using_list);
     strlist_free(&lvars_list);
@@ -1321,13 +1333,94 @@ process_file(const char *filename, const char *progname)
     funclist_free(&funcs_list);
     kvmap_free(&global_consts);
     kvmap_free(&function_consts);
+}
+
+
+
+int
+process_file(struct strlist *files, const char *progname)
+{
+    int res = 0;
+    int filenum;
 
     if (progname) {
-        fprintf(outf, ".\n");
-        fprintf(outf, "c\n");
-        fprintf(outf, "q\n");
+        fprintf(outf, "@program %s\n", progname);
+        fprintf(outf, "1 99999 d\n1 i\n");
     }
-    fclose(yyin);
+
+    if (files->count < 1) {
+        strlist_add(files, "");
+    }
+
+    parser_data_init();
+    for (filenum = 0; filenum < files->count; filenum++) {
+        /* Get basename. */
+        const char *fullname = files->list[filenum];
+        const char *basename = fullname;
+        const char *ptr = basename;
+        while (*ptr) {
+            if (*ptr == '/' || *ptr == '\\') {
+                basename = ++ptr;
+            } else {
+                ptr++;
+            }
+        }
+
+        yylineno = 1;
+        yydirname = savestring(".");
+        yyfilename = savestring(fullname);
+        yyin = NULL;
+
+        /* Open file, initialize file state info. */
+        if (!bookmark_push(fullname)) {
+            res = -3;
+            break;
+        }
+
+        /* We don't actually need to pop the base bookmark. */
+        bookmark_count--;
+
+        fprintf(outf, "( Generated from %s by the MUV compiler. )\n", basename);
+        fprintf(outf, "(   https://github.com/revarbat/muv )\n\n");
+
+        do {
+            res = yyparse();
+            if (res == 2) {
+                yyerror("Out of Memory.");
+            }
+            if (res != 0) {
+                break;
+            }
+        } while (bookmark_pop());
+        fclose(yyin);
+
+        if (res != 0) {
+            break;
+        }
+    }
+
+    if (res == 0) {
+        const char *initfunc;
+        const char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
+        char *inits = strlist_join(&inits_list, "\n", 0, -1);
+        char *inits2 = indent(inits);
+
+        initfunc = savefmt(": __start\n%s%s%s\n;\n", inits2, ((*inits2 && *mainfunc)?"\n":""), mainfunc);
+        fprintf(outf, "%s", initfunc);;
+
+        free(inits);
+        free(inits2);
+        free((void*)mainfunc);
+        free((void*)initfunc);
+
+        if (progname) {
+            fprintf(outf, ".\n");
+            fprintf(outf, "c\n");
+            fprintf(outf, "q\n");
+        }
+    }
+
+    parser_data_free();
 
     return res;
 }
@@ -1336,7 +1429,7 @@ process_file(const char *filename, const char *progname)
 void
 usage(const char* execname)
 {
-    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE] FILE\n", execname);
+    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE] FILE ...\n", execname);
 }
 
 
@@ -1345,8 +1438,10 @@ main(int argc, char **argv)
 {
     int res;
     const char *execname = argv[0];
-    const char *filename = "STDIN";
     const char *progname = NULL;
+    struct strlist files;
+
+    strlist_init(&files);
 
     yyin = stdin;
     outf = stdout;
@@ -1374,18 +1469,12 @@ main(int argc, char **argv)
             usage(execname);
             exit(-3);
         } else {
-            if (argc > 1) {
-                usage(execname);
-                exit(-3);
-            }
-            yyin = fopen(argv[0], "r");
-            filename = argv[0];
-            break;
+            strlist_add(&files, argv[0]);
         }
         argc--; argv++;
     }
 
-    res = process_file(filename, progname);
+    res = process_file(&files, progname);
     return -res;
 }
 

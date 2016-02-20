@@ -1,35 +1,30 @@
-var mylvar;
-
-func loopy2() {
-    var i;
-    for (i = 0; i < 10; i++)
-        tell(intostr(i));
-}
-
+include "!fb6prims";
 
 func loopy(count)
 {
-    var i;
-    for (i=1; i<=count; i+=1)
+    var i = 1;
+    until (i > count) {
         tell(intostr(i));
+        i++;
+    }
+
+    i = 1;
+    while (i <= count) {
+        tell(intostr(i));
+        i++;
+    }
 
     i = 1;
     do {
         tell(intostr(i));
-        i+=1;
+        i++;
     } while(i<=count);
 
     i = 1;
     do {
         tell(intostr(i));
-        i+=1;
+        i++;
     } until (i>count);
-
-    i = 1;
-    while (i <= count) {
-        tell(intostr(i));
-        i += 1;
-    }
 
     var key, val;
 
@@ -40,11 +35,6 @@ func loopy(count)
     for (key => val in online()) {
         tell(cat(key, " = ", val));
     }
-
-    mylvar = 4;
-    tell(intostr(mylvar));
-
-    loopy2();
 }
 
 

@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 var foo = 72;
 
 func arrrr() {
@@ -31,12 +33,9 @@ func loopy(count) {
 
     foo = count;
 
-    for (i = 1; i <= count; i++)
-        tell(intostr(i));
-
     i = 1;
     while (i <= count)
-        tell(intostr(i));
+        tell(intostr(i++));
 
     i = 1;
     do {

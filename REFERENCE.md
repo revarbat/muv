@@ -123,6 +123,15 @@ You can declare extra variables in function scope like this:
         ...
     }
 
+
+Constants
+---------
+
+You can declare constants using the syntax:
+
+    const CONSTNAME = VALUE;
+
+
 Calls
 -----
 
@@ -135,6 +144,22 @@ this way:
 
 If a primitive returns more than one argument on the stack normally, then all
 items it would return are returned in a list array.
+
+
+Includes
+--------
+You can include other MUV files by using the `include` command:
+
+    include "otherfile.muv";
+
+You can include standard MUV files by preceeding the filename with a `!`.
+In fact, this is the way you specify which MUF primitive set to use:
+
+    include "!fb6prims";
+
+At the moment, only the `fb6prims` set is defined, but in the future, more
+server specific include files can be added to the `/usr/local/share/muv/incls`
+directory.
 
 
 Expressions
@@ -433,33 +458,24 @@ Loops
 
 There are several types of loops available:
 
-    var i;
-    for (i = 1; i <= 10; i+=1) {
-        tell(intostr(i));
-    }
-
     var i = 10;
     while (i > 0) {
-        tell(intostr(i));
-        i -= 1;
+        tell(intostr(i--));
     }
 
     var i = 10;
     until (i == 0) {
-        tell(intostr(i));
-        i -= 1;
+        tell(intostr(i--));
     }
 
     var i = 10;
     do {
-        tell(intostr(i));
-        i -= 1;
+        tell(intostr(i--));
     } while(i > 0);
 
     var i = 10;
     do {
-        tell(intostr(i));
-        i -= 1;
+        tell(intostr(i--));
     } until(i == 0);
 
 You can also iterate arrays/lists/dictionaries like this:

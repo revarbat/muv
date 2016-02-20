@@ -12,7 +12,6 @@ Short List
 Future
 ------
 
-- Import/export?
 - Simple object oriented classes.
 - Standard libraries.
 - Upload to MUCK using -u:

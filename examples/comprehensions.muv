@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 func main(arg) {
     var k;
     var v;

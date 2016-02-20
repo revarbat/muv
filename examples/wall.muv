@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 func wall(msg) {
     var d = firstdescr(#-1);
     while (d) {

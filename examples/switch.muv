@@ -1,3 +1,5 @@
+include "!fb6prims";
+
 extern single type(val);
 
 func complex_match(v1, v2) {
