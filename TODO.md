@@ -4,7 +4,6 @@ TODO
 Short List
 ----------
 
-- Allow var declaration expr:  `for (var item in arr) ...`
 - Tuple assignment:  `x, y = [y, x];`
 - Array slicing:  `s = foo[2:4];`
 

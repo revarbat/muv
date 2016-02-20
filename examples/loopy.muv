@@ -26,13 +26,11 @@ func loopy(count)
         i++;
     } until (i>count);
 
-    var key, val;
-
-    for (val in online()) {
+    for (var val in online()) {
         tell(val);
     }
 
-    for (key => val in online()) {
+    for (var key => val in online()) {
         tell(cat(key, " = ", val));
     }
 }

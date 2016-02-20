@@ -1,10 +1,11 @@
 include "!fb6prims";
 
-var foo = 23, bar=43;
+var foo = 23;
+var bar = 43;
 var fee;
 
 func main(arg) {
-    fee = cat(intostr(foo), intostr(bar));
+    fee = cat(foo, " ", bar);
     tell(fee);
     return 0;
 }

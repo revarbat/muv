@@ -100,11 +100,10 @@ void yyerror(char *s);
 %type <getset> lvalue
 %type <str> undeclared_function
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
-%type <str> variable undeclared_variable
+%type <str> variable lvariable undeclared_variable
 %type <str> externdef simple_statement statement statements paren_expr
-%type <str> compr_loop compr_cond
+%type <str> compr_loop compr_cond lvardef
 %type <str> function_call primitive_call expr subscripts
-%type <str> lvardef lvarlist fvardef fvarlist
 %type <str> using_clause case_clause case_clauses default_clause
 %type <list> arglist arglist_or_null dictlist argvarlist
 %type <num_int> ret_count_type opt_varargs
@@ -120,7 +119,7 @@ program: /* nothing */ { }
     ;
 
 globalstatement:
-      VAR lvarlist ';' { $$ = savefmt("%s\n", $2); free($2); }
+      VAR lvardef ';' { $$ = savefmt("%s\n", $2); free($2); }
     | CONST proposed_varname ASGN expr ';' {
             $$ = savestring("");
             kvmap_add(&global_consts, $2, $4);
@@ -149,10 +148,6 @@ lvardef: proposed_varname {
             free($1);
             free($3);
         }
-    ;
-
-lvarlist: lvardef { $$ = $1; }
-    | lvarlist ',' lvardef { $$ = savefmt("%s\n%s", $1, $3); free($1); free($3); }
     ;
 
 funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
@@ -258,6 +253,16 @@ variable: DECLARED_VAR { $$ = $1; }
         }
     ;
 
+lvariable: DECLARED_VAR { $$ = $1; }
+    | VAR proposed_varname {
+            char *vardecl = savefmt("var %s\n", $2);
+            strlist_add(&vardecl_list, vardecl);
+            free(vardecl);
+            strlist_add(&fvars_list, $2);
+            $$ = $2;
+        }
+    ;
+
 ret_count_type:
       VOID { $$ = 0; }
     | SINGLE  { $$ = 1; }
@@ -306,7 +311,6 @@ statement: ';' { $$ = savestring(""); }
             free($1); free($3);
             free(body);
         }
-    | VAR fvarlist ';' { $$ = $2; }
     | CONST proposed_varname ASGN expr ';' {
             $$ = savestring("");
             kvmap_add(&function_consts, $2, $4);
@@ -353,13 +357,13 @@ statement: ';' { $$ = savestring(""); }
             free($2); free($4);
             free(cond); free(body);
         }
-    | FOR '(' variable IN expr ')' statement {
+    | FOR '(' lvariable IN expr ')' statement {
             char *body = indent($7);
             $$ = savefmt("%s\nforeach %s ! pop\n%s\nrepeat", $5, $3, body);
             free($3); free($5); free($7);
             free(body);
         }
-    | FOR '(' variable KEYVAL variable IN expr ')' statement {
+    | FOR '(' lvariable KEYVAL lvariable IN expr ')' statement {
             char *body = indent($9);
             $$ = savefmt("%s\nforeach %s ! %s !\n%s\nrepeat", $7, $5, $3, body);
             free($3); free($5); free($7); free($9);
@@ -373,7 +377,7 @@ statement: ';' { $$ = savestring(""); }
             free(trybody);
             free(catchbody);
         }
-    | TRY statement CATCH '(' variable ')' statement {
+    | TRY statement CATCH '(' lvariable ')' statement {
             char *trybody = indent($2);
             char *catchbody = indent($7);
             $$ = savefmt("0 try\n%s\ncatch_detailed %s !\n%s\nendcatch", trybody, $5, catchbody);
@@ -434,7 +438,7 @@ paren_expr: '(' expr ')' { $$ = $2; } ;
 statements: /* nothing */ { $$ = savestring(""); }
     | statements statement {
             if (*$1) {
-                $$ = savefmt("%s\n%s", $1, $2);
+                $$ = savefmt("%s\n\n%s", $1, $2);
             } else {
                 $$ = $2;
             }
@@ -470,7 +474,7 @@ function_call: function '(' arglist_or_null ')' {
             char* fargs = strlist_wrap(&$3, 0, $1.expects);
             char* vargs = strlist_join(&$3, "\n", $1.expects, -1);
             char* ivargs = indent(vargs);
-            basecall = savefmt("%s%s{%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
+            basecall = savefmt("%s%s{\n%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
             free(fargs);
             free(vargs);
             free(ivargs);
@@ -497,7 +501,7 @@ primitive_call:
     | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
     ;
 
-lvalue: variable {
+lvalue: lvariable {
             $$.get = savefmt("%s @", $1);
             $$.set = savefmt("%s !", $1);
             $$.del = savefmt("0 %s !", $1);
@@ -533,11 +537,11 @@ compr_cond: /* nothing */ { $$ = savestring(""); }
     ;
 
 compr_loop:
-      '(' variable IN expr ')' {
+      '(' lvariable IN expr ')' {
             $$ = savefmt("%s\nforeach %s ! pop", $4, $2);
             free($2); free($4);
         }
-    | '(' variable KEYVAL variable IN expr ')' {
+    | '(' lvariable KEYVAL lvariable IN expr ')' {
             $$ = savefmt("%s\nforeach %s ! %s !", $6, $4, $2);
             free($2); free($4);
         }
@@ -552,7 +556,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
     | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
-    | variable { $$ = savefmt("%s @", $1); free($1); }
+    | lvariable { $$ = savefmt("%s @", $1); free($1); }
     | variable '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
     | variable '[' expr ']' '[' subscripts {
             $$ = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
@@ -560,6 +564,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
         }
     | INSERT { $$ = savestring("{ }list"); }
     | '[' arglist_or_null ']' {
+            /* list initializer */
             char *items = strlist_wrap(&$2, 0, -1);
             char *body = indent(items);
             if ($2.count == 0) {
@@ -586,6 +591,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free($3); free($4); free($5);
         }
     | '[' dictlist ']' {
+            /* dictionary initializer */
             char *items = strlist_wrap(&$2, 0, -1);
             char *body = indent(items);
             $$ = savefmt("{\n%s}dict", body);
@@ -593,7 +599,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             strlist_free(&$2);
         }
     | '[' FOR compr_loop compr_cond expr KEYVAL expr ']' {
-            /* list comprehension */
+            /* dictionary comprehension */
             char *kexpr = indent($5);
             char *vexpr = indent($7);
             if (*$4) {
@@ -678,29 +684,6 @@ dictlist:
             free(vals);
             free($3); free($5);
         }
-    ;
-
-fvardef: proposed_varname {
-            char *vardecl = savefmt("var %s\n", $1);
-            $$ = savestring("");
-            strlist_add(&fvars_list, $1);
-            strlist_add(&vardecl_list, vardecl);
-            free(vardecl);
-            free($1);
-        }
-    | proposed_varname ASGN expr {
-            char *vardecl = savefmt("var %s\n", $1);
-            $$ = savefmt("%s %s !", $3, $1);
-            strlist_add(&fvars_list, $1);
-            strlist_add(&vardecl_list, vardecl);
-            free(vardecl);
-            free($1);
-            free($3);
-        }
-    ;
-
-fvarlist: fvardef { $$ = $1; }
-    | fvarlist ',' fvardef { $$ = savefmt("%s\n%s", $1, $3); free($1); free($3); }
     ;
 
 %%

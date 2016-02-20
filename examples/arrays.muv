@@ -6,7 +6,9 @@ func fmtnotify(player, fmt, args*) {
 
 
 func dump(arr, indent) {
-    var key, val, out = "";
+    var key;
+    var val;
+    var out = "";
     for (key => val in arr) {
         if (array?(val) || dictionary?(val)) {
 	    fmttell("%s%~ => [", indent, key);
@@ -45,7 +47,8 @@ func main() {
         "Tenth",
         "Eleventh"
     ];
-    var idx, word;
+    var idx;
+    var word;
     for (word in arr) {
         tell(arr[idx]);
     }

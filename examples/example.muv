@@ -3,21 +3,20 @@ include "!fb6prims";
 var foo = 72;
 
 func arrrr() {
-    var key, val;
     var bar = ["one", "two", "three", "four", "five"];
 
     tell(bar[3]);
-    for (key => val in bar) {
+    for (var key => var val in bar) {
         tell(cat(key + " = " + val));
     }
 }
 
 func trys() {
-    var err, bar;
+    var bar;
 
     try {
         bar = desc(me);
-    } catch (err) {
+    } catch (var err) {
         tell(err);
     }
 

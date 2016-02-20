@@ -74,8 +74,7 @@ Global Variables
 You can declare global variables at the toplevel scope like:
 
     var myglobal;
-    var firstvar, secondvar, third;
-    var foo = 23, bar = 72;
+    var answer = 42;
 
 The global variables `me` and `loc` are pre-defined for all programs.
 
@@ -117,9 +116,7 @@ You can declare extra variables in function scope like this:
 
     func myfunction() {
         var myvar;
-        var firstvar, secondvar, third;
-        var forth = "Sally";
-        var fifth = "5th", sixth = 6;
+        var fifth = "5th";
         ...
     }
 
@@ -425,7 +422,10 @@ clause early, and execution resumes after the end of the switch.  If you use a
 `continue` statement inside a case clause, the entire switch statement is
 re-evaluated.  This can be useful for, perhaps, running a looping state machine.
 
-    var FIRST = 1, SECOND = 2, THIRD = 3, FOURTH = 4;
+    const FIRST = 1;
+    const SECOND = 2;
+    const THIRD = 3;
+    const FOURTH = 4;
     var state = FIRST;
     switch(state) {
         case(FIRST) {
@@ -463,31 +463,30 @@ There are several types of loops available:
         tell(intostr(i--));
     }
 
-    var i = 10;
+    i = 10;
     until (i == 0) {
         tell(intostr(i--));
     }
 
-    var i = 10;
+    i = 10;
     do {
         tell(intostr(i--));
     } while(i > 0);
 
-    var i = 10;
+    i = 10;
     do {
         tell(intostr(i--));
     } until(i == 0);
 
 You can also iterate arrays/lists/dictionaries like this:
 
-    var letter, letters = ["a", "b", "c", "d", "e"];
-    for (letter in letters)
+    var letters = ["a", "b", "c", "d", "e"];
+    for (var letter in letters)
         tell(letter);
 
 or
 
-    var idx, letter;
-    for (idx => letter in ["a", "b", "c", "d", "e"])
+    for (var idx => var letter in ["a", "b", "c", "d", "e"])
         tell(cat(intostr(idx), letter));
 
 
@@ -501,9 +500,8 @@ array is untouched.
 For example, if you have a list of strings in the variable `words`, you can create
 a list of uppercased versions of those words like this:
 
-    var word;
     var words = ["fee", "fie", "foe", "fum"];
-    var uppers = [for (word in words) toupper(word)]
+    var uppers = [for (var word in words) toupper(word)]
 
 Similarly, you can mutate a dictionary:
 
@@ -513,8 +511,7 @@ Similarly, you can mutate a dictionary:
         "swap" => 1,
         "setpropstr" => 3
     ];
-    var k, v;
-    var keywords = [for (k => v in prims) cat("KW_", toupper(k)) => v];
+    var keywords = [for (var k => var v in prims) cat("KW_", toupper(k)) => v];
 
 You can also filter a list or dictionary by adding an `if` or `unless` clause:
 
