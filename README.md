@@ -51,11 +51,11 @@ To build:
 
     make
 
-To install under /usr/local:
+To install under `/usr/local`:
 
     sudo make install
 
-To install under /usr instead:
+To install under `/usr` instead:
 
     sudo make install ROOT=/usr
 
