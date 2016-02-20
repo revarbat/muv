@@ -39,8 +39,8 @@ You can write:
 Code Status
 -----------
 
-This code is in Beta.  It compiles and runs cleanly on 32bit and 64bit systems, but the language
-needs thorough testing.  The output code could use optimization.
+This code is in Alpha.  It compiles and runs cleanly on 32bit and 64bit systems, but the language
+is still being developed.  The output code could use optimization.
 
 
 Compiling
