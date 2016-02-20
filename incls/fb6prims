@@ -1,5 +1,5 @@
-extern void throw(x) = "abort";
 extern void abort(x);
+extern void throw(x) = "abort";
 
 extern single awake?(x);
 extern single online() = "online_array";
@@ -36,8 +36,22 @@ extern single firstdescr(x);
 extern single lastdescr(x);
 extern single nextdescr(x);
 
-extern multiple call(x, args*) = "2 try array_explode pop depth rotate call catch abort endcatch";
-extern multiple call_public(x, pub, args*) = "3 try array_explode pop depth rotate depth rotate call catch abort endcatch";
+extern multiple call(x, args*) = "
+2 try
+    array_explode pop
+    depth rotate call
+catch abort
+endcatch
+";
+
+extern multiple call_public(x, pub, args*) = "
+3 try
+    array_explode pop
+    depth rotate depth rotate call
+catch abort
+endcatch
+";
+
 extern single cancall?(x,y);
 extern single interp(x,y,z);
 
@@ -53,8 +67,13 @@ extern void watchpid(x);
 extern void tell(x) = "me @ swap notify";
 extern void notify(x,y);
 extern void notify_except(x,y,z);
-extern void notify_exclude(x,y,z) = "swap array_explode dup 2 + rotate notify_exclude";
 extern void array_notify(x,y);
+
+extern void notify_exclude(x,y,z) = "
+swap array_explode
+dup 2 + rotate notify_exclude
+";
+
 extern void user_log(x);
 extern single read();
 extern multiple tread(x);
@@ -185,6 +204,7 @@ extern multiple array_cut(x,y);
 extern single array_delitem(x,y);
 extern single array_delrange(x,y,z);
 extern single array_diff(x,y);
+extern single array_ndiff(x);
 extern single array_excludeval(x,y);
 extern single array_extract(x,y);
 extern single array_findval(x,y);
@@ -195,6 +215,7 @@ extern single array_insertitem(x,y,z);
 extern single array_insertrange(x,y,z);
 extern single array_interpret(x);
 extern single array_intersect(x,y);
+extern single array_nintersect(x);
 extern single array_join(x,y);
 extern multiple array_last(x);
 extern single array_matchkey(x,y);
@@ -210,6 +231,7 @@ extern single array_setrange(x,y,z);
 extern single array_sort(x,y);
 extern single array_sort_indexed(x,y,z);
 extern single array_union(x,y);
+extern single array_nunion(x);
 
 extern single dbtop();
 extern single dbcmp(x,y);
@@ -391,7 +413,7 @@ const false = 0;
 
 extern single cat(args*) = "array_interpret";
 extern single array_make(args*) = "";
-extern single array_dict_make(args*) = "{ swap array_explode pop }dict";
+extern single array_make_dict(args*) = "{ swap array_explode pop }dict";
 extern single fmtstring(fmt, args*) = "
 2 try
     array_explode 1 + rotate fmtstring
