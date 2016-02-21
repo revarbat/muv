@@ -1,3 +1,6 @@
+////////////////////////////////////////
+// Declarations for all FB6 primitives.
+
 extern void abort(x);
 extern void throw(x) = "abort";
 

@@ -1,0 +1,12 @@
+////////////////////////////
+// regex namespace
+
+extern multiple regex.match(x,y,z) = "\\regexp";
+extern single   regex.sub(w,x,y,z) = "\\regsub";
+
+// Server defined constants.
+const REGEX_ICASE = muf("reg_icase");
+const REGEX_ALL = muf("reg_all");
+const REGEX_EXTENDED = muf("reg_extended");
+
+

@@ -1,0 +1,86 @@
+/////////////////////////////
+// obj namespace
+
+extern single   obj.dbref(x) = "\\dbref";
+
+extern single   obj.top() = "\\dbtop";
+extern single   obj.cmp(x,y) = "\\dbcmp";
+extern single   obj.nextowned(x) = "\\nextowned";
+
+extern single   obj.match(x) = "\\match";
+extern single   obj.rmatch(x,y) = "\\rmatch";
+extern single   obj.pmatch(x) = "\\pmatch";
+extern single   obj.part_pmatch(x) = "\\part_pmatch";
+
+extern single   obj.name_ok?(x) = "name-ok?";
+extern single   obj.pname_ok?(x) = "pname-ok?";
+extern single   obj.ext_name_ok?(x,y) = "ext-name-ok?";
+
+extern single   obj.unparse(x) = "\\unparseobj";
+extern multiple obj.timestamps(x) = "\\timestamps";
+extern single   obj.objmem(x) = "\\objmem";
+extern multiple obj.stats(x) = "\\stats";
+
+extern single   obj.controls(x,y) = "\\controls";
+extern single   obj.owner(x) = "\\owner";
+extern void     obj.setown(x,y) = "\\setown";
+extern void     obj.moveto(x,y) = "\\moveto";
+extern single   obj.location(x) = "\\location";
+extern single   obj.contents(x) = "\\contents";
+extern single   obj.contents_array(x) = "\\contents_array";
+
+extern single   obj.next(x) = "\\next";
+extern single   obj.exits(x) = "\\exits";
+extern single   obj.exits_array(x) = "\\exits_array";
+extern single   obj.getlinks(x) = "\\getlinks_array";
+extern void     obj.setlinks(x,y) = "\\setlinks_array";
+extern single   obj.entrances(x) = "\\entrances_array";
+extern single   obj.nextentrance(x,y) = "\\nextentrance";
+extern single   obj.findnext(w,x,y,z) = "\\findnext";
+
+extern single   obj.copyobj(x) = "\\copyobj";
+extern single   obj.copyplayer(x,y,z) = "\\copyplayer";
+extern void     obj.toadplayer(x,y) = "\\toadplayer";
+extern single   obj.newplayer(x,y) = "\\newplayer";
+extern single   obj.newroom(x,y) = "\\newroom";
+extern single   obj.newobject(x,y) = "\\newobject";
+extern single   obj.newexit(x,y) = "\\newexit";
+extern single   obj.newprogram(x,y) = "\\newprogram";
+extern void     obj.recycle(x) = "\\recycle";
+
+extern single   obj.pennies(x) = "\\pennies";
+extern void     obj.addpennies(x,y) = "\\addpennies";
+extern void     obj.movepennies(x,y,z) = "\\movepennies";
+
+extern single   obj.checkpassword(x,y) = "\\checkpassword";
+extern void     obj.newpassword(x,y) = "\\newpassword";
+extern void     obj.set(x,y) = "\\set";
+extern single   obj.flag?(x,y) = "\\flag?";
+extern single   obj.mlevel(x) = "\\mlevel";
+
+extern single   obj.ok?(x) = "\\ok?";
+extern single   obj.player?(x) = "\\player?";
+extern single   obj.room?(x) = "\\room?";
+extern single   obj.thing?(x) = "\\thing?";
+extern single   obj.exit?(x) = "\\exit?";
+extern single   obj.program?(x) = "\\program?";
+
+extern single   obj.desc(x) = "\\desc";
+extern single   obj.drop(x) = "\\drop";
+extern single   obj.fail(x) = "\\fail";
+extern single   obj.name(x) = "\\name";
+extern single   obj.odrop(x) = "\\odrop";
+extern single   obj.ofail(x) = "\\ofail";
+extern single   obj.osucc(x) = "\\osucc";
+extern void     obj.setdesc(x,y) = "\\setdesc";
+extern void     obj.setdrop(x,y) = "\\setdrop";
+extern void     obj.setfail(x,y) = "\\setfail";
+extern void     obj.setname(x,y) = "\\setname";
+extern void     obj.setodrop(x,y) = "\\setodrop";
+extern void     obj.setofail(x,y) = "\\setofail";
+extern void     obj.setosucc(x,y) = "\\setosucc";
+extern void     obj.setsucc(x,y) = "\\setsucc";
+extern single   obj.succ(x) = "\\succ";
+extern single   obj.truename(x) = "\\truename";
+
+

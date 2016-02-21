@@ -1,4 +1,4 @@
-include "!fb6prims";
+include "!fb6/prims";
 
 extern single type(val);
 

@@ -1,0 +1,23 @@
+///////////////////////////////
+// proc namespace
+
+extern single proc.mode() = "\\mode";
+extern void   proc.setmode(x) = "\\setmode";
+extern void   proc.preempt() = "\\preempt";
+extern void   proc.foreground() = "\\foreground";
+extern void   proc.background() = "\\background";
+extern single proc.interp(x,y,z) = "\\interp";
+extern single proc.queue(x,y,z) = "\\queue";
+extern single proc.fork() = "\\fork";
+extern single proc.kill(x) = "\\kill";
+extern single proc.pid() = "\\pid";
+extern single proc.ispid?(x) = "\\ispid?";
+extern single proc.getpids(x) = "\\getpids";
+extern single proc.getpidinfo(x) = "\\getpidinfo";
+extern single proc.instances(x) = "\\instances";
+
+const PROC_PREEMPT = muf("pr_mode");
+const PROC_FOREGROUND = muf("fg_mode");
+const PROC_BACKGROUND = muf("bg_mode");
+
+

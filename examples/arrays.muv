@@ -1,4 +1,4 @@
-include "!fb6prims";
+include "!fb6/prims";
 
 func fmtnotify(player, fmt, args*) {
     notify(player, fmtstring(fmt, muf("args @ array_explode pop")));

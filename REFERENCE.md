@@ -150,13 +150,46 @@ You can include other MUV files by using the `include` command:
     include "otherfile.muv";
 
 You can include standard MUV files by preceeding the filename with a `!`.
-In fact, this is the way you specify which MUF primitive set to use:
+If you include the file `!fb6/prims`, like this:
 
-    include "!fb6prims";
+    include "!fb6/prims";
 
-At the moment, only the `fb6prims` set is defined, but in the future, more
-server specific include files can be added to the `/usr/local/share/muv/incls`
-directory.
+You will get all the standard FB6 MUF primitives declared for MUV to use.
+These primitives will be declared with exactly the same names as they have
+in MUF.
+
+Since that is kind of a messy namespace, you can instead include files with
+just the primitives you need, renamed into namespaces.  For example, if you
+include the file `!fb6/obj` You can get access to the standard fb6 object-
+related primitives, renamed into the `obj` namespace such that MUF primitives
+like `name` and `set` are renamed to `obj.name()` and `obj.set()`, leading
+to far less namespace polution.  Currently the provided include files are as
+follows, in order of likely importance:
+
+File       | Namespace | What it declares
+-----------|-----------|-----------------------------------------------------
+fb6/prims  |           | All FB6 MUF prims, with the same names as in MUF.
+fb6/stdlib |           | Frequently used functions/primitives.
+fb6/io     | io        | Notify and read type primitives.
+fb6/type   | type      | Type checking and conversion primitives.
+fb6/str    | str       | String based primitives.
+fb6/ansi   | ansi      | ANSI terminal display related string primitives.
+fb6/regex  | regex     | Regular expression primitives.
+fb6/math   | math      | Floating point and integer math primitives.
+fb6/array  | array     | Array/list/dictionary related primitives.
+fb6/lock   | lock      | Lock related primitives.
+fb6/time   | time      | Time based primitives.
+fb6/prop   | prop      | Primitives for reading and writing properties.
+fb6/obj    | obj       | DB object related primitives.
+fb6/conn   | conn      | Connection based primitives.
+fb6/descr  | descr     | Descriptor based connection primitives.
+fb6/event  | event     | Event handling primitives.
+fb6/mcp    | mcp       | MCP client-server communication protocol primitives.
+fb6/gui    | gui       | MCP-GUI related primitives and defines.
+fb6/proc   | proc      | MUF process related primitives.
+fb6/prog   | prog      | Program calling, editing, and compiling.
+fb6/sys    | sys       | System related primitives.
+fb6/debug  | debug     | Debugging related primitives.
 
 
 Expressions

@@ -5,12 +5,12 @@ Short List
 ----------
 
 - Tuple assignment:  `x, y = [y, x];`
+
+
+Pie in Sky
+----------
+
 - Array slicing:  `s = foo[2:4];`
-
-
-Future
-------
-
 - Simple object oriented classes.
 - Standard libraries.
 - Upload to MUCK using -u:

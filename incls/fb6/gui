@@ -1,0 +1,31 @@
+extern single gui.available(x) = "\\gui_available";
+extern single gui.dlog_create(w,x,y,z) = "\\gui_dlog_create";
+extern single gui.dlog_simple(x,y) = "\\gui_dlog_simple";
+extern single gui.dlog_helper(x,y,z) = "\\gui_dlog_helper";
+extern void   gui.dlog_show(x) = "\\gui_dlog_show";
+extern void   gui.dlog_close(x) = "\\gui_dlog_close";
+extern void   gui.ctrl_create(w,x,y,z) = "\\gui_ctrl_create";
+extern void   gui.ctrl_command(w,x,y,z) = "\\gui_ctrl_command";
+extern single gui.values_get(x) = "\\gui_values_get";
+extern single gui.value_get(x,y) = "\\gui_value_get";
+extern void   gui.value_set(x,y,z) = "\\gui_value_set";
+
+const GUI_DATUM     = muf("c_datum");
+const GUI_MENU      = muf("c_menu");
+const GUI_LABEL     = muf("c_label");
+const GUI_IMAGE     = muf("c_image");
+const GUI_HRULE     = muf("c_hrule");
+const GUI_VRULE     = muf("c_vrule");
+const GUI_BUTTON    = muf("c_button");
+const GUI_CHECKBOX  = muf("c_checkbox");
+const GUI_RADIOBTN  = muf("c_radiobtn");
+const GUI_EDIT      = muf("c_edit");
+const GUI_MULTIEDIT = muf("c_multiedit");
+const GUI_COMBOBOX  = muf("c_combobox");
+const GUI_LISTBOX   = muf("c_listbox");
+const GUI_SPINNER   = muf("c_spinner");
+const GUI_SCALE     = muf("c_scale");
+const GUI_FRAME     = muf("c_frame");
+const GUI_NOTEBOOK  = muf("c_notebook");
+
+
