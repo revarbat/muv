@@ -126,7 +126,9 @@ Constants
 
 You can declare constants using the syntax:
 
-    const CONSTNAME = VALUE;
+    const PI = 3.14159;
+    
+By convention, the constant name should be all uppercase.
 
 
 Calls
