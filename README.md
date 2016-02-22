@@ -26,8 +26,7 @@ Instead of writing cryptic code like:
 You can write:
 
     func showspecies() {
-        var obj;
-        for (obj in contents_array(loc))
+        for (var obj in contents_array(loc))
             if (player?(obj))
                 fmttell("%-30s %-30s",
                     name(obj),
