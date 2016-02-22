@@ -1,13 +1,14 @@
-include "!fb6/prims";
+include "!fb6/io";
+include "!fb6/obj";
+include "!fb6/prop";
 
 func showspecies() {
-    var obj;
-    for (obj in contents_array(loc)) {
-        if(player?(obj)) {
-            fmttell("%-30s %-10s %-30s",
-                name(obj),
-                getpropstr(obj, "sex"),
-                getpropstr(obj, "species")
+    for (var obj in obj_contents_array(loc)) {
+        if(obj_player?(obj)) {
+            io_fmttell("%-30D %-10s %-30s",
+                obj,
+                prop_get_str(obj, "sex"),
+                prop_get_str(obj, "species")
             );
         }
     }

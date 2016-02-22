@@ -1,8 +1,8 @@
 %{
 
 #define MAXIDENTLEN 128
-#define FUNC_PREFIX "f_"
-#define VAR_PREFIX "v_"
+#define FUNC_PREFIX "_"
+#define VAR_PREFIX "_"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -267,9 +267,8 @@ lvariable: DECLARED_VAR { $$ = $1; }
             char *vardecl = savefmt("var %s\n", vname);
             strlist_add(&vardecl_list, vardecl);
             kvmap_add(&function_vars, $2, vname);
-            free(vname);
+            $$ = vname;
             free(vardecl);
-            $$ = $2;
         }
     ;
 

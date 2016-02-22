@@ -44,16 +44,14 @@ extern multiple call(x, args*) = "
     array_explode pop
     depth rotate call
 catch abort
-endcatch
-";
+endcatch";
 
 extern multiple call_public(x, pub, args*) = "
 3 try
     array_explode pop
     depth rotate depth rotate call
 catch abort
-endcatch
-";
+endcatch";
 
 extern single cancall?(x,y);
 extern single interp(x,y,z);
@@ -72,10 +70,8 @@ extern void notify(x,y);
 extern void notify_except(x,y,z);
 extern void array_notify(x,y);
 
-extern void notify_exclude(x,y,z) = "
-swap array_explode
-dup 2 + rotate notify_exclude
-";
+extern void notify_exclude(x,y,z) = "swap array_explode
+dup 2 + rotate notify_exclude";
 
 extern void user_log(x);
 extern single read();
@@ -411,9 +407,6 @@ extern void debugger_break();
 extern void force(x,y);
 extern single force_level();
 
-const true = 1;
-const false = 0;
-
 extern single cat(args*) = "array_interpret";
 extern single array_make(args*) = "";
 extern single array_make_dict(args*) = "{ swap array_explode pop }dict";
@@ -423,8 +416,7 @@ extern single fmtstring(fmt, args*) = "
     depth 0 swap - rotate
     depth 1 - popn
 catch abort
-endcatch
-";
+endcatch";
 
 extern void fmttell(fmt, args*) = "
 2 try
@@ -432,23 +424,26 @@ extern void fmttell(fmt, args*) = "
     me @ swap notify
     depth popn
 catch abort
-endcatch
-";
+endcatch";
 
 extern multiple execute(addr, args*) = "
 2 try
     array_explode 1 + rotate execute
 catch abort
-endcatch
-";
+endcatch";
 
 // Server defined constants.
+const TRUE = 1;
+const FALSE = 0;
+
 const REG_ICASE = muf("reg_icase");
 const REG_ALL = muf("reg_all");
 const REG_EXTENDED = muf("reg_extended");
+
 const PR_MODE = muf("pr_mode");
 const FG_MODE = muf("fg_mode");
 const BG_MODE = muf("bg_mode");
+
 const C_DATUM = muf("c_datum");
 const C_MENU = muf("c_menu");
 const C_LABEL = muf("c_label");

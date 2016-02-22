@@ -1,49 +1,49 @@
 ////////////////////////////////////
 // Make math namespace.
 
-extern single   math.int(x) = "int";
-extern single   math.abs(x) = "abs";
-extern single   math.ceil(x) = "ceil";
-extern single   math.floor(x) = "floor";
-extern single   math.fmod(x,y) = "fmod";
-extern multiple math.modf(x) = "modf";
-extern single   math.sign(x) = "sign";
+extern single   math_int(x) = "int";
+extern single   math_abs(x) = "abs";
+extern single   math_ceil(x) = "ceil";
+extern single   math_floor(x) = "floor";
+extern single   math_fmod(x,y) = "fmod";
+extern multiple math_modf(x) = "modf";
+extern single   math_sign(x) = "sign";
 
-extern single   math.sqrt(x) = "sqrt";
-extern single   math.pow(x,y) = "pow";
-extern single   math.log(x) = "log";
-extern single   math.exp(x) = "exp";
-extern single   math.log10(x) = "log10";
-extern single   math.exp10(x) = "exp10";
+extern single   math_sqrt(x) = "sqrt";
+extern single   math_pow(x,y) = "pow";
+extern single   math_log(x) = "log";
+extern single   math_exp(x) = "exp";
+extern single   math_log10(x) = "log10";
+extern single   math_exp10(x) = "exp10";
 
-extern single   math.sin(x) = "sin";
-extern single   math.cos(x) = "cos";
-extern single   math.tan(x) = "tan";
-extern single   math.asin(x) = "asin";
-extern single   math.acos(x) = "acos";
-extern single   math.atan(x) = "atan";
-extern single   math.atan2(y,x) = "atan2";
+extern single   math_sin(x) = "sin";
+extern single   math_cos(x) = "cos";
+extern single   math_tan(x) = "tan";
+extern single   math_asin(x) = "asin";
+extern single   math_acos(x) = "acos";
+extern single   math_atan(x) = "atan";
+extern single   math_atan2(y,x) = "atan2";
 
-extern multiple math.diff3(x1,y1,z1,x2,y2,z2) = "diff3";
-extern single   math.dist3d(x,y,z) = "dist3d";
-extern multiple math.xyz_to_polar(x,y,z) = "xyz_to_polar";
-extern multiple math.polar_to_xyz(rad,theta,phi) = "polar_to_xyz";
+extern multiple math_diff3(x1,y1,z1,x2,y2,z2) = "diff3";
+extern single   math_dist3d(x,y,z) = "dist3d";
+extern multiple math_xyz_to_polar(x,y,z) = "xyz_to_polar";
+extern multiple math_polar_to_xyz(rad,theta,phi) = "polar_to_xyz";
 
-extern single   math.getseed() = "getseed";
-extern void     math.setseed(x) = "setseed";
-extern single   math.srand() = "srand";
-extern single   math.frand() = "frand";
-extern single   math.random() = "random";
-extern single   math.gaussian(x,y) = "gaussian";
+extern single   math_getseed() = "getseed";
+extern void     math_setseed(x) = "setseed";
+extern single   math_srand() = "srand";
+extern single   math_frand() = "frand";
+extern single   math_random() = "random";
+extern single   math_gaussian(x,y) = "gaussian";
 
-extern void     math.clear_errors() = "clear";
-extern single   math.clear_error(x) = "clear_error";
-extern single   math.error?() = "error?";
-extern single   math.error_bit(x) = "error_bit";
-extern single   math.error_name(x) = "error_name";
-extern single   math.error_num() = "error_num";
-extern single   math.error_str(x) = "error_str";
-extern single   math.is_set?(x) = "is_set?";
-extern single   math.set_error(x) = "set_error";
+extern void     math_error_clear_all() = "clear";
+extern single   math_error_clear(x) = "clear_error";
+extern single   math_error?() = "error?";
+extern single   math_error_bit(x) = "error_bit";
+extern single   math_error_name(x) = "error_name";
+extern single   math_error_num() = "error_num";
+extern single   math_error_str(x) = "error_str";
+extern single   math_error_is_set?(x) = "is_set?";
+extern single   math_error_set(x) = "set_error";
 
 

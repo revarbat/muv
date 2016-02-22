@@ -1,43 +1,43 @@
 ////////////////////
 // prop namespace
 
-extern single   prop.get(x,y) = "getprop";
-extern single   prop.get_fval(x,y) = "getpropfval";
-extern single   prop.get_str(x,y) = "getpropstr";
-extern single   prop.get_val(x,y) = "getpropval";
+extern single   prop_get(x,y) = "getprop";
+extern single   prop_get_fval(x,y) = "getpropfval";
+extern single   prop_get_str(x,y) = "getpropstr";
+extern single   prop_get_val(x,y) = "getpropval";
 
-extern void     prop.add(w,x,y,z) = "addprop";
-extern void     prop.set(x,y,z) = "setprop";
-extern void     prop.remove(x,y) = "remove_prop";
+extern void     prop_add(w,x,y,z) = "addprop";
+extern void     prop_set(x,y,z) = "setprop";
+extern void     prop_remove(x,y) = "remove_prop";
 
-extern multiple prop.envprop(x,y) = "envprop";
-extern multiple prop.envpropstr(x,y) = "envpropstr";
+extern multiple prop_env(x,y) = "envprop";
+extern multiple prop_env_str(x,y) = "envpropstr";
 
-extern single   prop.blessed?(x,y) = "blessed?";
-extern void     prop.bless(x,y) = "blessprop";
-extern void     prop.unbless(x,y) = "unblessprop";
+extern single   prop_blessed?(x,y) = "blessed?";
+extern void     prop_bless(x,y) = "blessprop";
+extern void     prop_unbless(x,y) = "unblessprop";
 
-extern single   prop.dir?(x,y) = "propdir?";
-extern single   prop.next(x,y) = "nextprop";
+extern single   prop_dir?(x,y) = "propdir?";
+extern single   prop_next(x,y) = "nextprop";
 
-extern single   prop.filter_flags(x,y) = "array_filter_flags";
-extern single   prop.filter(x,y,z) = "array_filter_prop";
+extern single   prop_filter_flags(x,y) = "array_filter_flags";
+extern single   prop_filter(x,y,z) = "array_filter_prop";
 
-extern single   prop.dirs_get(x,y) = "array_get_propdirs";
+extern single   prop_dirs_get(x,y) = "array_get_propdirs";
 
-extern single   prop.list_get(x,y) = "array_get_proplist";
-extern void     prop.list_put(x,y,z) = "array_put_proplist";
+extern single   prop_list_get(x,y) = "array_get_proplist";
+extern void     prop_list_put(x,y,z) = "array_put_proplist";
 
-extern single   prop.vals_get(x,y) = "array_get_propvals";
-extern void     prop.vals_put(x,y,z) = "array_put_propvals";
+extern single   prop_vals_get(x,y) = "array_get_propvals";
+extern void     prop_vals_put(x,y,z) = "array_put_propvals";
 
-extern void     prop.reflist_add(x,y,z) = "reflist_add";
-extern void     prop.reflist_del(x,y,z) = "reflist_del";
-extern single   prop.reflist_find(x,y,z) = "reflist_find";
-extern single   prop.reflist_get(x,y) = "array_get_reflist";
-extern void     prop.reflist_put(x,y,z) = "array_put_reflist";
+extern void     prop_reflist_add(x,y,z) = "reflist_add";
+extern void     prop_reflist_del(x,y,z) = "reflist_del";
+extern single   prop_reflist_find(x,y,z) = "reflist_find";
+extern single   prop_reflist_get(x,y) = "array_get_reflist";
+extern void     prop_reflist_put(x,y,z) = "array_put_reflist";
 
-extern single   prop.parse_mpi(w,x,y,z) = "parseprop";
-extern multiple prop.parse_mpi_ex(w,x,y,z) = "parsepropex";
+extern single   prop_parse_mpi(w,x,y,z) = "parseprop";
+extern multiple prop_parse_mpi_ex(w,x,y,z) = "parsepropex";
 
 

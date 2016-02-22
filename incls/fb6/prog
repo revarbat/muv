@@ -1,7 +1,7 @@
 ///////////////////////////////
 // prog namespace
 
-extern multiple prog.call(x, args*) = "
+extern multiple prog_call(x, args*) = "
 2 try
     array_explode pop
     depth rotate call
@@ -9,7 +9,7 @@ catch abort
 endcatch
 ";
 
-extern multiple prog.call_public(x, pub, args*) = "
+extern multiple prog_call_public(x, pub, args*) = "
 3 try
     array_explode pop
     depth rotate depth rotate call
@@ -17,18 +17,18 @@ catch abort
 endcatch
 ";
 
-extern multiple prog.execute(addr, args*) = "
+extern multiple prog_execute(addr, args*) = "
 2 try
     array_explode 1 + rotate execute
 catch abort
 endcatch
 ";
 
-extern single prog.cancall?(x,y) = "cancall?";
-extern single prog.compile(x,y) = "compile";
-extern void   prog.uncompile(x) = "uncompile";
-extern single prog.compiled?(x) = "compiled?";
-extern single prog.getlines(x,y,z) = "program_getlines";
-extern void   prog.setlines(x,y) = "program_setlines";
+extern single prog_cancall?(x,y) = "cancall?";
+extern single prog_compile(x,y) = "compile";
+extern void   prog_uncompile(x) = "uncompile";
+extern single prog_compiled?(x) = "compiled?";
+extern single prog_getlines(x,y,z) = "program_getlines";
+extern void   prog_setlines(x,y) = "program_setlines";
 
 

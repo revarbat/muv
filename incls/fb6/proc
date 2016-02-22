@@ -1,20 +1,20 @@
 ///////////////////////////////
 // proc namespace
 
-extern single proc.mode() = "mode";
-extern void   proc.setmode(x) = "setmode";
-extern void   proc.preempt() = "preempt";
-extern void   proc.foreground() = "foreground";
-extern void   proc.background() = "background";
-extern single proc.interp(x,y,z) = "interp";
-extern single proc.queue(x,y,z) = "queue";
-extern single proc.fork() = "fork";
-extern single proc.kill(x) = "kill";
-extern single proc.pid() = "pid";
-extern single proc.ispid?(x) = "ispid?";
-extern single proc.getpids(x) = "getpids";
-extern single proc.getpidinfo(x) = "getpidinfo";
-extern single proc.instances(x) = "instances";
+extern single proc_mode() = "mode";
+extern void   proc_setmode(x) = "setmode";
+extern void   proc_preempt() = "preempt";
+extern void   proc_foreground() = "foreground";
+extern void   proc_background() = "background";
+extern single proc_interp(x,y,z) = "interp";
+extern single proc_queue(x,y,z) = "queue";
+extern single proc_fork() = "fork";
+extern single proc_kill(x) = "kill";
+extern single proc_pid() = "pid";
+extern single proc_ispid?(x) = "ispid?";
+extern single proc_getpids(x) = "getpids";
+extern single proc_getpidinfo(x) = "getpidinfo";
+extern single proc_instances(x) = "instances";
 
 const PROC_PREEMPT = muf("pr_mode");
 const PROC_FOREGROUND = muf("fg_mode");

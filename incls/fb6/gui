@@ -1,14 +1,14 @@
-extern single gui.available(x) = "gui_available";
-extern single gui.dlog_create(w,x,y,z) = "gui_dlog_create";
-extern single gui.dlog_simple(x,y) = "gui_dlog_simple";
-extern single gui.dlog_helper(x,y,z) = "gui_dlog_helper";
-extern void   gui.dlog_show(x) = "gui_dlog_show";
-extern void   gui.dlog_close(x) = "gui_dlog_close";
-extern void   gui.ctrl_create(w,x,y,z) = "gui_ctrl_create";
-extern void   gui.ctrl_command(w,x,y,z) = "gui_ctrl_command";
-extern single gui.values_get(x) = "gui_values_get";
-extern single gui.value_get(x,y) = "gui_value_get";
-extern void   gui.value_set(x,y,z) = "gui_value_set";
+extern single gui_available(x) = "gui_available";
+extern single gui_dlog_create(w,x,y,z) = "gui_dlog_create";
+extern single gui_dlog_simple(x,y) = "gui_dlog_simple";
+extern single gui_dlog_helper(x,y,z) = "gui_dlog_helper";
+extern void   gui_dlog_show(x) = "gui_dlog_show";
+extern void   gui_dlog_close(x) = "gui_dlog_close";
+extern void   gui_ctrl_create(w,x,y,z) = "gui_ctrl_create";
+extern void   gui_ctrl_command(w,x,y,z) = "gui_ctrl_command";
+extern single gui_values_get(x) = "gui_values_get";
+extern single gui_value_get(x,y) = "gui_value_get";
+extern void   gui_value_set(x,y,z) = "gui_value_set";
 
 const GUI_DATUM     = muf("c_datum");
 const GUI_MENU      = muf("c_menu");

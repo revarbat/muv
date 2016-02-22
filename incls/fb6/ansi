@@ -1,10 +1,10 @@
 /////////////////////////////////
 // ansi namespace
 
-extern single   ansi.attr(x,y) = "textattr";
-extern single   ansi.strip(x) = "ansi_strip";
-extern single   ansi.len(x) = "ansi_strlen";
-extern multiple ansi.cut(x,y) = "ansi_strcut";
-extern single   ansi.midstr(x,y,z) = "ansi_midstr";
+extern single   ansi_attr(x,y) = "textattr";
+extern single   ansi_strip(x) = "ansi_strip";
+extern single   ansi_len(x) = "ansi_strlen";
+extern multiple ansi_cut(x,y) = "ansi_strcut";
+extern single   ansi_midstr(x,y,z) = "ansi_midstr";
 
 
