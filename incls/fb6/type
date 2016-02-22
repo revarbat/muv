@@ -1,14 +1,14 @@
 ////////////////////////////
 // type namespace
 
-extern single type.address?(x) = "\\address?";
-extern single type.array?(x) = "\\array?";
-extern single type.dbref?(x) = "\\dbref?";
-extern single type.dictionary?(x) = "\\dictionary?";
-extern single type.float?(x) = "\\float?";
-extern single type.int?(x) = "\\int?";
-extern single type.lock?(x) = "\\lock?";
-extern single type.number?(x) = "\\number?";
-extern single type.string?(x) = "\\string?";
+extern single type.address?(x) = "address?";
+extern single type.array?(x) = "array?";
+extern single type.dbref?(x) = "dbref?";
+extern single type.dictionary?(x) = "dictionary?";
+extern single type.float?(x) = "float?";
+extern single type.int?(x) = "int?";
+extern single type.lock?(x) = "lock?";
+extern single type.number?(x) = "number?";
+extern single type.string?(x) = "string?";
 
 

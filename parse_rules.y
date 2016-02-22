@@ -1,6 +1,8 @@
 %{
 
 #define MAXIDENTLEN 128
+#define FUNC_PREFIX "f_"
+#define VAR_PREFIX "v_"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -17,8 +19,8 @@
 
 struct kvmap global_consts;
 struct kvmap function_consts;
-struct strlist lvars_list;
-struct strlist fvars_list;
+struct kvmap global_vars;
+struct kvmap function_vars;
 struct strlist vardecl_list;
 struct strlist inits_list;
 struct strlist using_list;
@@ -135,16 +137,20 @@ globalstatement:
     ;
 
 lvardef: proposed_varname {
-            $$ = savefmt("lvar %s\n", $1);
-            strlist_add(&lvars_list, $1);
+            char *vname = savefmt("%s%s", VAR_PREFIX, $1);
+            $$ = savefmt("lvar %s\n", vname);
+            kvmap_add(&global_vars, $1, vname);
+            free(vname);
             free($1);
         }
     | proposed_varname ASGN expr {
-            $$ = savefmt("lvar %s\n", $1);
-            strlist_add(&lvars_list, $1);
-            char *init = savefmt("%s %s !", $3, $1);
+            char *vname = savefmt("%s%s", VAR_PREFIX, $1);
+            $$ = savefmt("lvar %s\n", vname);
+            kvmap_add(&global_vars, $1, vname);
+            char *init = savefmt("%s %s !", $3, vname);
             strlist_add(&inits_list, init);
             free(init);
+            free(vname);
             free($1);
             free($3);
         }
@@ -153,21 +159,23 @@ lvardef: proposed_varname {
 funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         /* Mid-rule action to make sure function is declared
          * before statements, to allow possible recursion. */
-        funclist_add(&funcs_list, $2, $2, $4.count - ($5?1:0), 1, $5);
+        char *code = savefmt("%s%s", FUNC_PREFIX, $2);
+        funclist_add(&funcs_list, $2, code, $4.count - ($5?1:0), 1, $5);
+        free(code);
     } '{' statements '}' {
         char *body = indent($9);
         char *vars = strlist_join(&$4, " ", 0, -1);
         char *decls = strlist_join(&vardecl_list, "", 0, -1);
         char *idecls = indent(decls);
         free(decls);
-        $$ = savefmt(": %s[ %s -- ret ]\n%s%s 0\n;\n\n", $2, vars, idecls, body);
+        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s 0\n;\n\n", FUNC_PREFIX, $2, vars, idecls, body);
         free(idecls);
         free($2);
         strlist_free(&$4);
         free($9);
         free(body);
         free(vars);
-        strlist_clear(&fvars_list);
+        kvmap_clear(&function_vars);
         strlist_clear(&vardecl_list);
         kvmap_clear(&function_consts);
     } ;
@@ -177,7 +185,7 @@ externdef:
             funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
             free($3);
             strlist_free(&$5);
-            strlist_clear(&fvars_list);
+            kvmap_clear(&function_vars);
             strlist_clear(&vardecl_list);
         }
     | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ASGN STR ';' {
@@ -185,7 +193,7 @@ externdef:
             free($3);
             strlist_free(&$5);
             free($9);
-            strlist_clear(&fvars_list);
+            kvmap_clear(&function_vars);
             strlist_clear(&vardecl_list);
         }
     ;
@@ -255,10 +263,12 @@ variable: DECLARED_VAR { $$ = $1; }
 
 lvariable: DECLARED_VAR { $$ = $1; }
     | VAR proposed_varname {
-            char *vardecl = savefmt("var %s\n", $2);
+            char *vname = savefmt("%s%s", VAR_PREFIX, $2);
+            char *vardecl = savefmt("var %s\n", vname);
             strlist_add(&vardecl_list, vardecl);
+            kvmap_add(&function_vars, $2, vname);
+            free(vname);
             free(vardecl);
-            strlist_add(&fvars_list, $2);
             $$ = $2;
         }
     ;
@@ -276,15 +286,19 @@ opt_varargs: /* nothing */ { $$ = 0; }
 argvarlist:
     /* nothing */ { strlist_init(&$$); }
     | proposed_varname {
+            char *vname = savefmt("%s%s", VAR_PREFIX, $1);
             strlist_init(&$$);
-            strlist_add(&$$, $1);
-            strlist_add(&fvars_list, $1);
+            strlist_add(&$$, vname);
+            kvmap_add(&function_vars, $1, vname);
+            free(vname);
             free($1);
         }
     | argvarlist ',' proposed_varname {
+            char *vname = savefmt("%s%s", VAR_PREFIX, $3);
             $$ = $1;
-            strlist_add(&$$, $3);
-            strlist_add(&fvars_list, $3);
+            strlist_add(&$$, vname);
+            kvmap_add(&function_vars, $3, vname);
+            free(vname);
             free($3);
         }
     ;
@@ -1033,12 +1047,14 @@ yylex()
         }
 
         /* Function local variable take precendence over globals */
-        if (strlist_find(&fvars_list, in) >= 0) {
-            yylval.str = savestring(in);
+        cp = kvmap_get(&function_vars, in);
+        if (cp) {
+            yylval.str = savestring(cp);
             return DECLARED_VAR;
         }
-        if (strlist_find(&lvars_list, in) >= 0) {
-            yylval.str = savestring(in);
+        cp = kvmap_get(&global_vars, in);
+        if (cp) {
+            yylval.str = savestring(cp);
             return DECLARED_VAR;
         }
 
@@ -1284,18 +1300,18 @@ parser_data_init()
 {
     strlist_init(&inits_list);
     strlist_init(&using_list);
-    strlist_init(&lvars_list);
-    strlist_init(&fvars_list);
     strlist_init(&vardecl_list);
     funclist_init(&funcs_list);
     kvmap_init(&global_consts);
+    kvmap_init(&global_vars);
     kvmap_init(&function_consts);
+    kvmap_init(&function_vars);
 
     /* Reserve standard global vars. */
-    strlist_add(&lvars_list, "me");
-    strlist_add(&lvars_list, "loc");
-    strlist_add(&lvars_list, "trigger");
-    strlist_add(&lvars_list, "command");
+    kvmap_add(&global_vars, "me", "me");
+    kvmap_add(&global_vars, "loc", "loc");
+    kvmap_add(&global_vars, "trigger", "trigger");
+    kvmap_add(&global_vars, "command", "command");
 
     /* Global initializations */
     strlist_add(&inits_list, "\"me\" match me !");
@@ -1310,12 +1326,12 @@ parser_data_free()
 {
     strlist_free(&inits_list);
     strlist_free(&using_list);
-    strlist_free(&lvars_list);
-    strlist_free(&fvars_list);
     strlist_free(&vardecl_list);
     funclist_free(&funcs_list);
     kvmap_free(&global_consts);
+    kvmap_free(&global_vars);
     kvmap_free(&function_consts);
+    kvmap_free(&function_vars);
 }
 
 
@@ -1383,18 +1399,20 @@ process_file(struct strlist *files, const char *progname)
     }
 
     if (res == 0) {
-        const char *initfunc;
-        const char *mainfunc = indent(funcs_list.list[funcs_list.count-1].name);
+        const char *mainfunc;
         char *inits = strlist_join(&inits_list, "\n", 0, -1);
         char *inits2 = indent(inits);
 
-        initfunc = savefmt(": __start\n%s%s%s\n;\n", inits2, ((*inits2 && *mainfunc)?"\n":""), mainfunc);
-        fprintf(outf, "%s", initfunc);;
+        if (funcs_list.count > 0) {
+            mainfunc = savefmt("    %s%s", FUNC_PREFIX, funcs_list.list[funcs_list.count-1].name);
+        } else {
+            mainfunc = savestring("");
+        }
+        fprintf(outf, ": __start\n%s%s%s\n;\n", inits2, ((*inits2 && *mainfunc)?"\n":""), mainfunc);
 
         free(inits);
         free(inits2);
         free((void*)mainfunc);
-        free((void*)initfunc);
 
         if (progname) {
             fprintf(outf, ".\n");

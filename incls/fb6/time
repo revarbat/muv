@@ -1,13 +1,13 @@
 /////////////////////////////
 // time namespace
 
-extern multiple time.time() = "\\time";
-extern multiple time.date() = "\\date";
-extern single   time.systime() = "\\systime";
-extern single   time.systime_precise() = "\\systime_precise";
-extern single   time.gmtoffset() = "\\gmtoffset";
-extern multiple time.split(x) = "\\timesplit";
-extern single   time.fmt(x,y) = "\\timefmt";
-extern void     time.sleep(x) = "\\sleep";
+extern multiple time.time() = "time";
+extern multiple time.date() = "date";
+extern single   time.systime() = "systime";
+extern single   time.systime_precise() = "systime_precise";
+extern single   time.gmtoffset() = "gmtoffset";
+extern multiple time.split(x) = "timesplit";
+extern single   time.fmt(x,y) = "timefmt";
+extern void     time.sleep(x) = "sleep";
 
 

@@ -1,14 +1,15 @@
 ////////////////////////////////
 // io namespace
 
-extern void io.tell(x) = "me @ swap \\notify";
-extern void io.notify(x,y) = "\\notify";
-extern void io.notify_except(x,y,z) = "\\notify_except";
-extern void io.array_notify(x,y) = "\\array_notify";
+extern void io.tell(x) = "me @ swap notify";
+extern void io.notify(x,y) = "notify";
+extern void io.notify_except(x,y,z) = "notify_except";
+extern void io.array_notify(x,y) = "array_notify";
 extern void io.notify_exclude(x,y,z) = "swap array_explode dup 2 + rotate notify_exclude";
 
 extern void io.fmtnotify(who,fmt,args*) = "
 3 try
+    array_reverse
     array_explode pop
     depth 1 - rotate fmtstring
     depth rotate swap notify
@@ -26,14 +27,14 @@ catch abort
 endcatch
 ";
 
-extern void     io.user_log(x) = "\\user_log";
-extern single   io.read() = "\\read";
-extern multiple io.timed_read(x) = "\\tread";
-extern void     io.read_wants_blanks() = "\\read_wants_blanks";
+extern void     io.user_log(x) = "user_log";
+extern single   io.read() = "read";
+extern multiple io.timed_read(x) = "tread";
+extern void     io.read_wants_blanks() = "read_wants_blanks";
 
-extern single   io.ignoring?(x,y) = "\\ignoring?";
-extern void     io.ignore_add(x,y) = "\\ignore_add";
-extern void     io.ignore_del(x,y) = "\\ignore_del";
-extern single   io.ignore_list(x) = "\\array_get_ignorelist";
+extern single   io.ignoring?(x,y) = "ignoring?";
+extern void     io.ignore_add(x,y) = "ignore_add";
+extern void     io.ignore_del(x,y) = "ignore_del";
+extern single   io.ignore_list(x) = "array_get_ignorelist";
 
 

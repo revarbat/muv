@@ -1,15 +1,15 @@
 /////////////////////////////////
 // conn and descr namespace
 
-extern single conn.awake?(x) = "\\awake?";
-extern single conn.boot(x) = "\\conboot";
-extern single conn.count() = "\\concount";
-extern single conn.dbref(x) = "\\condbref";
-extern single conn.descr(x) = "\\condescr";
-extern single conn.host(x) = "\\conhost";
-extern single conn.idle(x) = "\\conidle";
-extern void   conn.notify(x,y) = "\\connotify";
-extern single conn.online() = "\\online_array";
-extern single conn.time(x) = "\\contime";
-extern single conn.user(x) = "\\conuser";
+extern single conn.awake?(x) = "awake?";
+extern single conn.boot(x) = "conboot";
+extern single conn.count() = "concount";
+extern single conn.dbref(x) = "condbref";
+extern single conn.descr(x) = "condescr";
+extern single conn.host(x) = "conhost";
+extern single conn.idle(x) = "conidle";
+extern void   conn.notify(x,y) = "connotify";
+extern single conn.online() = "online_array";
+extern single conn.time(x) = "contime";
+extern single conn.user(x) = "conuser";
 

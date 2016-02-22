@@ -1,10 +1,10 @@
 ////////////////////////////////////////////////
 // mcp and gui namespaces.
 
-extern void   mcp.register(x,y,z) = "\\mcp_register";
-extern void   mcp.register_event(x,y,z) = "\\mcp_register_event";
-extern void   mcp.bind(x,y,z) = "\\mcp_bind";
-extern single mcp.supports(x,y) = "\\mcp_supports";
-extern void   mcp.send(w,x,y,z) = "\\mcp_send";
+extern void   mcp.register(x,y,z) = "mcp_register";
+extern void   mcp.register_event(x,y,z) = "mcp_register_event";
+extern void   mcp.bind(x,y,z) = "mcp_bind";
+extern single mcp.supports(x,y) = "mcp_supports";
+extern void   mcp.send(w,x,y,z) = "mcp_send";
 
 

@@ -1,12 +1,12 @@
 /////////////////////////////////
 // lock namespace
 
-extern single lock.locked?(x,y) = "\\locked?";
-extern single lock.parse(x) = "\\parselock";
-extern single lock.unparse(x) = "\\unparselock";
-extern single lock.pretty(x) = "\\prettylock";
-extern single lock.test(x,y) = "\\testlock";
-extern single lock.set(x,y) = "\\setlockstr";
-extern single lock.get(x) = "\\getlockstr";
+extern single lock.locked?(x,y) = "locked?";
+extern single lock.parse(x) = "parselock";
+extern single lock.unparse(x) = "unparselock";
+extern single lock.pretty(x) = "prettylock";
+extern single lock.test(x,y) = "testlock";
+extern single lock.set(x,y) = "setlockstr";
+extern single lock.get(x) = "getlockstr";
 
 

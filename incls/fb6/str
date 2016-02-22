@@ -1,54 +1,55 @@
 //////////////////////////////////
 // str namespace for strings
 
-extern single   str.int_to_str(x) = "\\intostr";
-extern single   str.int_to_char(x) = "\\itoc";
-extern single   str.char_to_int(x) = "\\ctoi";
+extern single   str.int_to_str(x) = "intostr";
+extern single   str.int_to_char(x) = "itoc";
+extern single   str.char_to_int(x) = "ctoi";
 
-extern single   str.to_int(x) = "\\atoi";
-extern single   str.to_float(x) = "\\stod";
+extern single   str.to_int(x) = "atoi";
+extern single   str.to_float(x) = "stod";
 
-extern single   str.len(x) = "\\strlen";
-extern single   str.cat(args*) = "\\array_interpret";
+extern single   str.len(x) = "strlen";
+extern single   str.cat(args*) = "array_interpret";
 
-extern single   str.instr(x,y) = "\\instr";
-extern single   str.rinstr(x,y) = "\\rinstr";
-extern single   str.instring(x,y) = "\\instring";
-extern single   str.rinstring(x,y) = "\\rinstring";
+extern single   str.instr(x,y) = "instr";
+extern single   str.rinstr(x,y) = "rinstr";
+extern single   str.instring(x,y) = "instring";
+extern single   str.rinstring(x,y) = "rinstring";
 
-extern multiple str.cut(x,y) = "\\strcut";
-extern single   str.midstr(x,y,z) = "\\midstr";
-extern multiple str.split(x,y) = "\\split";
-extern multiple str.rsplit(x,y) = "\\rsplit";
-extern single   str.explode(x,y) = "\\explode_array";
+extern multiple str.cut(x,y) = "strcut";
+extern single   str.midstr(x,y,z) = "midstr";
+extern multiple str.split(x,y) = "split";
+extern multiple str.rsplit(x,y) = "rsplit";
+extern single   str.explode(x,y) = "explode_array";
 
-extern multiple str.tokensplit(x,y,z) = "\\tokensplit";
-extern single   str.match(x,y) = "\\smatch";
+extern multiple str.tokensplit(x,y,z) = "tokensplit";
+extern single   str.match(x,y) = "smatch";
 
-extern single   str.cmp(x,y) = "\\strcmp";
-extern single   str.cmpi(x,y) = "\\stringcmp";
-extern single   str.cmpn(x,y,z) = "\\strncmp";
-extern single   str.startswith(x,y) = "\\stringpfx";
+extern single   str.cmp(x,y) = "strcmp";
+extern single   str.cmpi(x,y) = "stringcmp";
+extern single   str.cmpn(x,y,z) = "strncmp";
+extern single   str.startswith(x,y) = "stringpfx";
 
-extern single   str.strip(x) = "\\strip";
-extern single   str.striplead(x) = "\\striplead";
-extern single   str.striptail(x) = "\\striptail";
+extern single   str.strip(x) = "strip";
+extern single   str.striplead(x) = "striplead";
+extern single   str.striptail(x) = "striptail";
 
-extern single   str.subst(x,y,z) = "\\subst";
-extern single   str.tolower(x) = "\\tolower";
-extern single   str.toupper(x) = "\\toupper";
-extern single   str.pronouns(x,y) = "\\pronoun_sub";
+extern single   str.subst(x,y,z) = "subst";
+extern single   str.tolower(x) = "tolower";
+extern single   str.toupper(x) = "toupper";
+extern single   str.pronouns(x,y) = "pronoun_sub";
 
-extern single   str.encrypt(x,y) = "\\strencrypt";
-extern single   str.decrypt(x,y) = "\\strdecrypt";
+extern single   str.encrypt(x,y) = "strencrypt";
+extern single   str.decrypt(x,y) = "strdecrypt";
 
-extern single   str.fmtstrings(x,y) = "\\array_fmtstrings";
+extern single   str.fmtstrings(x,y) = "array_fmtstrings";
 extern single   str.fmtstring(fmt, args*) = "
 2 try
-    \\array_explode 1 + \\rotate \\fmtstring
-    \\depth 0 swap - \\rotate
-    \\depth 1 - \\popn
-catch \\abort
+    array_reverse array_explode
+    1 + rotate fmtstring
+    depth 0 swap - rotate
+    depth 1 - popn
+catch abort
 endcatch
 ";
 

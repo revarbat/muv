@@ -1,16 +1,16 @@
 /////////////////////////////////////////
 // Standard absolute basics MUV library
 
-extern void abort(x) = "\\abort";
-extern void throw(x) = "\\abort";
+extern void abort(x) = "abort";
+extern void throw(x) = "abort";
 
-extern single prog() = "\\prog";
-extern single trig() = "\\trig";
-extern single caller() = "\\caller";
-extern single version() = "\\version";
+extern single prog() = "prog";
+extern single trig() = "trig";
+extern single caller() = "caller";
+extern single version() = "version";
 
-extern void tell(x) = "me @ swap \\notify";
-extern single cat(args*) = "\\array_interpret";
+extern void tell(x) = "me @ swap notify";
+extern single cat(args*) = "array_interpret";
 
 const true = 1;
 const false = 0;
