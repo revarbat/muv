@@ -15,8 +15,8 @@ Instead of writing cryptic code like:
         foreach obj ! pop
             obj @ player? if
                 obj @ "species" getpropstr
-                obj @ name
-                "%-30s %-30s"
+                obj @
+                "%-30D %-30s"
                 fmtstring
                 me @ swap notify
             then
@@ -28,10 +28,8 @@ You can write:
     func showspecies() {
         for (var obj in contents_array(loc))
             if (player?(obj))
-                fmttell("%-30s %-30s",
-                    name(obj),
-                    getpropstr(obj, "species")
-                );
+                fmttell("%-30D %-30s", obj,
+                        getpropstr(obj, "species"));
     }
 
 
