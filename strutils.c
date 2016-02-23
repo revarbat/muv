@@ -76,6 +76,55 @@ indent(const char *arg)
 
 
 
+char *
+format_muv_str(const char *s)
+{
+    const char *p;
+    char *out;
+    char *p2;
+    size_t len;
+    for (len = 3, p = s; *p; len++, p++) {
+        switch (*p) {
+            case '\\':
+            case '"':
+            case '\n':
+            case '\r':
+            case '\b':
+                len++;
+                break;
+        }
+    }
+    out = (char*)malloc(len);
+    p2 = out;
+    *p2++ = '\"';
+    for (p = s; *p; p++) {
+        switch (*p) {
+            case '\\':
+            case '\"':
+                *p2++ = '\\';
+                *p2++ = *p;
+                break;
+            case '\r':
+            case '\n':
+                *p2++ = '\\';
+                *p2++ = 'r';
+                break;
+            case '\033':
+                *p2++ = '\\';
+                *p2++ = '[';
+                break;
+            default:
+                *p2++ = *p;
+                break;
+        }
+    }
+    *p2++ = '\"';
+    *p2++ = '\0';
+    return out;
+}
+
+
+
 void getset_free(struct gettersetter *x)
 {
     free((char*)x->get);

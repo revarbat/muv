@@ -1,6 +1,7 @@
 %{
 
 #define MAXIDENTLEN 128
+#define MAXSTRLEN 1024
 #define FUNC_PREFIX "_"
 #define VAR_PREFIX "_"
 
@@ -564,7 +565,7 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
     | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
     | '#' INTEGER { $$ = savefmt("#%d", $2); }
     | FLOAT { $$ = $1; }
-    | STR { $$ = savefmt("\"%s\"", $1); free($1); }
+    | STR { $$ = format_muv_str($1); free($1); }
     | paren_expr { $$ = $1; }
     | function_call { $$ = $1; }
     | primitive_call { $$ = $1; }
@@ -885,7 +886,7 @@ lookup(char *s, int *bval)
 int
 yylex()
 {
-    char in[BUFSIZ];
+    char in[MAXSTRLEN];
     char *p = in;
     int c, digit;
     struct funcinfo_t* pinfo;
@@ -1109,11 +1110,20 @@ yylex()
             }
 
             if (c == '\\') {
-                *p++ = c;
-                cnt++;
                 c = fgetc(yyin);
+                switch (c) {
+                    case 'n':
+                    case 'r':
+                        c = '\n';
+                        break;
+                    case '[':
+                    case 'e':
+                        c = '\033';
+                        break;
+                    default:
+                        break;
+                }
             }
-
             *p++ = c;
         }
 

@@ -1,131 +1,144 @@
+include "!fb6/prims";
+
+
 class person {
     var surname = "";
     var givenname = "";
 
-    init(surname, givenname) {
+    method init(surname, givenname) {
         self.surname = surname;
         self.givenname = givenname;
         return self;
     }
 
     method greet() {
-        notify(me, cat("Hello ", self.givenname, " ", self.surname, "!"));
+        fmttell("Hello, %s %s!", self.givenname, self.surname);
     }
 };
 
 
 class employee(person) {
     var empnum = 0;
-    var ssn = "", account = "";
+    var ssn = "";
+    var account = "";
 
-    method _init(empnum, surname, givenname, ssn, account) {
-        self.empnum  = empnum;
+    method init(empnum, surname, givenname, ssn, account) {
+        self.empnum = empnum;
         self.ssn = ssn;
-        self.accountname = account;
+        self.account = account;
         return super(surname, givenname);
     }
 
     method welcome() {
-        notify_fmt(me, fmtstring(
+        fmttell(
             "Welcome %s %s, as employee %s.",
-            self.givenname, self.surname, self.empnum
-        ));
+            self.givenname,
+            self.surname,
+            self.empnum
+        );
     }
 };
+
+
+func main(arg) {
+    var emp = new employee(12345, "Doe", "John", "123-45-6789", "jdoe")
+    emp.greet();
+}
 
 
 ---------------------------------------------------------------------------
 
 
-lvar classdata_person;
+$def ivar_new  (            v) dup @ dup "idx" [] 1 + dup rot "idx" ->[] rot !
+$def ivar_set  (x inst attr v) -4 rotate { rot rot }list 3 pick @ swap ->[] swap !
+$def ivar_get  (  inst attr v) { 4 rotate 4 rotate }list swap @ swap array_nested_get
+$def ivar_exec (  inst mthd v) ivar_get dup address? if execute else pop "Method not found." abort then
 
-: class_person_new[ -- inst ]
-    classdata_person @ dup "idx" [] 1 + dup rot "idx" ->[] classdata_person !
-;
 
-: class_person_get[ inst attr -- ]
-    classdata_person @ { inst @ attr @ }list array_nested_get
-;
+lvar cls_person;
 
-: class_person_set[ val inst attr -- ]
-    val @ classdata_person @ { inst @ attr @ }list array_nested_set classdata_person !
-;
 
-: method_person__init[ self surname givenname -- ]
-    surname   @ self @ "surname"   class_person_set pop
-    givenname @ self @ "givenname" class_person_set pop
+: m_person__init[ self surname givenname -- ]
+    surname   @ dup self @ "surname"   cls_person ivar_set pop
+    givenname @ dup self @ "givenname" cls_person ivar_set pop
     self @ exit 0
 ;
 
-: method_person__greet[ self -- ]
+
+: m_person__greet[ self -- ]
     me @
     {
         "Hello "
-        self @ "givenname" class_person_get
+        self @ "givenname" cls_person ivar_get
         " "
-        self @ "surname" class_person_get
+        self @ "surname" cls_person ivar_get
         "!"
     }cat
     notify
     0
 ;
 
+
 : classinit_person[ self -- ]
     {
         "idx" 100
-        "static" {
-            "surname"   ""
-            "givenname" ""
-        }dict
-    }dict classdata_person !
+        "surname"   ""
+        "givenname" ""
+        "greet" 'm_person__greet
+    }dict cls_person !
 ;
 
-lvar classdata_employee;
 
-: class_employee_new[ -- inst ]
-    classdata_employee @ dup "idx" [] 1 + dup rot "idx" ->[] classdata_employee !
-;
+lvar cls_employee;
 
-: class_employee_get[ inst attr -- ]
-    classdata_employee @ { inst @ attr @ }list array_nested_get
-;
 
-: class_employee_set[ val inst attr -- ]
-    val @ classdata_employee @ { inst @ attr @ }list array_nested_set classdata_employee !
-;
-
-: method_employee__init[ self empnum surname givenname ssn account -- ]
-    empnum  @ self @ "empnum"  class_employee_set pop
-    ssn     @ self @ "ssn"     class_employee_set pop
-    account @ self @ "account" class_employee_set pop
-    surname @ givenname @ method_person__init
+: m_employee__init[ self empnum surname givenname ssn account -- ]
+    empnum  @ self @ "empnum"  cls_employee ivar_set pop
+    ssn     @ self @ "ssn"     cls_employee ivar_set pop
+    account @ self @ "account" cls_employee ivar_set pop
+    self @ surname @ givenname @ method_person__init
     exit 0
 ;
+
+
+: m_employee__welcome[ self -- ]
+    {
+        self @ "empnum" cls_employee ivar_get
+        self @ "surname" cls_employee ivar_get
+        self @ "givenname" cls_employee ivar_get
+    }list
+    "Welcome %s %s, as employee %s."
+    fmtstring
+    me @ swap notify 0 pop
+    0
+;
+
 
 : classinit_employee[ self -- ]
     {
         "idx" 100
-        "static" {
-            "empnum"  ""
-            "ssn"     ""
-            "account" ""
-        }dict
-    }dict classdata_employee !
+        "empnum"  ""
+        "ssn"     ""
+        "account" ""
+        "welcome" 'm_employee__welcome
+    }dict cls_employee !
 ;
 
 
-...
-
-
-: main[arg -- ]
-   ...
+: _main[ arg -- ]
+    var emp
+    12345 "Doe" "John" "123-45-6789" "jdoe" cls_employee ivar_new
+    dup emp ! pop
+    emp @ "greet" cls_employee ivar_exec pop
+    emp @ "welcome" cls_employee ivar_exec pop
+    0
 ;
 
 
-: toplevel__init
+: __start[ arg -- ret ]
     classinit_person
     classinit_employee
-    main
+    _main
 ;
 
 

@@ -147,51 +147,74 @@ items it would return are returned in a list array.
 
 Includes
 --------
-You can include other MUV files by using the `include` command:
+You can include the code from other MUV files by using the `include` command:
 
     include "otherfile.muv";
 
 You can include standard MUV files by preceeding the filename with a `!`.
-If you include the file `!fb6/prims`, like this:
+This tells `include` to look for the file in the system-wide MUV includes
+directory, which is usually in `/us/local/share/muv/incls`.
+
+One important standard include file is `!fb6/prims`.
 
     include "!fb6/prims";
 
-You will get all the standard FB6 MUF primitives declared for MUV to use.
-These primitives will be declared with exactly the same names as they have
-in MUF.
+If you include `!fb6/prims` in your file, you will get all the standard FB6
+MUF primitives declared for MUV to use.  These primitives will be declared
+with exactly the same names as they have in MUF, with the same argument
+ordering.  The only exceptions are:
 
-Since that is kind of a messy namespace, you can instead include files with
-just the primitives you need, renamed into namespaces.  For example, if you
-include the file `!fb6/obj` You can get access to the standard fb6 object-
-related primitives, renamed into the `obj` namespace such that MUF primitives
-like `name` and `set` are renamed to `obj.name()` and `obj.set()`, leading
-to far less namespace polution.  Currently the provided include files are as
+MUF Name       |  MUV Name        | Change
+---------------|------------------|------------------------------------------
+`name-ok?`     | `name_ok?()`     | Dash in name replaced with underscore.
+`pname-ok?`    | `pname_ok?()`    | Dash in name replaced with underscore.
+`ext-name-ok?` | `ext_name_ok?()` | Dashes in name replaced with underscore.
+`fmtstring`    | `fmtstring()`    | Argument ordering completely reversed.
+
+The `!fb6/prims` include file also adds some useful functions:
+
+Function            | Description
+--------------------|--------------------------------------------------------
+`tell(msg)`         | The same as `notify(me, msg)`
+`fmttell(fmt, ...)` | The same as `tell(fmtstring(fmt, ...))`
+`cat(...)`          | Converts all args to strings and concatenates them.
+
+
+Since MUF has kind of a messy namespace, you can *instead* include files with
+just the primitives you need, renamed a bit more sensibly.  For example, if
+you include the file `!fb6/obj` You can get access to the standard fb6 object
+related primitives, renamed into the `obj_` namespace such that MUF primitives
+like `name` and `set` are renamed to `obj_name()` and `obj_set()`, leading to
+far less namespace polution.  The standard namespaced include files are as
 follows, in order of likely importance:
 
-File       | Namespace | What it declares
------------|-----------|-----------------------------------------------------
-fb6/prims  |           | All FB6 MUF prims, with the same names as in MUF.
-fb6/stdlib |           | Frequently used functions/primitives.
-fb6/io     | io        | Notify and read type primitives.
-fb6/type   | type      | Type checking and conversion primitives.
-fb6/str    | str       | String based primitives.
-fb6/ansi   | ansi      | ANSI terminal display related string primitives.
-fb6/regex  | regex     | Regular expression primitives.
-fb6/math   | math      | Floating point and integer math primitives.
-fb6/array  | array     | Array/list/dictionary related primitives.
-fb6/lock   | lock      | Lock related primitives.
-fb6/time   | time      | Time based primitives.
-fb6/prop   | prop      | Primitives for reading and writing properties.
-fb6/obj    | obj       | DB object related primitives.
-fb6/conn   | conn      | Connection based primitives.
-fb6/descr  | descr     | Descriptor based connection primitives.
-fb6/event  | event     | Event handling primitives.
-fb6/mcp    | mcp       | MCP client-server communication protocol primitives.
-fb6/gui    | gui       | MCP-GUI related primitives and defines.
-fb6/proc   | proc      | MUF process related primitives.
-fb6/prog   | prog      | Program calling, editing, and compiling.
-fb6/sys    | sys       | System related primitives.
-fb6/debug  | debug     | Debugging related primitives.
+File         | Prefix   | What it declares
+-------------|----------|-----------------------------------------------------
+`fb6/stdlib` |          | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
+`fb6/io`     | `io_`    | `notify` and `read` type primitives.
+`fb6/type`   | `type_`  | Type checking and conversion primitives.
+`fb6/str`    | `str_`   | String manipulation primitives.
+`fb6/ansi`   | `ansi_`  | ANSI color code related string primitives.
+`fb6/regex`  | `regex_` | Regular expression primitives.
+`fb6/math`   | `math_`  | Floating point and integer math primitives.
+`fb6/array`  | `array_` | Array/list/dictionary related primitives.
+`fb6/prop`   | `prop_`  | Primitives for reading and writing properties.
+`fb6/obj`    | `obj_`   | DB object related primitives.
+`fb6/time`   | `time_`  | Time based primitives.
+`fb6/lock`   | `lock_`  | Lock related primitives.
+`fb6/conn`   | `conn_`  | Connection based primitives.
+`fb6/descr`  | `descr_` | Descriptor based connection primitives.
+`fb6/event`  | `event_` | Event handling primitives.
+`fb6/mcp`    | `mcp_`   | MCP client-server communication protocol prims.
+`fb6/gui`    | `gui_`   | MCP-GUI related primitives and defines.
+`fb6/proc`   | `proc_`  | MUF process related primitives.
+`fb6/prog`   | `prog_`  | Program calling, editing, and compiling.
+`fb6/sys`    | `sys_`   | System related primitives.
+`fb6/debug`  | `debug_` | Debugging related primitives.
+
+WARNING: You should either use `include "!fb6/prims";` *or* include one or
+more of the namespaced files, but *not both*.  You will get compilation
+errors if you mix them.
 
 
 Expressions
@@ -249,8 +272,9 @@ Miscellaneous:
 
 These expressions can be combined in surprising ways:
 
-    var x, y = [[4, 5, 6], 3], z = 1;
-    x = y[0][1] = 43 * (z += 1 << 3);
+    var y = [[4, 5, 6], 3];
+    var z = 1;
+    var x = y[0][1] = 43 * (z += 1 << 3);
 
 
 Arrays
@@ -522,7 +546,7 @@ You can also iterate arrays/lists/dictionaries like this:
 or
 
     for (var idx => var letter in ["a", "b", "c", "d", "e"])
-        tell(cat(intostr(idx), letter));
+        tell(cat(idx, letter));
 
 
 Comprehensions
@@ -687,33 +711,69 @@ An extern with raw MUF like:
 will insert `bar` into the output code where a call to `foo()` is made.
 
 
-Built-Ins
----------
-MUV defines some convenience functions that MUF doesn't:
+Debugging MUV
+-------------
+When you are debugging a program compiled into MUF from MUV, there are
+a few things you should be aware of:
 
-`tell(msg)` simply acts like `notify(me, msg)`
+- To prevent namespace collision with the built-in primitives of MUF,
+  the functions and variables that MUV generates are renamed slightly
+  from what was given in the MUV sources.
+- To keep consistent with expressions returning values, some extra `dup`s
+  and `pop`s will appear throughout the code.  Some of this will get
+  optimized out by the MUF compiler, and some won't, but they are very
+  fast primitives that shouldn't affect performance *too* horribly.
+  This is all because you can chain expressions in MUV.
+- Calls to an `extern void` defined primitives or function will be
+  followed by a `0` to fake that the call returned `0`.
+- Calls to an `extern multiple` defined primitives or function will be
+  wrapped in `{` and `}list` to collapse the multiple return values
+  into a single list array.
+- Because in MUV *all* calls have a return value, for those functions
+  that don't have a `return` statement, a `0` is put at the end of a
+  generated function, just in case.
 
+For example, the following MUV source:
 
-`cat(...)` takes any number of arguments, translates them into a basic
-string representation of each, and concatenates them together.
+    extern void tell(msg) = "me @ swap notify";
+    extern single toupper(s);
+    extern multiple stats(who);
+    func foo(bar) {
+        tell(toupper(bar));
+        var baz = stats(me);
+    }
 
-    cat(count, " items belong to ", me)
+Will compile to MUF as:
 
-will return a string like
+    : _foo[ _bar -- ret ]
+        var _baz
+        _bar @ toupper me @ swap notify 0 pop
 
-    "23 items belong to John_Doe"
+        { me @ stats }list
+        dup _baz ! pop 0
+    ;
 
+There are several things to note here:
 
-`fmtstring(fmt, ...)` roughly implements the functionality of the MUF
-primitive `fmtstring`.  The format string is similar to C's printf function.
-For full details, see the documentation for the `fmtstring` MUF primitive.
-
-    fmtstring("#%d: %s", int(me), name(me))
-
-will return a string like:
-
-    "#1: Wizard"
-
-
-`fmttell(fmt, ...)` is roughly the same as `tell(fmtstring(fmt, ...))`
+- The user declared function `foo` has been renamed to `_foo`.
+- The user declared variables `bar` and `baz` have been renamed to
+  `_bar` and `_baz`.
+- The system variable `me`, however, remains unchanged.  
+- Since `toupper()` is declared to return a `single` value, that value is
+  returned unmolested after the call to `toupper`.
+- The call to the `extern` declared function `tell`, is replaced by
+  the code `me @ swap notify`.
+- Since `tell` is declared `void`, a `0` is pushed onto the stack, so
+  that `tell()` always appears to return `0`.
+- Since the expression `tell(toupper(bar))` does not store its returned
+  value in any variable, a `pop` is added to get rid of the unused value.
+- Since `stats()` is declared to return `multiple` values, the entire
+  expression is wrapped in `{` and `}list` to collapse all those values
+  into a single list array.
+- When storing a value in the variable `baz`, a `dup` is performed on
+  the value, just in case that value is needed for chained assigns, or
+  in another expression.
+- Since that value was NOT needed after all, it it `pop`ed away.
+- As the function `foo()` reaches its end without `return`ing a value,
+  a `0` is pushed onto the stack, so `foo()` always returns at least `0`.
 

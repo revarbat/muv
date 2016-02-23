@@ -7,6 +7,7 @@
 char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
 char *indent(const char *);
+char *format_muv_str(const char *);
 
 struct gettersetter {
     const char *get;
