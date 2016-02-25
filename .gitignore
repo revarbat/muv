@@ -40,6 +40,7 @@
 .*.swp
 
 # MUV files
+tests/test_*_out.muf
 configs.h
 muv
 

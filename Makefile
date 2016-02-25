@@ -28,10 +28,10 @@ y.tab.c: parse_rules.y
 
 clean:
 	rm -f core ${TARGET} ${OBJECTS} configs.h y.tab.c y.tab.h *.output *.vcg *.tab.c *.tab.h
+	rm -f tests/test_*_out.muf
 
 test: ${TARGET}
-	for f in examples/*.muv ; do echo $$f ; ${TARGET} -o foo.muf $$f ; done
-	rm -f foo.muf
+	cd tests && ./runtest.sh
 
 install: ${TARGET}
 	mkdir -p ${SHAREDIR}

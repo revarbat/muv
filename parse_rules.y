@@ -68,8 +68,7 @@ void yyerror(char *s);
 %token <num_int> INTEGER
 %token <prim> DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR CONST
-%token <str> DECLARED_VAR
-%token <keyval> DECLARED_CONST
+%token <keyval> DECLARED_CONST DECLARED_VAR
 %token <token> INCLUDE UNARY
 %token <token> IF ELSE UNLESS
 %token <token> FUNC RETURN TRY CATCH
@@ -79,7 +78,7 @@ void yyerror(char *s);
 %token <token> TOP PUSH MUF DEL
 %token <token> EXTERN VOID SINGLE MULTIPLE
 
-%right THEN ELSE
+%right BARE ELSE SUFFIX
 %left ',' KEYVAL
 %right ASGN PLUSASGN MINUSASGN MULTASGN DIVASGN MODASGN BITLEFTASGN BITRIGHTASGN BITANDASGN BITORASGN BITXORASGN
 %left DECR INCR
@@ -95,20 +94,17 @@ void yyerror(char *s);
 %left PLUS MINUS
 %left MULT DIV MOD
 %right UNARY NOT BITNOT
-%left '[' ']' '(' ')' INSERT
+%left '[' ']' '(' ')' INSERT DOT
 
-%type <str> globalstatement funcdef
-%type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
-%type <prim> function
-%type <getset> lvalue
-%type <str> undeclared_function
+%type <str> globalstatement funcdef proposed_funcname
+%type <str> good_proposed_funcname bad_proposed_funcname
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
-%type <str> variable lvariable undeclared_variable
 %type <str> externdef simple_statement statement statements paren_expr
 %type <str> compr_loop compr_cond lvardef
-%type <str> function_call primitive_call expr subscripts
+%type <str> function_call expr
 %type <str> using_clause case_clause case_clauses default_clause
-%type <list> arglist arglist_or_null dictlist argvarlist
+%type <list> arglist arglist_or_null dictlist argvarlist subscripts
+%type <getset> lvalue
 %type <num_int> ret_count_type opt_varargs
 
 %start program
@@ -199,7 +195,8 @@ externdef:
         }
     ;
 
-bad_proposed_funcname: DECLARED_VAR { $$ = $1; }
+bad_proposed_funcname:
+      DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
@@ -210,28 +207,15 @@ good_proposed_funcname: IDENT { $$ = $1; }
 proposed_funcname:
       good_proposed_funcname { $$ = $1; }
     | bad_proposed_funcname {
-        char buf[1024];
-        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared.", $1);
-        yyerror(buf);
+        char *err = savefmt("Indentifier '%s' already declared.", $1);
+        yyerror(err);
+        free(err);
         YYERROR;
     }
     ;
 
-undeclared_function: IDENT { $$ = $1; }
-    | DECLARED_VAR { $$ = $1; }
-    | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
-    ;
-
-function: DECLARED_FUNC { $$ = $1; }
-    | undeclared_function {
-            char buf[1024];
-            snprintf(buf, sizeof(buf), "Undeclared function '%s'.", $1);
-            yyerror(buf);
-            YYERROR;
-        }
-    ;
-
-bad_proposed_varname: DECLARED_VAR { $$ = $1; }
+bad_proposed_varname:
+      DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
@@ -241,36 +225,11 @@ good_proposed_varname: IDENT { $$ = $1; }
 
 proposed_varname: good_proposed_varname { $$ = $1; }
     | bad_proposed_varname {
-        char buf[1024];
-        snprintf(buf, sizeof(buf), "Indentifier '%s' already declared.", $1);
-        yyerror(buf);
+        char *err = savefmt("Indentifier '%s' already declared.", $1);
+        yyerror(err);
+        free(err);
         YYERROR;
     }
-    ;
-
-undeclared_variable: IDENT { $$ = $1; }
-    | DECLARED_FUNC { $$ = savestring($1.name); }
-    ;
-
-variable: DECLARED_VAR { $$ = $1; }
-    | undeclared_variable {
-            char buf[1024];
-            $$ = $1;
-            snprintf(buf, sizeof(buf), "Undeclared variable '%s'.", $1);
-            yyerror(buf);
-            YYERROR;
-        }
-    ;
-
-lvariable: DECLARED_VAR { $$ = $1; }
-    | VAR proposed_varname {
-            char *vname = savefmt("%s%s", VAR_PREFIX, $2);
-            char *vardecl = savefmt("var %s\n", vname);
-            strlist_add(&vardecl_list, vardecl);
-            kvmap_add(&function_vars, $2, vname);
-            $$ = vname;
-            free(vardecl);
-        }
     ;
 
 ret_count_type:
@@ -330,7 +289,7 @@ statement: ';' { $$ = savestring(""); }
             kvmap_add(&function_consts, $2, $4);
             free($2); free($4);
         }
-    | IF paren_expr statement %prec THEN {
+    | IF paren_expr statement %prec BARE {
             char *body = indent($3);
             $$ = savefmt("%s if\n%s\nthen", $2, body);
             free($2); free($3);
@@ -371,16 +330,16 @@ statement: ';' { $$ = savestring(""); }
             free($2); free($4);
             free(cond); free(body);
         }
-    | FOR '(' lvariable IN expr ')' statement {
+    | FOR '(' lvalue IN expr ')' statement {
             char *body = indent($7);
-            $$ = savefmt("%s\nforeach %s ! pop\n%s\nrepeat", $5, $3, body);
-            free($3); free($5); free($7);
+            $$ = savefmt("%s\nforeach %s pop\n%s\nrepeat", $5, $3.set, body);
+            getset_free(&$3); free($5); free($7);
             free(body);
         }
-    | FOR '(' lvariable KEYVAL lvariable IN expr ')' statement {
+    | FOR '(' lvalue KEYVAL lvalue IN expr ')' statement {
             char *body = indent($9);
-            $$ = savefmt("%s\nforeach %s ! %s !\n%s\nrepeat", $7, $5, $3, body);
-            free($3); free($5); free($7); free($9);
+            $$ = savefmt("%s\nforeach %s %s\n%s\nrepeat", $7, $5.set, $3.set, body);
+            getset_free(&$3); getset_free(&$5); free($7); free($9);
             free(body);
         }
     | TRY statement CATCH '(' ')' statement {
@@ -391,11 +350,11 @@ statement: ';' { $$ = savestring(""); }
             free(trybody);
             free(catchbody);
         }
-    | TRY statement CATCH '(' lvariable ')' statement {
+    | TRY statement CATCH '(' lvalue ')' statement {
             char *trybody = indent($2);
             char *catchbody = indent($7);
-            $$ = savefmt("0 try\n%s\ncatch_detailed %s !\n%s\nendcatch", trybody, $5, catchbody);
-            free($2); free($5); free($7);
+            $$ = savefmt("0 try\n%s\ncatch_detailed %s\n%s\nendcatch", trybody, $5.set, catchbody);
+            free($2); getset_free(&$5); free($7);
             free(trybody);
             free(catchbody);
         }
@@ -415,7 +374,7 @@ using_clause: /* nothing */ {
             $$ = savestring("=");
             strlist_add(&using_list, $$);
         }
-    | USING function {
+    | USING DECLARED_FUNC {
             if ($2.expects != 2) {
                 yyerror("Using clause expects instruction or function that takes 2 args.");
                 YYERROR;
@@ -459,28 +418,28 @@ statements: /* nothing */ { $$ = savestring(""); }
         }
     ;
 
-function_call: function '(' arglist_or_null ')' {
+function_call: DECLARED_FUNC '(' arglist_or_null ')' {
         char *basecall;
         if ($1.hasvarargs) {
             if ($3.count < $1.expects) {
-                char buf[1024];
-                snprintf(buf, sizeof(buf),
+                char *err = savefmt(
                     "Function '%s' expects at least %d args, but was provided %d args.",
                     $1.name, $1.expects, $3.count
                 );
+                yyerror(err);
                 strlist_free(&$3);
-                yyerror(buf);
+                free(err);
                 YYERROR;
             }
         } else {
             if ($3.count != $1.expects) {
-                char buf[1024];
-                snprintf(buf, sizeof(buf),
+                char *err = savefmt(
                     "Function '%s' expects %d args, but was provided %d args.",
                     $1.name, $1.expects, $3.count
                 );
+                yyerror(err);
                 strlist_free(&$3);
-                yyerror(buf);
+                free(err);
                 YYERROR;
             }
         }
@@ -508,35 +467,42 @@ function_call: function '(' arglist_or_null ')' {
         strlist_free(&$3);
     } ;
 
-primitive_call:
-      TOP { $$ = savestring(""); }
-    | PUSH '(' arglist ')' { $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
-    | MUF '(' STR ')' { $$ = $3; }
-    | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
+lvalue: VAR proposed_varname {
+            char *vname = savefmt("%s%s", VAR_PREFIX, $2);
+            char *vardecl = savefmt("var %s\n", vname);
+            strlist_add(&vardecl_list, vardecl);
+            kvmap_add(&function_vars, $2, vname);
+            $$.get = savefmt("%s @", vname);
+            $$.set = savefmt("%s !", vname);
+            $$.del = savefmt("0 %s !", vname);
+            free(vname);
+            free(vardecl);
+        }
+    | DECLARED_VAR %prec BARE {
+            $$.get = savefmt("%s @", $1.val);
+            $$.set = savefmt("%s !", $1.val);
+            $$.del = savefmt("0 %s !", $1.val);
+            keyval_free(&$1);
+        }
+    | DECLARED_VAR '[' subscripts %prec SUFFIX {
+            char *idx = strlist_wrap(&$3, 0, -1);
+            if ($3.count == 1) {
+                $$.get = savefmt("%s @ %s []", $1.val, idx);
+                $$.set = savefmt("%s @ %s ->[] %s !", $1.val, idx, $1.val);
+                $$.del = savefmt("%s @ %s array_delitem %s !", $1.val, idx, $1.val);
+            } else {
+                $$.get = savefmt("%s @ { %s }list array_nested_get", $1.val, idx);
+                $$.set = savefmt("%s @ { %s }list array_nested_set %s !", $1.val, idx, $1.val);
+                $$.del = savefmt("%s @ { %s }list array_nested_del %s !", $1.val, idx, $1.val);
+            }
+            free(idx);
+            keyval_free(&$1);
+            strlist_free(&$3);
+        }
     ;
 
-lvalue: lvariable {
-            $$.get = savefmt("%s @", $1);
-            $$.set = savefmt("%s !", $1);
-            $$.del = savefmt("0 %s !", $1);
-            free($1);
-        }
-    | variable '[' expr ']' {
-            $$.get = savefmt("%s @ %s []", $1, $3);
-            $$.set = savefmt("%s @ %s ->[] %s !", $1, $3, $1);
-            $$.del = savefmt("%s @ %s array_delitem %s !", $1, $3, $1);
-            free($1); free($3);
-        }
-    | variable '[' expr ']' '[' subscripts {
-            $$.get = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
-            $$.set = savefmt("%s @ { %s %s }list array_nested_set %s !", $1, $3, $6, $1);
-            $$.del = savefmt("%s @ { %s %s }list array_nested_del %s !", $1, $3, $6, $1);
-            free($1); free($3); free($6);
-        }
-    ;
-
-subscripts: expr ']' { $$ = $1; }
-    | subscripts '[' expr ']' { $$ = savefmt("%s %s", $1, $3); free($1); free($3); }
+subscripts: expr ']' { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+    | subscripts '[' expr ']' { $$ = $1; strlist_add(&$$, $3); free($3); }
     ;
 
 compr_cond: /* nothing */ { $$ = savestring(""); }
@@ -551,31 +517,38 @@ compr_cond: /* nothing */ { $$ = savestring(""); }
     ;
 
 compr_loop:
-      '(' lvariable IN expr ')' {
-            $$ = savefmt("%s\nforeach %s ! pop", $4, $2);
-            free($2); free($4);
+      '(' lvalue IN expr ')' {
+            $$ = savefmt("%s\nforeach %s pop", $4, $2.set);
+            getset_free(&$2); free($4);
         }
-    | '(' lvariable KEYVAL lvariable IN expr ')' {
-            $$ = savefmt("%s\nforeach %s ! %s !", $6, $4, $2);
-            free($2); free($4);
+    | '(' lvalue KEYVAL lvalue IN expr ')' {
+            $$ = savefmt("%s\nforeach %s %s", $6, $4.set, $2.set);
+            getset_free(&$2); getset_free(&$4); free($6);
         }
     ;
 
-expr: INTEGER { $$ = savefmt("%d", $1); }
-    | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
-    | '#' INTEGER { $$ = savefmt("#%d", $2); }
+expr: paren_expr { $$ = $1; }
+    | IDENT {
+            char *errstr = savefmt("Undeclared identifier '%s'.", $1);
+            yyerror(errstr);
+            $$ = $1;
+            free(errstr);
+            YYERROR;
+        }
+    | INTEGER { $$ = savefmt("%d", $1); }
     | FLOAT { $$ = $1; }
     | STR { $$ = format_muv_str($1); free($1); }
-    | paren_expr { $$ = $1; }
-    | function_call { $$ = $1; }
-    | primitive_call { $$ = $1; }
+    | '#' MINUS INTEGER { $$ = savefmt("#-%d", $3); }
+    | '#' INTEGER { $$ = savefmt("#%d", $2); }
     | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
-    | lvariable { $$ = savefmt("%s @", $1); free($1); }
-    | variable '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
-    | variable '[' expr ']' '[' subscripts {
-            $$ = savefmt("%s @ { %s %s }list array_nested_get", $1, $3, $6);
-            free($1); free($3); free($6);
-        }
+    | lvalue { $$ = savestring($1.get); getset_free(&$1); }
+    | function_call { $$ = $1; }
+    | TOP { $$ = savestring(""); }
+    | PUSH '(' arglist ')' { $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
+    | MUF '(' STR ')' { $$ = $3; }
+    | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
+    | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); }
+    | expr '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
     | INSERT { $$ = savestring("{ }list"); }
     | '[' arglist_or_null ']' {
             /* list initializer */
@@ -631,47 +604,46 @@ expr: INTEGER { $$ = savefmt("%d", $1); }
             free(vexpr);
             free($3); free($4); free($5); free($7);
         }
-    | PLUS expr   %prec UNARY { $$ = $2; }
-    | MINUS expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
-    | NOT expr    %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
+    | PLUS   expr %prec UNARY { $$ = $2; }
+    | MINUS  expr %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
+    | NOT    expr %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
     | BITNOT expr %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
-    | BITAND function %prec UNARY { $$ = savefmt("'%s", $2.name); }
-    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); getset_free(&$2); }
-    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); getset_free(&$2); }
-    | lvalue INCR { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); getset_free(&$1); }
-    | lvalue DECR { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); getset_free(&$1); }
-    | expr PLUS expr  { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
-    | expr MINUS expr { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
-    | expr MULT expr  { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
-    | expr DIV expr   { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
-    | expr MOD expr   { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
-    | expr EQ expr    { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
-    | expr NEQ expr   { $$ = savefmt("%s %s = not", $1, $3); free($1); free($3); }
-    | expr LT expr    { $$ = savefmt("%s %s <", $1, $3); free($1); free($3); }
-    | expr GT expr    { $$ = savefmt("%s %s >", $1, $3); free($1); free($3); }
-    | expr LTE expr   { $$ = savefmt("%s %s <=", $1, $3); free($1); free($3); }
-    | expr GTE expr   { $$ = savefmt("%s %s >=", $1, $3); free($1); free($3); }
-    | expr AND expr   { $$ = savefmt("%s %s and", $1, $3); free($1); free($3); }
-    | expr OR expr    { $$ = savefmt("%s %s or", $1, $3); free($1); free($3); }
-    | expr XOR expr   { $$ = savefmt("%s %s xor", $1, $3); free($1); free($3); }
+    | BITAND DECLARED_FUNC %prec UNARY { $$ = savefmt("'%s", $2.name); }
+    | expr PLUS expr     { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
+    | expr MINUS expr    { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
+    | expr MULT expr     { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
+    | expr DIV expr      { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
+    | expr MOD expr      { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
+    | expr EQ expr       { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
+    | expr NEQ expr      { $$ = savefmt("%s %s = not", $1, $3); free($1); free($3); }
+    | expr LT expr       { $$ = savefmt("%s %s <", $1, $3); free($1); free($3); }
+    | expr GT expr       { $$ = savefmt("%s %s >", $1, $3); free($1); free($3); }
+    | expr LTE expr      { $$ = savefmt("%s %s <=", $1, $3); free($1); free($3); }
+    | expr GTE expr      { $$ = savefmt("%s %s >=", $1, $3); free($1); free($3); }
+    | expr AND expr      { $$ = savefmt("%s %s and", $1, $3); free($1); free($3); }
+    | expr OR expr       { $$ = savefmt("%s %s or", $1, $3); free($1); free($3); }
+    | expr XOR expr      { $$ = savefmt("%s %s xor", $1, $3); free($1); free($3); }
     | expr BITOR expr    { $$ = savefmt("%s %s bitor", $1, $3); free($1); free($3); }
     | expr BITXOR expr   { $$ = savefmt("%s %s bitxor", $1, $3); free($1); free($3); }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | lvalue ASGN expr        { $$ = savefmt("%s\ndup %s", $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue INSERT ASGN expr { $$ = savefmt("%s\ndup %s []<-\n%s", $4, $1.get, $1.set); getset_free(&$1); free($4); }
-    | lvalue PLUSASGN expr   { $$ = savefmt("%s\n%s +\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue MINUSASGN expr  { $$ = savefmt("%s\n%s -\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue MULTASGN expr   { $$ = savefmt("%s\n%s *\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue DIVASGN expr    { $$ = savefmt("%s\n%s /\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue MODASGN expr    { $$ = savefmt("%s\n%s %%\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue BITORASGN expr  { $$ = savefmt("%s\n%s bitor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue BITXORASGN expr { $$ = savefmt("%s\n%s bitxor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue BITANDASGN expr { $$ = savefmt("%s\n%s bitand\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | lvalue BITLEFTASGN expr { $$ = savefmt("%s\n%s bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue ASGN expr         { $$ = savefmt("%s\ndup %s", $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue INSERT ASGN expr  { $$ = savefmt("%s\ndup %s []<-\n%s", $4, $1.get, $1.set); getset_free(&$1); free($4); }
+    | lvalue PLUSASGN expr     { $$ = savefmt("%s\n%s +\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MINUSASGN expr    { $$ = savefmt("%s\n%s -\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MULTASGN expr     { $$ = savefmt("%s\n%s *\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue DIVASGN expr      { $$ = savefmt("%s\n%s /\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue MODASGN expr      { $$ = savefmt("%s\n%s %%\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITORASGN expr    { $$ = savefmt("%s\n%s bitor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITXORASGN expr   { $$ = savefmt("%s\n%s bitxor\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITANDASGN expr   { $$ = savefmt("%s\n%s bitand\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
+    | lvalue BITLEFTASGN expr  { $$ = savefmt("%s\n%s bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
     | lvalue BITRIGHTASGN expr { $$ = savefmt("%s\n0 %s - bitshift\ndup %s", $1.get, $3, $1.set); getset_free(&$1); free($3); }
-    | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); }
+    | lvalue INCR             { $$ = savefmt("%s dup 1 + %s", $1.get, $1.set); getset_free(&$1); }
+    | lvalue DECR             { $$ = savefmt("%s dup 1 - %s", $1.get, $1.set); getset_free(&$1); }
+    | INCR lvalue %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.get, $2.set); getset_free(&$2); }
+    | DECR lvalue %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.get, $2.set); getset_free(&$2); }
     ;
 
 arglist_or_null: /* nothing */ { strlist_init(&$$); }
@@ -782,7 +754,6 @@ bookmark_push(const char *fname)
 int
 bookmark_pop()
 {
-    char buf[1024];
     long pos;
     
     if (bookmark_count < 1) {
@@ -798,8 +769,9 @@ bookmark_pop()
 
     fclose(yyin);
     if (*yyfilename) {
-        snprintf(buf, sizeof(buf), "%s/%s", yydirname, yyfilename);
-        yyin = fopen(buf, "r");
+        char *fnam = savefmt("%s/%s", yydirname, yyfilename);
+        yyin = fopen(fnam, "r");
+        free(fnam);
         fseek(yyin, pos, SEEK_SET);
     } else {
         yyin = stdin;
@@ -1024,7 +996,7 @@ yylex()
     }
 
     /* handle keywords or idents/builtins */
-    if (isalpha(c) || c == '_' || c == '.') {
+    if (isalpha(c) || c == '_') {
         int cnt = 0;
         int rv;
         int bltin;
@@ -1049,12 +1021,14 @@ yylex()
         /* Function local variable take precendence over globals */
         cp = kvmap_get(&function_vars, in);
         if (cp) {
-            yylval.str = savestring(cp);
+            yylval.keyval.key = savestring(in);
+            yylval.keyval.val = savestring(cp);
             return DECLARED_VAR;
         }
         cp = kvmap_get(&global_vars, in);
         if (cp) {
-            yylval.str = savestring(cp);
+            yylval.keyval.key = savestring(in);
+            yylval.keyval.val = savestring(cp);
             return DECLARED_VAR;
         }
 
@@ -1138,6 +1112,9 @@ yylex()
     }
 
     switch(c) {
+        case '.':
+            return DOT;
+
         case '<':
             c = fgetc(yyin);
             if (c == '<') {
