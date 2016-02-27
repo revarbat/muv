@@ -1,7 +1,7 @@
 include "!fb6/prims";
 
 
-class person {
+class Person {
     var surname = "";
     var givenname = "";
 
@@ -11,12 +11,12 @@ class person {
     }
 
     method greet() {
-        fmttell("Hello, %s %s!", self.givenname, self.surname);
+        tell(fmtstring("Hello, %s %s!", self.givenname, self.surname));
     }
 }
 
 
-class employee(person) {
+class Employee(person) {
     var empnum = 0;
     var ssn = "";
     var account = "";
@@ -29,18 +29,21 @@ class employee(person) {
     }
 
     method welcome() {
-        fmttell(
-            "Welcome %s %s, as employee %s.",
-            self.givenname,
-            self.surname,
-            self.empnum
+        tell(
+	    fmtstring(
+		"Welcome %s %s, as employee %s.",
+		self.givenname,
+		self.surname,
+		self.empnum
+	    )
         );
     }
 }
 
 
 func main(arg) {
-    var emp = new employee(12345, "Doe", "John", "123-45-6789", "jdoe");
+    var emp = new Employee(12345, "Doe", "John", "123-45-6789", "jdoe");
+    emp.welcome();
     emp.greet();
 }
 
