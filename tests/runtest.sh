@@ -5,10 +5,10 @@ runtest() {
     outfile="test_$1_out.muf"
     cmpfile="test_$1_cmp.muf"
 
-    muv -o $outfile $infile
+    ../muv -o $outfile $infile
     if [[ -e $cmpfile ]] ; then
         echo "Checking test $1"
-        diff -b $cmpfile $outfile
+        diff -c -b -B -w $cmpfile $outfile
     else
         echo "Installing first run results for test $1"
         mv $outfile $cmpfile

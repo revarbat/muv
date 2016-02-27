@@ -2,8 +2,8 @@
 (   https://github.com/revarbat/muv )
 
 : _sub[ _a _b -- ret ]
-    _a @
-    dup _b @ []<-
+    _b @
+    _a @ dup rot []<-
     _b ! pop
 
     _b @ exit 0

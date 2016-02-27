@@ -5,25 +5,7 @@ extern void io_tell(x) = "me @ swap notify";
 extern void io_notify(x,y) = "notify";
 extern void io_notify_except(x,y,z) = "notify_except";
 extern void io_array_notify(x,y) = "array_notify";
-extern void io_notify_exclude(x,y,z) = "swap array_explode dup 2 + rotate notify_exclude";
-
-extern void io_fmtnotify(who,fmt,args*) = "
-3 try
-    array_reverse
-    array_explode pop
-    depth 1 - rotate fmtstring
-    depth rotate swap notify
-    depth popn
-catch abort
-endcatch";
-
-extern void io_fmttell(fmt,args*) = "
-2 try
-    array_explode 1 + rotate fmtstring
-    me @ swap notify
-    depth popn
-catch abort
-endcatch";
+extern void io_notify_exclude(x,y,z) = "swap array_vals dup 2 + rotate notify_exclude";
 
 extern void     io_user_log(x) = "user_log";
 extern single   io_read() = "read";

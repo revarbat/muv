@@ -1,0 +1,20 @@
+func main(arg) {
+    var arr = [
+        "foo" => [
+            "fee" => 2,
+            "fie" => 8,
+            "foe" => 7,
+            "fum" => 42
+        ],
+        "bar" => [
+            "blah" => 1,
+            "blat" => 3,
+            "bloo" => 5,
+            "bleh" => 7
+        ]
+    ];
+    var b = arr.foo.fie;
+    arr.bar.bloo = 43;
+    arr.bar.blat += 7;
+}
+

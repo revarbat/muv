@@ -13,6 +13,8 @@ struct gettersetter {
     const char *get;
     const char *set;
     const char *del;
+    const char *oper_pre;
+    const char *oper_post;
 };
 
 void getset_free(struct gettersetter *x);

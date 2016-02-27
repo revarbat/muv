@@ -87,7 +87,7 @@ strlist_join(struct strlist *l, const char *s, int start, int end)
     totlen += strlen(s) * l->count;
     ptr2 = buf = (char*)malloc(totlen+1);
     for (i = start; i < l->count && i < end; i++) {
-        if (i > 0) {
+        if (i > start) {
             for(ptr = s; *ptr; ) *ptr2++ = *ptr++;
         }
         for(ptr = l->list[i]; *ptr; ) *ptr2++ = *ptr++;
@@ -115,7 +115,7 @@ strlist_wrap(struct strlist *l, int start, int end)
     totlen += l->count;
     ptr2 = buf = (char*)malloc(totlen+1);
     for (i = start; i < l->count && i < end; i++) {
-        if (i > 0) {
+        if (i > start) {
             if (currlen > 0) {
                 if (currlen + strlen(l->list[i]) > 80) {
                     *ptr2++ = '\n';
@@ -137,6 +137,23 @@ strlist_wrap(struct strlist *l, int start, int end)
     }
     *ptr2 = '\0';
     return buf;
+}
+
+
+void
+strlist_reverse(struct strlist *l)
+{
+    int a, b;
+    if (l->count < 1)
+        return;
+    a = 0;
+    b = l->count-1;
+    while (a < b) {
+        const char *tmp = l->list[a];
+        l->list[a] = l->list[b];
+        l->list[b] = tmp;
+        a++; b--;
+    }
 }
 
 

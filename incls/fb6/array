@@ -2,7 +2,7 @@
 // array namespace
 
 extern single   array_make(args*) = "";
-extern single   array_make_dict(args*) = "{ swap array_explode pop }dict";
+extern single   array_make_dict(args*) = "{ swap array_vals pop }dict";
 
 extern multiple array_first(x) = "array_first";
 extern multiple array_last(x) = "array_last";

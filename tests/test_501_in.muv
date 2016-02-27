@@ -1,21 +1,16 @@
 include "!fb6/prims";
 
-func fmtnotify(player, fmt, args*) {
-    notify(player, fmtstring(fmt, muf("args @ array_explode pop")));
-}
-
-
 func dump(arr, indent) {
     var key;
     var val;
     var out = "";
     for (key => val in arr) {
         if (array?(val) || dictionary?(val)) {
-	    fmttell("%s%~ => [", indent, key);
+	    tell(fmtstring("%s%~ => [", indent, key));
             dump(val, cat(indent, "  "));
-	    fmttell("%s]", indent);
+	    tell(fmtstring("%s]", indent));
         } else {
-	    fmttell("%s%~ => %~", indent, key, val);
+	    tell(fmtstring("%s%~ => %~", indent, key, val));
 	}
     }
 }
@@ -54,7 +49,7 @@ func main() {
     }
     var empty = [];  // initialize 'empty' with an empty array/list.
     for (idx => word in arr) {
-        fmtnotify(me, "%d: %s", idx, word);
+        notify(me, fmtstring("%d: %s", idx, word));
     }
     var nested = [
         [1, 2, 3, 4],

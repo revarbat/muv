@@ -1,78 +1,38 @@
 ( Generated from test_501_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-
-: _fmtnotify[ _player _fmt _args -- ret ]
-    _player @
-    _fmt @ {
-
-        args @ array_explode pop
-    }list 
-    2 try
-        array_explode 1 + rotate fmtstring
-        depth 0 swap - rotate
-        depth 1 - popn
-    catch abort
-    endcatch notify 0 pop 0
-;
-
+  
 : _dump[ _arr _indent -- ret ]
     var _key
     var _val
     var _out
     _key @ pop
-
     _val @ pop
-
     ""
     dup _out ! pop
-
     _arr @
     foreach _val ! _key !
         _val @ array? _val @ dictionary? or if
-            "%s%~ => [" {
-
-                _indent @
-                _key @
-            }list 
-            2 try
-                array_explode 1 + rotate fmtstring
-                me @ swap notify
-                depth popn
-            catch abort
-            endcatch 0 pop
-
+            _key @
+            _indent @
+            "%s%~ => ["
+            fmtstring me @ swap notify 0 pop
             _val @ {
                 _indent @
                 "  "
             }list array_interpret _dump pop
-
-            "%s]" {
-
-                _indent @
-            }list 
-            2 try
-                array_explode 1 + rotate fmtstring
-                me @ swap notify
-                depth popn
-            catch abort
-            endcatch 0 pop
+            _indent @
+            "%s]"
+            fmtstring me @ swap notify 0 pop
         else
-            "%s%~ => %~" {
-
-                _indent @
-                _key @
-                _val @
-            }list 
-            2 try
-                array_explode 1 + rotate fmtstring
-                me @ swap notify
-                depth popn
-            catch abort
-            endcatch 0 pop
+            _val @
+            _key @
+            _indent @
+            "%s%~ => %~"
+            fmtstring me @ swap notify 0 pop
         then
     repeat 0
 ;
-
+  
 : _dictfunc[  -- ret ]
     var _mydict
     var _myvar
@@ -82,20 +42,15 @@
         "three" "Third"
     }dict
     dup _mydict ! pop
-
     _mydict @ "" _dump pop
-
     _mydict @ "two" []
     dup _myvar ! pop
-
     _myvar @ me @ swap notify 0 pop
-
     "Fifth"
     dup _mydict @ "five" ->[] _mydict ! pop
-
     _mydict @ "three" array_delitem _mydict ! 0 pop 0
 ;
-
+  
 : _main[  -- ret ]
     var _arr
     var _idx
@@ -107,28 +62,21 @@
         "Tenth" "Eleventh"
     }list
     dup _arr ! pop
-
     _idx @ pop
-
     _word @ pop
-
     _arr @
     foreach _word ! pop
         _arr @ _idx @ [] me @ swap notify 0 pop
     repeat
-
     { }list
     dup _empty ! pop
-
     _arr @
     foreach _word ! _idx !
-        me @ "%d: %s" {
-
-            _idx @
-            _word @
-        }list _fmtnotify pop
+        me @ _word @
+        _idx @
+        "%d: %s"
+        fmtstring notify 0 pop
     repeat
-
     {
         {
             1 2 3 4
@@ -148,34 +96,26 @@
         }list
     }list
     dup _nested ! pop
-
     _nested @ { 2 1 }list array_nested_get me @ swap notify 0 pop
-
     {
         "Fee" "Fie" "Foe" "Fum"
     }list
     dup _nested @ 1 ->[] _nested ! pop
-
     23
     dup _nested @ { 0 3 }list array_nested_set _nested ! pop
-
-    _nested @ { 0 3 }list array_nested_get
+    _nested @ { 0 3 }list over over array_nested_get
     2 +
-    dup _nested @ { 0 3 }list array_nested_set _nested ! pop
-
-    "foo"
-    dup _nested @ 0 [] []<-
-    _nested @ 0 ->[] _nested ! pop
-
-    "foo"
-    dup _nested @ { 3 1 }list array_nested_get []<-
-    _nested @ { 3 1 }list array_nested_set _nested ! pop
-
+    dup 4 rotate 4 rotate array_nested_set _nested ! pop
+    _nested @ 0 over over []
+    "foo" dup rot []<-
+    4 rotate 4 rotate ->[] _nested ! pop
+    _nested @ { 3 1 }list over over array_nested_get
+    "foo" dup rot []<-
+    4 rotate 4 rotate array_nested_set _nested ! pop
     _nested @ 2 array_delitem _nested ! 0 pop
-
     _nested @ "" _dump pop 0
 ;
-
+  
 : __start
     "me" match me !
     me @ location loc !

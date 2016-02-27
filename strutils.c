@@ -130,9 +130,13 @@ void getset_free(struct gettersetter *x)
     free((char*)x->get);
     free((char*)x->set);
     free((char*)x->del);
+    free((char*)x->oper_pre);
+    free((char*)x->oper_post);
     x->get = NULL;
     x->set = NULL;
     x->del = NULL;
+    x->oper_pre = NULL;
+    x->oper_post = NULL;
 }
 
 

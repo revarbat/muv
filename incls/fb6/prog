@@ -1,28 +1,13 @@
 ///////////////////////////////
 // prog namespace
 
-extern multiple prog_call(x, args*) = "
-2 try
-    array_explode pop
-    depth rotate call
-catch abort
-endcatch
-";
+extern multiple prog_call(x, args*) = "array_vals ++ rotate call";
 
-extern multiple prog_call_public(x, pub, args*) = "
-3 try
-    array_explode pop
-    depth rotate depth rotate call
-catch abort
-endcatch
-";
+func prog_call_public(x, pub, args*) {
+    return muf("{ args @ array_vals pop x @ pub @ call }list");
+}
 
-extern multiple prog_execute(addr, args*) = "
-2 try
-    array_explode 1 + rotate execute
-catch abort
-endcatch
-";
+extern multiple prog_execute(x, args*) = "array_vals ++ rotate execute";
 
 extern single prog_cancall?(x,y) = "cancall?";
 extern single prog_compile(x,y) = "compile";

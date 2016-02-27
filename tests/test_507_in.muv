@@ -26,12 +26,12 @@ func submit(arg) {
         tell("Enter your submission here:");
         arg = read();
     }
-    var new = copyobj(#1981);
+    var newobj = copyobj(#1981);
     var word = first_word(arg);
     var newname = cat(name(me), "'s submission (", word, ")");
-    setname(new, newname);
-    setdesc(new, arg);
-    moveto(new, #1976);
+    setname(newobj, newname);
+    setdesc(newobj, arg);
+    moveto(newobj, #1976);
     tell("Thank you for the submission.");
 }
 

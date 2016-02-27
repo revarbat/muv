@@ -43,13 +43,5 @@ extern single   str_encrypt(x,y) = "strencrypt";
 extern single   str_decrypt(x,y) = "strdecrypt";
 
 extern single   str_fmtstrings(x,y) = "array_fmtstrings";
-extern single   str_fmtstring(fmt, args*) = "
-2 try
-    array_reverse array_explode
-    1 + rotate fmtstring
-    depth 0 swap - rotate
-    depth 1 - popn
-catch abort
-endcatch";
 
 
