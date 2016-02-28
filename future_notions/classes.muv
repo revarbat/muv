@@ -16,7 +16,7 @@ class Person {
 }
 
 
-class Employee(person) {
+class Employee(Person) {
     var empnum = 0;
     var ssn = "";
     var account = "";
@@ -28,10 +28,11 @@ class Employee(person) {
         super(surname, givenname);
     }
 
-    method welcome() {
+    method welcome(company) {
         tell(
 	    fmtstring(
-		"Welcome %s %s, as employee %s.",
+		"Welcome to %s, %s %s, as employee %s.",
+		company,
 		self.givenname,
 		self.surname,
 		self.empnum

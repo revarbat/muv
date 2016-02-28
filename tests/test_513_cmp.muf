@@ -25,7 +25,8 @@
     dup _arr @ { "bar" "bloo" }list array_nested_set _arr ! pop
     _arr @ { "bar" "blat" }list over over array_nested_get
     7 +
-    dup 4 rotate 4 rotate array_nested_set _arr ! pop 0
+    dup 4 rotate 4 rotate array_nested_set _arr ! pop
+    0
 ;
   
 : __start

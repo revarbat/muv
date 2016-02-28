@@ -1,31 +1,27 @@
 ( Generated from test_503_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-
+  
 : _complex_match[ _v1 _v2 -- ret ]
     _v1 @ number? _v2 @ number? and if
         _v1 @ _v2 @ = exit
     then
-
     _v1 @ string? _v2 @ int? and if
         _v1 @ _v2 @ intostr strcmp not exit
     then
-
     _v1 @ type _v2 @ type strcmp not if
         0 exit
     then
-
     _v1 @ string? if
         _v1 @ tolower _v2 @ tolower strcmp not exit
     then
-
-    0 exit 0
+    0 exit
+    0
 ;
-
+  
 : _main[ _arg -- ret ]
     var _i
     2
     dup _i ! pop
-
     0 begin pop (switch)
         _i @
         (case)
@@ -42,7 +38,6 @@
         then
         break
     repeat pop
-
     0 begin pop (switch)
         _arg @
         (case)
@@ -60,7 +55,6 @@
         (default)
         "I don't understand." me @ swap notify 0 pop break
     repeat pop
-
     0 begin pop (switch)
         _arg @
         (case)
@@ -76,9 +70,10 @@
             "None selected!" me @ swap notify 0 pop break
         then
         break
-    repeat pop 0
+    repeat pop
+    0
 ;
-
+  
 : __start
     "me" match me !
     me @ location loc !

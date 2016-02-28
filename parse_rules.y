@@ -158,8 +158,14 @@ classdef: CLASS proposed_funcname inheritance {
             char *linits = savefmt("{\n%s\n}dict", iinits);
             char *ilinits = indent(linits);
             char *initfunc = savefmt("classinit_%s", current_class);
-            char *initdef = savefmt(": %s[ -- ]\n%s classdata_%s !\n;\n", initfunc, ilinits, current_class);
-            char *newdef = savefmt(": classnew_%s[ -- inst ]\n    classdata_%s @\n;\n", current_class, current_class);
+            char *initdef;
+            char *newdef;
+            if (parent_class && *parent_class) {
+                initdef = savefmt(": %s[ -- ]\n%s\n    classdata_%s @ foreach rot rot ->[] repeat\n    classdata_%s !\n;\n", initfunc, ilinits, parent_class, current_class);
+            } else {
+                initdef = savefmt(": %s[ -- ]\n%s classdata_%s !\n;\n", initfunc, ilinits, current_class);
+            }
+            newdef = savefmt(": classnew_%s[ -- inst ]\n    classdata_%s @\n;\n", current_class, current_class);
             $$ = savefmt("lvar classdata_%s\n%s\n%s\n%s\n", current_class, $6, initdef, newdef);
             strlist_add(&inits_list, initfunc);
             kvmap_clear(&function_vars);
@@ -237,7 +243,7 @@ methoddef: METHOD proposed_funcname '(' argvarlist opt_varargs ')' {
         char *idx = format_muv_str(funcname);
         char *funcinit = savefmt("\"%s\" '%s", $2, funcname);
         strlist_add(&classinit_list, funcinit);
-        $$ = savefmt(": %s[ self %s -- ret ]\n%s%s 0\n;\n  \n", funcname, vars, idecls, body);
+        $$ = savefmt(": %s[ %s self -- ret ]\n%s%s\n    0 self @\n;\n  \n", funcname, vars, idecls, body);
         kvmap_clear(&function_vars);
         strlist_clear(&vardecl_list);
         kvmap_clear(&function_consts);
@@ -267,7 +273,7 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         char *decls = strlist_join(&vardecl_list, "", 0, -1);
         char *idecls = indent(decls);
         free(decls);
-        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s 0\n;\n  \n", FUNC_PREFIX, $2, vars, idecls, body);
+        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s\n    0\n;\n  \n", FUNC_PREFIX, $2, vars, idecls, body);
         kvmap_clear(&function_vars);
         strlist_clear(&vardecl_list);
         kvmap_clear(&function_consts);
@@ -368,8 +374,22 @@ argvarlist:
 
 simple_statement:
       expr { $$ = savefmt("%s pop", $1); free($1); }
-    | RETURN { $$ = savestring("0 exit"); }
-    | RETURN expr { $$ = savefmt("%s exit", $2); free($2); }
+    | RETURN {
+            if (current_class && *current_class) {
+                $$ = savestring("0 self @ exit");
+            } else {
+                $$ = savestring("0 exit");
+            }
+        }
+    | RETURN expr {
+            if (current_class && *current_class) {
+                $$ = savefmt("%s self @ exit", $2);
+            } else {
+                $$ = savefmt("%s exit", $2);
+            }
+            $$ = savefmt("%s exit", $2);
+            free($2);
+        }
     | BREAK { $$ = savestring("break"); }
     | CONTINUE { $$ = savestring("continue"); }
     ;
@@ -581,6 +601,7 @@ lvalue: VAR proposed_varname {
             $$.del = savefmt("0 %s !", vname);
             $$.oper_pre = savefmt("%s @", vname);
             $$.oper_post = savefmt("%s !", vname);
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(vname);
             free(vardecl);
         }
@@ -590,10 +611,16 @@ lvalue: VAR proposed_varname {
             $$.del = savefmt("0 %s !", $1.val);
             $$.oper_pre = savefmt("%s @", $1.val);
             $$.oper_post = savefmt("%s !", $1.val);
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             keyval_free(&$1);
         }
     | DECLARED_VAR DOT attributes {
             char *idx = strlist_wrap(&$3, 0, -1);
+            char *selfidx = strlist_wrap(&$3, 0, $3.count-2);
+            const char *methd = $3.list[$3.count-1];
+            char *errmsg = savefmt("Method %s not found in %s line %d", methd, yyfilename, yylineno);
+            char *errstr = format_muv_str(errmsg);
+            char *self_pre, *self_post;
             if ($3.count == 1) {
                 $$.get = savefmt("%s @ %s []", $1.val, idx);
                 $$.set = savefmt("%s @ %s ->[] %s !", $1.val, idx, $1.val);
@@ -607,7 +634,48 @@ lvalue: VAR proposed_varname {
                 $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", $1.val, idx);
                 $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", $1.val);
             }
+            if ($3.count > 2) {
+                self_pre = savefmt("%s @ { %s }list array_nested_get", $1.val, selfidx);
+                self_post = savefmt("%s @ { %s }list array_nested_set %s !", $1.val, selfidx, $1.val);
+            } else if ($3.count > 1) {
+                self_pre = savefmt("%s @ %s []", $1.val, selfidx);
+                self_post = savefmt("%s @ %s ->[] %s !", $1.val, selfidx, $1.val);
+            } else {
+                self_pre = savefmt("%s @", $1.val);
+                self_post = savefmt("%s !", $1.val);
+            }
+            $$.call = savefmt("%s dup %s []\ndup address? if\n    execute %s\nelse\n    } popn %s abort\nthen", self_pre, methd, self_post, errstr);
+            free(selfidx);
+            free(errstr);
+            free(errmsg);
             free(idx);
+            keyval_free(&$1);
+            strlist_free(&$3);
+        }
+    | DECLARED_CLASS DOT attributes {
+            char *idx = strlist_wrap(&$3, 0, -1);
+            char *clsvar = savefmt("classdata_%s", $1.val);
+            const char *methd = $3.list[$3.count-1];
+            char *errmsg = savefmt("Class method %s not found in %s line %d", methd, yyfilename, yylineno);
+            char *errstr = format_muv_str(errmsg);
+            if ($3.count == 1) {
+                $$.get = savefmt("%s @ %s []", clsvar, idx);
+                $$.set = savefmt("%s @ %s ->[] %s !", clsvar, idx, clsvar);
+                $$.del = savefmt("%s @ %s array_delitem %s !", clsvar, idx, clsvar);
+                $$.oper_pre = savefmt("%s @ %s over over []", clsvar, idx);
+                $$.oper_post = savefmt("4 rotate 4 rotate ->[] %s !", clsvar);
+            } else {
+                $$.get = savefmt("%s @ { %s }list array_nested_get", clsvar, idx);
+                $$.set = savefmt("%s @ { %s }list array_nested_set %s !", clsvar, idx, clsvar);
+                $$.del = savefmt("%s @ { %s }list array_nested_del %s !", clsvar, idx, clsvar);
+                $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", clsvar, idx);
+                $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", clsvar);
+            }
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn %s abort\nthen", $$.get, errstr);
+            free(errstr);
+            free(errmsg);
+            free(idx);
+            free(clsvar);
             keyval_free(&$1);
             strlist_free(&$3);
         }
@@ -626,6 +694,7 @@ lvalue: VAR proposed_varname {
                 $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", $1.val, idx);
                 $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", $1.val);
             }
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(idx);
             keyval_free(&$1);
             strlist_free(&$3);
@@ -686,9 +755,10 @@ expr: paren_expr { $$ = $1; }
     | lvalue  %prec BARE { $$ = savestring($1.get); getset_free(&$1); }
     | lvalue '(' arglist_or_null ')'  %prec SUFFIX {
             char* fargs = strlist_wrap(&$3, 0, -1);
-            char* body = savefmt("%s\n%s\ndup address? if\n    execute\nelse\n    }list pop \"Method not found in %s line %d.\" abort\nthen", fargs, $1.get, yyfilename, yylineno);
-            char* ibody = indent(body);
-            $$ = savefmt("{\n%s\n}list\ndup array_count not if\n    pop 0\nelse\n    dup array_count 1 = if 0 [] then\nthen", ibody);
+            char *body, *ibody;
+            body = savefmt("%s%s%s", fargs, (*fargs?"\n":""), $1.call);
+            ibody = indent(body);
+            $$ = savefmt("{\n%s\n}list\ndup array_count 2 < if 0 [] then", ibody);
             free(ibody);
             free(body);
             free(fargs);
@@ -744,7 +814,7 @@ expr: paren_expr { $$ = $1; }
                 yyerror("Can't call super() outside of init method.");
                 YYERROR;
             }
-            if (!parent_class) {
+            if (!parent_class || !*parent_class) {
                 yyerror("No parent class to super() to.");
                 YYERROR;
             }

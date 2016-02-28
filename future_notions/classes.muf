@@ -1,94 +1,113 @@
-$def ivar_new  (            v) dup @ dup "idx" [] 1 + dup rot "idx" ->[] rot !
-$def ivar_set  (x inst attr v) -4 rotate { rot rot }list 3 pick @ swap ->[] swap !
-$def ivar_get  (  inst attr v) { 4 rotate 4 rotate }list swap @ swap array_nested_get
-$def ivar_exec (  inst mthd v) ivar_get dup address? if execute else pop "Method not found." abort then
+( Generated from classes.muv by the MUV compiler. )
+(   https://github.com/revarbat/muv )
+  
+lvar classdata_Person
 
 
-lvar cls_person;
-
-
-: m_person__init[ self surname givenname -- ]
-    surname   @ dup self @ "surname"   cls_person ivar_set pop
-    givenname @ dup self @ "givenname" cls_person ivar_set pop
-    self @ exit 0
+: _Person_init[ _surname _givenname self -- ret ]
+    _surname @
+    dup self @ "surname" ->[] self ! pop
+    _givenname @
+    dup self @ "givenname" ->[] self ! pop
+    0 self @
 ;
+  
 
-
-: m_person__greet[ self -- ]
-    me @
-    {
-        "Hello "
-        self @ "givenname" cls_person ivar_get
-        " "
-        self @ "surname" cls_person ivar_get
-        "!"
-    }cat
-    notify
-    0
+: _Person_greet[  self -- ret ]
+    self @ "surname" []
+    self @ "givenname" []
+    "Hello, %s %s!"
+    fmtstring me @ swap notify 0 pop
+    0 self @
 ;
+  
 
-
-: classinit_person[ self -- ]
+: classinit_Person[ -- ]
     {
-        "idx" 100
-        "surname"   ""
+        "surname" ""
         "givenname" ""
-        "greet" 'm_person__greet
-    }dict cls_person !
+        "init" '_Person_init
+        "greet" '_Person_greet
+    }dict classdata_Person !
 ;
 
-
-lvar cls_employee;
-
-
-: m_employee__init[ self empnum surname givenname ssn account -- ]
-    empnum  @ self @ "empnum"  cls_employee ivar_set pop
-    ssn     @ self @ "ssn"     cls_employee ivar_set pop
-    account @ self @ "account" cls_employee ivar_set pop
-    self @ surname @ givenname @ method_person__init
-    exit 0
+: classnew_Person[ -- inst ]
+    classdata_Person @
 ;
 
+lvar classdata_Employee
 
-: m_employee__welcome[ self -- ]
+
+
+: _Employee_init[ _empnum _surname _givenname _ssn _account self -- ret ]
+    _empnum @
+    dup self @ "empnum" ->[] self ! pop
+    _ssn @
+    dup self @ "ssn" ->[] self ! pop
+    _account @
+    dup self @ "account" ->[] self ! pop
+    self @ _surname @ _givenname @ _Person_init pop
+    0 self @
+;
+  
+
+: _Employee_welcome[ _company self -- ret ]
+    self @ "empnum" []
+    self @ "surname" []
+    self @ "givenname" []
+    _company @
+    "Welcome to %s, %s %s, as employee %s."
+    fmtstring me @ swap notify 0 pop
+    0 self @
+;
+  
+
+: classinit_Employee[ -- ]
     {
-        self @ "empnum" cls_employee ivar_get
-        self @ "surname" cls_employee ivar_get
-        self @ "givenname" cls_employee ivar_get
-    }list
-    "Welcome %s %s, as employee %s."
-    fmtstring
-    me @ swap notify 0 pop
-    0
-;
-
-
-: classinit_employee[ self -- ]
-    {
-        "idx" 100
-        "empnum"  ""
-        "ssn"     ""
+        "empnum" 0
+        "ssn" ""
         "account" ""
-        "welcome" 'm_employee__welcome
-    }dict cls_employee !
+        "init" '_Employee_init
+        "welcome" '_Employee_welcome
+    }dict
+    classdata_Person @ foreach rot rot ->[] repeat
+    classdata_Employee !
 ;
 
+: classnew_Employee[ -- inst ]
+    classdata_Employee @
+;
 
-: _main[ arg -- ]
-    var emp
-    12345 "Doe" "John" "123-45-6789" "jdoe" cls_employee ivar_new
-    dup emp ! pop
-    emp @ "greet" cls_employee ivar_exec pop
-    emp @ "welcome" cls_employee ivar_exec pop
+: _main[ _arg -- ret ]
+    var _emp
+    classnew_Employee 12345 "Doe" "John" "123-45-6789" "jdoe" _Employee_init
+    dup _emp ! pop
+    {
+        _emp @ dup "welcome" []
+        dup address? if
+            execute _emp !
+        else
+            } popn "Method \"welcome\" not found in classes.muv line 47" abort
+        then
+    }list
+    dup array_count 2 < if 0 [] then pop
+    {
+        _emp @ dup "greet" []
+        dup address? if
+            execute _emp !
+        else
+            } popn "Method \"greet\" not found in classes.muv line 48" abort
+        then
+    }list
+    dup array_count 2 < if 0 [] then pop
     0
 ;
-
-
-: __start[ arg -- ret ]
-    classinit_person
-    classinit_employee
+  
+: __start
+    "me" match me !
+    me @ location loc !
+    trig trigger !
+    classinit_Person
+    classinit_Employee
     _main
 ;
-
-
-

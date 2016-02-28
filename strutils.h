@@ -13,6 +13,7 @@ struct gettersetter {
     const char *get;
     const char *set;
     const char *del;
+    const char *call;
     const char *oper_pre;
     const char *oper_post;
 };

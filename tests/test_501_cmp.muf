@@ -30,7 +30,8 @@
             "%s%~ => %~"
             fmtstring me @ swap notify 0 pop
         then
-    repeat 0
+    repeat
+    0
 ;
   
 : _dictfunc[  -- ret ]
@@ -48,7 +49,8 @@
     _myvar @ me @ swap notify 0 pop
     "Fifth"
     dup _mydict @ "five" ->[] _mydict ! pop
-    _mydict @ "three" array_delitem _mydict ! 0 pop 0
+    _mydict @ "three" array_delitem _mydict ! 0 pop
+    0
 ;
   
 : _main[  -- ret ]
@@ -113,7 +115,8 @@
     "foo" dup rot []<-
     4 rotate 4 rotate array_nested_set _nested ! pop
     _nested @ 2 array_delitem _nested ! 0 pop
-    _nested @ "" _dump pop 0
+    _nested @ "" _dump pop
+    0
 ;
   
 : __start

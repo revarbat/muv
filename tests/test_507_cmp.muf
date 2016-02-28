@@ -2,7 +2,8 @@
 (   https://github.com/revarbat/muv )
   
 : _helloworld[  -- ret ]
-    "Hello World!" exit 0
+    "Hello World!" exit
+    0
 ;
   
 : _arraydemo[  -- ret ]
@@ -11,14 +12,16 @@
     dup _myarr ! pop
     42
     dup _myarr @ 23 ->[] _myarr ! pop
-    _myarr @ 23 [] me @ swap notify 0 pop 0
+    _myarr @ 23 [] me @ swap notify 0 pop
+    0
 ;
   
 : _first_word[ _thing -- ret ]
     var _words
     { _thing @ " " split }list
     dup _words ! pop
-    _words @ 0 [] exit 0
+    _words @ 0 [] exit
+    0
 ;
   
 : _submit[ _arg -- ret ]
@@ -44,7 +47,8 @@
     _newobj @ _newname @ setname 0 pop
     _newobj @ _arg @ setdesc 0 pop
     _newobj @ #1976 moveto 0 pop
-    "Thank you for the submission." me @ swap notify 0 pop 0
+    "Thank you for the submission." me @ swap notify 0 pop
+    0
 ;
   
 : __start

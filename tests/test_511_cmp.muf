@@ -12,7 +12,8 @@
             "%-30D %-10s %-30s"
             fmtstring me @ swap notify 0 pop
         then
-    repeat 0
+    repeat
+    0
 ;
   
 : __start

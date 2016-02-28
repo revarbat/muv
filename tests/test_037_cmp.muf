@@ -1,6 +1,6 @@
 ( Generated from test_037_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-
+  
 : _main[ _arg -- ret ]
     var _a
     {
@@ -18,13 +18,12 @@
         }dict
     }dict
     dup _a ! pop
-
     "FOO"
     dup _a @ { "foo" "fie" }list array_nested_set _a ! pop
-
-    _a @ { "foo" "fie" }list array_nested_get exit 0
+    _a @ { "foo" "fie" }list array_nested_get exit
+    0
 ;
-
+  
 : __start
     "me" match me !
     me @ location loc !
