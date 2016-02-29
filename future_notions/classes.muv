@@ -43,7 +43,7 @@ class Employee(Person) {
 
 
 func main(arg) {
-    var emp = new Employee(12345, "Doe", "John", "123-45-6789", "jdoe");
+    var emp = Employee(12345, "Doe", "John", "123-45-6789", "jdoe");
     emp.welcome();
     emp.greet();
 }

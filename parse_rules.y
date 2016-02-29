@@ -38,6 +38,7 @@ const char *yyfilename = "STDIN";
 char *current_class = NULL;
 char *current_method = NULL;
 char *parent_class = NULL;
+int class_has_init = 0;
 
 struct bookmark_t {
     const char *dname;
@@ -83,7 +84,7 @@ void yyerror(char *s);
 %token <token> CONTINUE BREAK
 %token <token> TOP PUSH MUF DEL FMTSTRING
 %token <token> EXTERN VOID SINGLE MULTIPLE
-%token <token> CLASS METHOD NEW SUPER
+%token <token> CLASS METHOD SUPER
 
 %right BARE ELSE SUFFIX
 %left ',' KEYVAL
@@ -166,7 +167,12 @@ classdef: CLASS proposed_funcname inheritance {
                 initdef = savefmt(": %s[ -- ]\n%s classdata_%s !\n;\n", initfunc, ilinits, current_class);
             }
             newdef = savefmt(": classnew_%s[ -- inst ]\n    classdata_%s @\n;\n", current_class, current_class);
-            $$ = savefmt("lvar classdata_%s\n%s\n%s\n%s\n", current_class, $6, initdef, newdef);
+            if (!class_has_init) {
+                char *tmp = initdef;
+                initdef = savefmt("%s  \n: %s%s%sinit[ self -- ret ]\n    0 self @\n;\n", initdef, CLASS_PREFIX, current_class, FUNC_PREFIX);
+                free(tmp);
+            }
+            $$ = savefmt("lvar classdata_%s\n  \n%s%s  \n%s  \n", current_class, $6, initdef, newdef);
             strlist_add(&inits_list, initfunc);
             kvmap_clear(&function_vars);
             strlist_clear(&classinit_list);
@@ -183,11 +189,12 @@ classdef: CLASS proposed_funcname inheritance {
             free(parent_class);
             current_class = NULL;
             parent_class = NULL;
+            class_has_init = 0;
         }
     ;
 
 class_statements: class_statement { $$ = savestring($1); free($1); }
-    | class_statements class_statement { $$ = savefmt("%s\n%s", $1, $2); free($1); free($2); }
+    | class_statements class_statement { $$ = savefmt("%s%s", $1, $2); free($1); free($2); }
     ;
 
 class_statement:
@@ -244,6 +251,9 @@ methoddef: METHOD proposed_funcname '(' argvarlist opt_varargs ')' {
         char *funcinit = savefmt("\"%s\" '%s", $2, funcname);
         strlist_add(&classinit_list, funcinit);
         $$ = savefmt(": %s[ %s self -- ret ]\n%s%s\n    0 self @\n;\n  \n", funcname, vars, idecls, body);
+        if (!strcmp($2, "init")) {
+            class_has_init = 1;
+        }
         kvmap_clear(&function_vars);
         strlist_clear(&vardecl_list);
         kvmap_clear(&function_consts);
@@ -798,16 +808,16 @@ expr: paren_expr { $$ = $1; }
             free(fargs);
             strlist_free(&$3);
         }
-    | NEW DECLARED_CLASS '(' arglist_or_null ')' {
-            char* fargs = strlist_wrap(&$4, 0, -1);
-            char *newfunc = savefmt("classnew_%s", $2.val);
-            char *initfunc = savefmt("%s%s%s%s", CLASS_PREFIX, $2.val, FUNC_PREFIX, "init");
+    | DECLARED_CLASS '(' arglist_or_null ')' {
+            char* fargs = strlist_wrap(&$3, 0, -1);
+            char *newfunc = savefmt("classnew_%s", $1.val);
+            char *initfunc = savefmt("%s%s%s%s", CLASS_PREFIX, $1.val, FUNC_PREFIX, "init");
             $$ = savefmt("%s %s %s", newfunc, fargs, initfunc);
             free(initfunc);
             free(newfunc);
             free(fargs);
-            keyval_free(&$2);
-            strlist_free(&$4);
+            keyval_free(&$1);
+            strlist_free(&$3);
         }
     | SUPER '(' arglist_or_null ')' {
             if (!current_method || strcmp(current_method, "init")) {
@@ -1098,7 +1108,6 @@ lookup(char *s, int *bval)
         {"method",    METHOD,    -1},
         {"muf",       MUF,       -1},
         {"multiple",  MULTIPLE,  -1},
-        {"new",       NEW,       -1},
         {"push",      PUSH,      -1},
         {"return",    RETURN,    -1},
         {"single",    SINGLE,    -1},
