@@ -519,7 +519,7 @@ using_clause: /* nothing */ {
             } else if (!strcmp($$, "strcmp")) {
                 strlist_add(&using_list, "strcmp not");
             } else {
-                strlist_add(&using_list, $$);
+                strlist_add(&using_list, $2.code);
             }
         }
     ;
