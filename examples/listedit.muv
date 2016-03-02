@@ -23,7 +23,7 @@ func verify(override, msg) {
 func handle_mode_list(obj, list) {
     var lines = prop_list_get(obj, list);
     for (var i => var line in lines) {
-        tell(fmtstring("%i: %s", i+1, line));
+        tell(fmtstring("%3i: %s", i+1, line));
     }
 }
 
