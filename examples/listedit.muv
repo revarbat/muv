@@ -1,21 +1,29 @@
 include "!fb6/stdlib";
 include "!fb6/array";
 include "!fb6/str";
+include "!fb6/obj";
 include "!fb6/prop";
 include "!fb6/io";
 include "!fb6/argparse";
 
 
 func verify(override, msg) {
+    if (override) {
+        return 1;
+    }
     tell(cat("Are you sure you want to ", msg, "?"));
-    return !str_cmpi(str_cut(io_read(), 1)[0], "y");
+    if (!str_cmpi(str_cut(io_read(), 1)[0], "y")) {
+        return 1;
+    }
+    tell("Cancelled.");
+    return 0;
 }
 
 
 func handle_mode_list(obj, list) {
     var lines = prop_list_get(obj, list);
     for (var i => var line in lines) {
-        tell(fmtstring("%d: %s", i+1, line));
+        tell(fmtstring("%i: %s", i+1, line));
     }
 }
 
@@ -23,7 +31,7 @@ func handle_mode_list(obj, list) {
 func handle_mode_append(obj, list, line) {
     var lines = prop_list_get(obj, list);
     lines[] = line;
-    prop_list_put(lines, obj, list);
+    prop_list_put(obj, list, lines);
     tell("Line appended.");
 }
 
@@ -31,7 +39,7 @@ func handle_mode_append(obj, list, line) {
 func handle_mode_del(obj, list, pos) {
     var lines = prop_list_get(obj, list);
     lines = array_delitem(lines, pos-1);
-    prop_list_put(lines, obj, list);
+    prop_list_put(obj, list, lines);
     tell("Line deleted.");
 }
 
@@ -39,7 +47,7 @@ func handle_mode_del(obj, list, pos) {
 func handle_mode_insert(obj, list, pos, val) {
     var lines = prop_list_get(obj, list);
     lines = array_insertitem(val, lines, pos-1);
-    prop_list_put(lines, obj, list);
+    prop_list_put(obj, list, lines);
     tell("Line inserted.");
 }
 
@@ -62,6 +70,19 @@ func main(arg) {
         return argparse_show_usage();
     }
 
+    opts.obj = obj_match(opts.obj);
+    switch (opts.obj using obj_cmp) {
+        case(#-1) {
+            return tell("I don't see that here!");
+        }
+        case(#-2) {
+            return tell("I don't know which object you mean!");
+        }
+        case(#-3) {
+            opts.obj = obj_getlinks(me)[0];
+        }
+    }
+
     if (opts.verbose) {
         tell(cat("Mode = ", opts.mode));
     }
@@ -78,6 +99,7 @@ func main(arg) {
             }
         }
         case("del") {
+            opts.pos = str_to_int(opts.pos);
             if (!opts.pos) {
                 return argparse_show_usage();
             }
@@ -86,6 +108,7 @@ func main(arg) {
             }
         }
         case("insert") {
+            opts.pos = str_to_int(opts.pos);
             if (!opts.pos || !opts.val) {
                 return argparse_show_usage();
             }

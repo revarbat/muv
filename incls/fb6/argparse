@@ -110,13 +110,13 @@ func argparse_show_usage() {
 
 func argparse_parse(line) {
     var parts;
-    var opts = [];
-    while (ap_stringpfx("#", line)) {
+    var opts = [=>];
+    while (ap_stringpfx(line, "#")) {
         parts = ap_split(ap_strcut(line,1)[1], " ");
         var opt = ap_tolower(parts[0]);
         var found = 0;
         for (var mode in argparse_modes) {
-            if (ap_stringpfx(opt, mode)) {
+            if (ap_stringpfx(mode, opt)) {
                 if (argparse_mode_given) {
                     if (ap_stringcmp(mode, argparse_mode)) {
                         tell("Cannot mix modes.");
@@ -130,7 +130,7 @@ func argparse_parse(line) {
             }
         }
         for (var flag in argparse_flags[argparse_mode]) {
-            if (ap_stringpfx(opt, flag)) {
+            if (ap_stringpfx(flag, opt)) {
                 opts[flag] = 1;
                 found++;
                 break;
