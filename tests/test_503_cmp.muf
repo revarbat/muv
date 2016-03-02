@@ -58,15 +58,15 @@
     0 begin pop (switch)
         _arg @
         (case)
-        dup "fee" complex_match if
+        dup "fee" _complex_match if
             "Fee selected!" me @ swap notify 0 pop break
         then
         (case)
-        dup 1 complex_match if
+        dup 1 _complex_match if
             "One selected!" me @ swap notify 0 pop break
         then
         (case)
-        dup "" complex_match if
+        dup "" _complex_match if
             "None selected!" me @ swap notify 0 pop break
         then
         break

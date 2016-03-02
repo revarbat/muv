@@ -2,7 +2,6 @@
 
 #define MAXIDENTLEN 128
 #define MAXSTRLEN 1024
-#define CLASS_PREFIX "_"
 #define FUNC_PREFIX "_"
 #define VAR_PREFIX "_"
 
@@ -19,13 +18,11 @@
 #include "strutils.h"
 
 
-struct kvmap class_names;
 struct kvmap global_consts;
 struct kvmap function_consts;
 struct kvmap global_vars;
 struct kvmap function_vars;
 struct strlist vardecl_list;
-struct strlist classinit_list;
 struct strlist inits_list;
 struct strlist using_list;
 struct funclist funcs_list;
@@ -35,10 +32,6 @@ FILE *outf;
 int yylineno = 1;
 const char *yydirname = ".";
 const char *yyfilename = "STDIN";
-char *current_class = NULL;
-char *current_method = NULL;
-char *parent_class = NULL;
-int class_has_init = 0;
 
 struct bookmark_t {
     const char *dname;
@@ -75,7 +68,7 @@ void yyerror(char *s);
 %token <num_int> INTEGER
 %token <prim> DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR CONST
-%token <keyval> DECLARED_CLASS DECLARED_CONST DECLARED_VAR
+%token <keyval> DECLARED_CONST DECLARED_VAR
 %token <token> INCLUDE UNARY
 %token <token> IF ELSE UNLESS
 %token <token> FUNC RETURN TRY CATCH
@@ -84,7 +77,6 @@ void yyerror(char *s);
 %token <token> CONTINUE BREAK
 %token <token> TOP PUSH MUF DEL FMTSTRING
 %token <token> EXTERN VOID SINGLE MULTIPLE
-%token <token> CLASS METHOD SUPER
 
 %right BARE ELSE SUFFIX
 %left ',' KEYVAL
@@ -105,7 +97,6 @@ void yyerror(char *s);
 %left '[' ']' '(' ')' INSERT DOT
 
 %type <str> globalstatement funcdef proposed_funcname
-%type <str> classdef methoddef inheritance class_statements class_statement
 %type <str> good_proposed_funcname bad_proposed_funcname
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> externdef simple_statement statement statements paren_expr
@@ -124,7 +115,6 @@ void yyerror(char *s);
 program: /* nothing */ { }
     | program globalstatement { fprintf(outf, "%s", $2);  free($2); }
     | program funcdef { fprintf(outf, "%s", $2);  free($2); }
-    | program classdef { fprintf(outf, "%s", $2); free($2); }
     | program externdef { }
     ;
 
@@ -144,77 +134,6 @@ globalstatement:
     | MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
     ;
 
-inheritance: /* nothing */ { $$ = savestring(""); }
-    | '(' DECLARED_CLASS ')' { $$ = savestring($2.val); }
-    ;
-
-classdef: CLASS proposed_funcname inheritance {
-            /* Mid-rule action to make sure class is declared early on. */
-            kvmap_add(&class_names, $2, $2);
-            current_class = savestring($2);
-            parent_class = savestring($3);
-        } '{' class_statements '}' {
-            char *inits = strlist_join(&classinit_list, "\n", 0, -1);
-            char *iinits = indent(inits);
-            char *linits = savefmt("{\n%s\n}dict", iinits);
-            char *ilinits = indent(linits);
-            char *initfunc = savefmt("classinit_%s", current_class);
-            char *initdef;
-            char *newdef;
-            if (parent_class && *parent_class) {
-                initdef = savefmt(": %s[ -- ]\n%s\n    classdata_%s @ foreach rot rot ->[] repeat\n    classdata_%s !\n;\n", initfunc, ilinits, parent_class, current_class);
-            } else {
-                initdef = savefmt(": %s[ -- ]\n%s classdata_%s !\n;\n", initfunc, ilinits, current_class);
-            }
-            newdef = savefmt(": classnew_%s[ -- inst ]\n    classdata_%s @\n;\n", current_class, current_class);
-            if (!class_has_init) {
-                char *tmp = initdef;
-                initdef = savefmt("%s  \n: %s%s%sinit[ self -- ret ]\n    0 self @\n;\n", initdef, CLASS_PREFIX, current_class, FUNC_PREFIX);
-                free(tmp);
-            }
-            $$ = savefmt("lvar classdata_%s\n  \n%s%s  \n%s  \n", current_class, $6, initdef, newdef);
-            strlist_add(&inits_list, initfunc);
-            kvmap_clear(&function_vars);
-            strlist_clear(&classinit_list);
-            kvmap_clear(&function_consts);
-            free($2); free($3);
-            free(newdef);
-            free(initdef);
-            free(initfunc);
-            free(ilinits);
-            free(linits);
-            free(iinits);
-            free(inits);
-            free(current_class);
-            free(parent_class);
-            current_class = NULL;
-            parent_class = NULL;
-            class_has_init = 0;
-        }
-    ;
-
-class_statements: class_statement { $$ = savestring($1); free($1); }
-    | class_statements class_statement { $$ = savefmt("%s%s", $1, $2); free($1); free($2); }
-    ;
-
-class_statement:
-      VAR attribute  %prec BARE ';' {
-            char *body = savefmt("%s 0", $2);
-            strlist_add(&classinit_list, body);
-            $$ = savestring("");
-            free(body);
-            free($2);
-        }
-    | VAR attribute ASGN expr ';'  %prec SUFFIX {
-            char *body = savefmt("%s %s", $2, $4);
-            strlist_add(&classinit_list, body);
-            $$ = savestring("");
-            free(body);
-            free($2);
-            free($4);
-        }
-    | methoddef { $$ = $1; }
-    ;
 
 lvardef: proposed_varname {
             char *vname = savefmt("%s%s", VAR_PREFIX, $1);
@@ -236,40 +155,6 @@ lvardef: proposed_varname {
         }
     ;
 
-methoddef: METHOD proposed_funcname '(' argvarlist opt_varargs ')' {
-        /* Mid-rule action to make sure function is declared
-         * before statements, to allow possible recursion. */
-        kvmap_add(&function_vars, "self", "self");
-        current_method = savestring($2);
-    } '{' statements '}' {
-        char *body = indent($9);
-        char *vars = strlist_join(&$4, " ", 0, -1);
-        char *decls = strlist_join(&vardecl_list, "", 0, -1);
-        char *idecls = indent(decls);
-        char *funcname = savefmt("%s%s%s%s", CLASS_PREFIX, current_class, FUNC_PREFIX, $2);
-        char *idx = format_muv_str(funcname);
-        char *funcinit = savefmt("\"%s\" '%s", $2, funcname);
-        strlist_add(&classinit_list, funcinit);
-        $$ = savefmt(": %s[ %s self -- ret ]\n%s%s\n    0 self @\n;\n  \n", funcname, vars, idecls, body);
-        if (!strcmp($2, "init")) {
-            class_has_init = 1;
-        }
-        kvmap_clear(&function_vars);
-        strlist_clear(&vardecl_list);
-        kvmap_clear(&function_consts);
-        free(current_method);
-        current_method = NULL;
-        free(funcinit);
-        free(idx);
-        free(funcname);
-        free(idecls);
-        free(decls);
-        free(vars);
-        free(body);
-        free($2);
-        strlist_free(&$4);
-        free($9);
-    } ;
 
 funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         /* Mid-rule action to make sure function is declared
@@ -316,7 +201,6 @@ externdef:
 bad_proposed_funcname:
       DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
-    | DECLARED_CLASS { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
@@ -336,7 +220,6 @@ proposed_funcname:
 bad_proposed_varname:
       DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
-    | DECLARED_CLASS { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
@@ -385,18 +268,9 @@ argvarlist:
 simple_statement:
       expr { $$ = savefmt("%s pop", $1); free($1); }
     | RETURN {
-            if (current_class && *current_class) {
-                $$ = savestring("0 self @ exit");
-            } else {
-                $$ = savestring("0 exit");
-            }
+            $$ = savestring("0 exit");
         }
     | RETURN expr {
-            if (current_class && *current_class) {
-                $$ = savefmt("%s self @ exit", $2);
-            } else {
-                $$ = savefmt("%s exit", $2);
-            }
             $$ = savefmt("%s exit", $2);
             free($2);
         }
@@ -513,7 +387,7 @@ using_clause: /* nothing */ {
                 yyerror("Using clause expects instruction or function that takes 2 args.");
                 YYERROR;
             }
-            $$ = savestring($2.name);
+            $$ = savestring($2.code);
             if (!strcmp($$, "stringcmp")) {
                 strlist_add(&using_list, "stringcmp not");
             } else if (!strcmp($$, "strcmp")) {
@@ -662,33 +536,6 @@ lvalue: VAR proposed_varname {
             keyval_free(&$1);
             strlist_free(&$3);
         }
-    | DECLARED_CLASS DOT attributes {
-            char *idx = strlist_wrap(&$3, 0, -1);
-            char *clsvar = savefmt("classdata_%s", $1.val);
-            const char *methd = $3.list[$3.count-1];
-            char *errmsg = savefmt("Class method %s not found in %s line %d", methd, yyfilename, yylineno);
-            char *errstr = format_muv_str(errmsg);
-            if ($3.count == 1) {
-                $$.get = savefmt("%s @ %s []", clsvar, idx);
-                $$.set = savefmt("%s @ %s ->[] %s !", clsvar, idx, clsvar);
-                $$.del = savefmt("%s @ %s array_delitem %s !", clsvar, idx, clsvar);
-                $$.oper_pre = savefmt("%s @ %s over over []", clsvar, idx);
-                $$.oper_post = savefmt("4 rotate 4 rotate ->[] %s !", clsvar);
-            } else {
-                $$.get = savefmt("%s @ { %s }list array_nested_get", clsvar, idx);
-                $$.set = savefmt("%s @ { %s }list array_nested_set %s !", clsvar, idx, clsvar);
-                $$.del = savefmt("%s @ { %s }list array_nested_del %s !", clsvar, idx, clsvar);
-                $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", clsvar, idx);
-                $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", clsvar);
-            }
-            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn %s abort\nthen", $$.get, errstr);
-            free(errstr);
-            free(errmsg);
-            free(idx);
-            free(clsvar);
-            keyval_free(&$1);
-            strlist_free(&$3);
-        }
     | DECLARED_VAR '[' subscripts  %prec SUFFIX {
             char *idx = strlist_wrap(&$3, 0, -1);
             if ($3.count == 1) {
@@ -722,7 +569,6 @@ attributes: attribute { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
 attribute: IDENT { $$ = format_muv_str($1);  free($1); }
     | DECLARED_CONST  { $$ = format_muv_str($1.key); keyval_free(&$1); }
     | DECLARED_VAR    { $$ = format_muv_str($1.key); keyval_free(&$1); }
-    | DECLARED_CLASS  { $$ = format_muv_str($1.key); keyval_free(&$1); }
     | DECLARED_FUNC   { $$ = format_muv_str($1.name); }
     ;
 
@@ -807,32 +653,6 @@ expr: paren_expr { $$ = $1; }
             $$ = savefmt("%s\nfmtstring", fargs);
             free(fargs);
             strlist_free(&$3);
-        }
-    | DECLARED_CLASS '(' arglist_or_null ')' {
-            char* fargs = strlist_wrap(&$3, 0, -1);
-            char *newfunc = savefmt("classnew_%s", $1.val);
-            char *initfunc = savefmt("%s%s%s%s", CLASS_PREFIX, $1.val, FUNC_PREFIX, "init");
-            $$ = savefmt("%s %s %s", newfunc, fargs, initfunc);
-            free(initfunc);
-            free(newfunc);
-            free(fargs);
-            keyval_free(&$1);
-            strlist_free(&$3);
-        }
-    | SUPER '(' arglist_or_null ')' {
-            if (!current_method || strcmp(current_method, "init")) {
-                yyerror("Can't call super() outside of init method.");
-                YYERROR;
-            }
-            if (!parent_class || !*parent_class) {
-                yyerror("No parent class to super() to.");
-                YYERROR;
-            }
-            char* fargs = strlist_wrap(&$3, 0, -1);
-            char *initfunc = savefmt("%s%s%s%s", CLASS_PREFIX, parent_class, FUNC_PREFIX, "init");
-            $$ = savefmt("self @ %s %s", fargs, initfunc);
-            free(initfunc);
-            free(fargs);
         }
     | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); }
     | expr '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
@@ -1091,7 +911,6 @@ lookup(char *s, int *bval)
         {"break",     BREAK,     -1},
         {"case",      CASE,      -1},
         {"catch",     CATCH,     -1},
-        {"class",     CLASS,     -1},
         {"const",     CONST,     -1},
         {"continue",  CONTINUE,  -1},
         {"default",   DEFAULT,   -1},
@@ -1105,13 +924,11 @@ lookup(char *s, int *bval)
         {"if",        IF,        -1},
         {"in",        IN,        -1},
         {"include",   INCLUDE,   -1},
-        {"method",    METHOD,    -1},
         {"muf",       MUF,       -1},
         {"multiple",  MULTIPLE,  -1},
         {"push",      PUSH,      -1},
         {"return",    RETURN,    -1},
         {"single",    SINGLE,    -1},
-        {"super",     SUPER,     -1},
         {"switch",    SWITCH,    -1},
         {"top",       TOP,       -1},
         {"try",       TRY,       -1},
@@ -1321,14 +1138,6 @@ yylex()
             yylval.keyval.key = savestring(in);
             yylval.keyval.val = savestring(cp);
             return DECLARED_VAR;
-        }
-
-        /* Declared class. */
-        cp = kvmap_get(&class_names, in);
-        if (cp) {
-            yylval.keyval.key = savestring(in);
-            yylval.keyval.val = savestring(cp);
-            return DECLARED_CLASS;
         }
 
         /* Declared functions should override primitives. */
@@ -1586,9 +1395,7 @@ parser_data_init()
     strlist_init(&inits_list);
     strlist_init(&using_list);
     strlist_init(&vardecl_list);
-    strlist_init(&classinit_list);
     funclist_init(&funcs_list);
-    kvmap_init(&class_names);
     kvmap_init(&global_consts);
     kvmap_init(&global_vars);
     kvmap_init(&function_consts);
@@ -1614,9 +1421,7 @@ parser_data_free()
     strlist_free(&inits_list);
     strlist_free(&using_list);
     strlist_free(&vardecl_list);
-    strlist_free(&classinit_list);
     funclist_free(&funcs_list);
-    kvmap_free(&class_names);
     kvmap_free(&global_consts);
     kvmap_free(&global_vars);
     kvmap_free(&function_consts);

@@ -60,8 +60,8 @@
     var _empty
     var _nested
     {
-        "First" "Second" "Third" "Forth" "Fifth" "Sixth" "Seventh" "Eighth" "Ninth"
-        "Tenth" "Eleventh"
+        "First" "Second" "Third" "Forth" "Fifth" "Sixth" "Seventh"
+        "Eighth" "Ninth" "Tenth" "Eleventh"
     }list
     dup _arr ! pop
     _idx @ pop

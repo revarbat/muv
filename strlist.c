@@ -117,7 +117,7 @@ strlist_wrap(struct strlist *l, int start, int end)
     for (i = start; i < l->count && i < end; i++) {
         if (i > start) {
             if (currlen > 0) {
-                if (currlen + strlen(l->list[i]) > 80) {
+                if (currlen + strlen(l->list[i]) > 60) {
                     *ptr2++ = '\n';
                     currlen = 0;
                 } else {
