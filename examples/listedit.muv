@@ -1,0 +1,99 @@
+include "!fb6/stdlib";
+include "!fb6/array";
+include "!fb6/str";
+include "!fb6/prop";
+include "!fb6/io";
+include "!fb6/argparse";
+
+
+func verify(override, msg) {
+    tell(cat("Are you sure you want to ", msg, "?"));
+    return !str_cmpi(str_cut(io_read(), 1)[0], "y");
+}
+
+
+func handle_mode_list(obj, list) {
+    var lines = prop_list_get(obj, list);
+    for (var i => var line in lines) {
+        tell(fmtstring("%d: %s", i+1, line));
+    }
+}
+
+
+func handle_mode_append(obj, list, line) {
+    var lines = prop_list_get(obj, list);
+    lines[] = line;
+    prop_list_put(lines, obj, list);
+    tell("Line appended.");
+}
+
+
+func handle_mode_del(obj, list, pos) {
+    var lines = prop_list_get(obj, list);
+    lines = array_delitem(lines, pos-1);
+    prop_list_put(lines, obj, list);
+    tell("Line deleted.");
+}
+
+
+func handle_mode_insert(obj, list, pos, val) {
+    var lines = prop_list_get(obj, list);
+    lines = array_insertitem(val, lines, pos-1);
+    prop_list_put(lines, obj, list);
+    tell("Line inserted.");
+}
+
+
+func main(arg) {
+    argparse_init();
+
+    argparse_set_mode("list");
+    argparse_add_mode("list",   [],        "obj=prop");
+    argparse_add_mode("append", ["force"], "obj=prop:val");
+    argparse_add_mode("del",    ["force"], "obj=prop:pos");
+    argparse_add_mode("insert", ["force"], "obj=prop:pos:val");
+    argparse_add_flag("verbose");
+
+    if (!var opts = argparse_parse(arg)) {
+        return;
+    }
+
+    if (!opts.obj || !opts.prop) {
+        return argparse_show_usage();
+    }
+
+    if (opts.verbose) {
+        tell(cat("Mode = ", opts.mode));
+    }
+    switch (opts.mode using str_cmpi) {
+        case("list") {
+            handle_mode_list(opts.obj, opts.prop);
+        }
+        case("append") {
+            if (!opts.val) {
+                return argparse_show_usage();
+            }
+            if (verify(opts.force, "append a line to the list")) {
+                handle_mode_append(opts.obj, opts.prop, opts.val);
+            }
+        }
+        case("del") {
+            if (!opts.pos) {
+                return argparse_show_usage();
+            }
+            if (verify(opts.force, "delete a line from the list")) {
+                handle_mode_del(opts.obj, opts.prop, opts.pos);
+            }
+        }
+        case("insert") {
+            if (!opts.pos || !opts.val) {
+                return argparse_show_usage();
+            }
+            if (verify(opts.force, "insert a line into the list")) {
+                handle_mode_insert(opts.obj, opts.prop, opts.pos, opts.val);
+            }
+        }
+    }
+}
+
+

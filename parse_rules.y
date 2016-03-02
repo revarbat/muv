@@ -675,11 +675,11 @@ expr: paren_expr { $$ = $1; }
             if (*$4) {
                 char *cond = indent($4);
                 char *ibody = indent(body);
-                $$ = savefmt("[] %s\n%s\n%s swap []<-\n    then\nrepeat", $3, cond, ibody);
+                $$ = savefmt("{ }list %s\n%s\n%s swap []<-\n    then\nrepeat", $3, cond, ibody);
                 free(ibody);
                 free(cond);
             } else {
-                $$ = savefmt("[] %s\n%s swap []<-\nrepeat", $3, body);
+                $$ = savefmt("{ }list %s\n%s swap []<-\nrepeat", $3, body);
             }
             free(body);
             free($3); free($4); free($5);
@@ -700,12 +700,12 @@ expr: paren_expr { $$ = $1; }
                 char *cond = indent($4);
                 char *ikexpr = indent(kexpr);
                 char *ivexpr = indent(vexpr);
-                $$ = savefmt("[] %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $3, cond, ivexpr, ikexpr);
+                $$ = savefmt("{ }dict %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $3, cond, ivexpr, ikexpr);
                 free(cond);
                 free(ikexpr);
                 free(ivexpr);
             } else {
-                $$ = savefmt("[] %s\n%s swap\n%s ->[]\nrepeat", $3, vexpr, kexpr);
+                $$ = savefmt("{ }dict %s\n%s swap\n%s ->[]\nrepeat", $3, vexpr, kexpr);
             }
             free(kexpr);
             free(vexpr);
@@ -762,8 +762,8 @@ arglist:
     | arglist ',' expr { $$ = $1;  strlist_add(&$$, $3); free($3); }
     ;
 
-dictlist:
-      expr KEYVAL expr {
+dictlist: KEYVAL { strlist_init(&$$); }
+    | expr KEYVAL expr {
             char *vals = savefmt("%s %s\n", $1, $3);
             strlist_init(&$$);
             strlist_add(&$$, vals);

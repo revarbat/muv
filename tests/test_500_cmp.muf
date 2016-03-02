@@ -20,12 +20,12 @@
         3 4 5 6 7 8 9
     }list
     dup _mylist ! pop
-    [] _mylist @
+    { }list _mylist @
     foreach _v ! pop
         _v @ _v @ * swap []<-
     repeat
     dup _squares ! pop
-    [] _mylist @
+    { }list _mylist @
     foreach _v ! pop
         _v @ 2 %
         if
@@ -33,7 +33,7 @@
         then
     repeat
     dup _odds ! pop
-    [] _mylist @
+    { }list _mylist @
     foreach _v ! pop
         _v @ 2 %
         not if
@@ -48,13 +48,13 @@
         "d" 4
     }dict
     dup _mydict ! pop
-    [] _mydict @
+    { }dict _mydict @
     foreach _v ! _k !
         _v @ _v @ * swap
         _k @ ->[]
     repeat
     dup _squarevals ! pop
-    [] _mydict @
+    { }dict _mydict @
     foreach _v ! _k !
         _k @ "b" strcmp 0 >
         if
@@ -63,7 +63,7 @@
         then
     repeat
     dup _foo ! pop
-    [] _mydict @
+    { }dict _mydict @
     foreach _v ! _k !
         _v @ 2 >
         not if
@@ -73,7 +73,7 @@
     repeat
     dup _bar ! pop
     _obj @ pop
-    [] loc @ contents_array
+    { }list loc @ contents_array
     foreach _obj ! pop
         _obj @ player? _obj @ awake? and
         if

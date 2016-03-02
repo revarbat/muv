@@ -1,0 +1,161 @@
+//////////////////////////////////////////////////////////
+// argparse -- command-line argument parser.
+//
+
+extern single ap_find(a,x) = "array_findval";
+extern multiple ap_strcut(s,pos) = "strcut";
+extern multiple ap_split(s,pos) = "split";
+extern single ap_stringcmp(x,y) = "stringcmp";
+extern single ap_stringpfx(x,y) = "stringpfx";
+extern single ap_join(a,delim) = "array_join";
+extern single ap_toupper(x) = "toupper";
+extern single ap_tolower(x) = "tolower";
+extern single ap_trigname() = "trig name \";\" split pop strip";
+extern multiple ap_regmatch(txt,pat) = "1 regexp";
+
+var argparse_mode = "";
+var argparse_mode_given = 0;
+var argparse_modes = [""];
+var argparse_flags = [=>];
+var argparse_posargs = [=>];
+var argparse_remainder = ["" => "remainder"];
+
+func argparse_init() {
+    argparse_mode = "";
+    argparse_mode_given = 0;
+    argparse_modes = [];
+    argparse_flags = [=>];
+    argparse_posargs = [=>];
+    argparse_remainder = ["" => "remainder"];
+}
+
+func argparse_parse_posargs(mode, posargs) {
+    do {
+        var tok = ap_regmatch(posargs, "^\([a-z0-9_]*\)\([^a-z0-9_]\)\(.*\)$")[0];
+        if (tok) {
+            if (!argparse_posargs[mode]) {
+                argparse_posargs[mode] = [];
+            }
+            argparse_posargs[mode][] = [ap_tolower(tok[1]), tok[2]];
+            posargs = tok[3];
+        } else {
+            argparse_remainder[mode] = ap_tolower(posargs);
+            break;
+        }
+    } while (1);
+}
+
+func argparse_set_mode(name) {
+    name = ap_tolower(name);
+    argparse_mode = name;
+}
+
+func argparse_add_mode(name, flags, posargs) {
+    name = ap_tolower(name);
+    argparse_modes[] = name;
+    argparse_flags[name] = [];
+    argparse_posargs[name] = [];
+    for (var flag in flags) {
+        if (!argparse_flags[name]) {
+            argparse_flags[name] = [];
+        }
+        argparse_flags[name][] = ap_tolower(flag);
+    }
+    argparse_parse_posargs(name, posargs);
+}
+
+func argparse_add_flag(name) {
+    name = ap_tolower(name);
+    for (var mode in argparse_modes) {
+        mode = ap_tolower(mode);
+        if (!ap_find(argparse_modes, mode)) {
+            abort(fmtstring("ArgParse: Option '%s' declared as part of non-existent mode '%s'!", name, mode));
+        }
+        if (!argparse_flags[mode]) {
+            argparse_flags[mode] = [];
+        }
+        argparse_flags[mode][] = name;
+    }
+}
+
+func argparse_add_posargs(posargs) {
+    for (var mode in argparse_modes) {
+        mode = ap_tolower(mode);
+        if (!ap_find(argparse_modes, mode)) {
+            abort(fmtstring("ArgParse: Option '%s' declared as part of non-existent mode '%s'!", mode, mode));
+        }
+        argparse_parse_posargs(mode, posargs);
+    }
+}
+
+func argparse_show_usage() {
+    var cmd = ap_trigname();
+    tell("Usage:");
+    for (var mode in argparse_modes) {
+        var flags = [for (var flag in argparse_flags[mode]) cat("[#", flag, "]")];
+        var posargs = [for (var posarg in argparse_posargs[mode]) cat(ap_toupper(posarg[0]), posarg[1])];
+        var line = fmtstring(
+            "%s %s%s %s%s%s%s",
+            cmd,
+            (mode ? "#" : ""),
+            mode,
+            ap_join(flags, " "),
+            (flags ? " " : ""),
+            ap_join(posargs, ""),
+            ap_toupper(argparse_remainder[mode])
+        );
+        tell(line);
+    }
+}
+
+func argparse_parse(line) {
+    var parts;
+    var opts = [];
+    while (ap_stringpfx("#", line)) {
+        parts = ap_split(ap_strcut(line,1)[1], " ");
+        var opt = ap_tolower(parts[0]);
+        var found = 0;
+        for (var mode in argparse_modes) {
+            if (ap_stringpfx(opt, mode)) {
+                if (argparse_mode_given) {
+                    if (ap_stringcmp(mode, argparse_mode)) {
+                        tell("Cannot mix modes.");
+                        argparse_show_usage();
+                        return [];
+                    }
+                }
+                argparse_mode = mode;
+                argparse_mode_given = 1;
+                found++;
+            }
+        }
+        for (var flag in argparse_flags[argparse_mode]) {
+            if (ap_stringpfx(opt, flag)) {
+                opts[flag] = 1;
+                found++;
+                break;
+            }
+        }
+        if (found > 1) {
+            tell(fmtstring("Option #%s is ambiguous.", opt));
+            argparse_show_usage();
+            return [];
+        } else if (found == 1) {
+            line = parts[1];
+            continue;
+        }
+        tell(fmtstring("Option #%s not recognized.", opt));
+        argparse_show_usage();
+        return [];
+    }
+    for (var posarg in argparse_posargs[argparse_mode]) {
+        parts = ap_split(line, posarg[1]);
+        opts[posarg[0]] = parts[0];
+        line = parts[1];
+    }
+    opts[argparse_remainder[argparse_mode]] = line;
+    opts.mode = argparse_mode;
+    return opts;
+}
+
+
