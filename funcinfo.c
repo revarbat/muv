@@ -38,18 +38,21 @@ funclist_free(struct funclist *l)
 void
 funclist_add(struct funclist *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs)
 {
-    struct funcinfo_t *p;
-    if (l->count >= l->cmax) {
-        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
-        l->list = (struct funcinfo_t*)realloc(l->list, sizeof(struct funcinfo_t) * l->cmax);
+    struct funcinfo_t *p = funclist_find(l, name);
+    if (p) {
+        funcinfo_free(p);
+    } else {
+        if (l->count >= l->cmax) {
+            l->cmax += (l->cmax < 4096)? l->cmax : 4096;
+            l->list = (struct funcinfo_t*)realloc(l->list, sizeof(struct funcinfo_t) * l->cmax);
+        }
+        p = &l->list[l->count++];
     }
-    p = &l->list[l->count];
     p->name = savestring(name);
     p->code = savestring(code);
     p->expects = argcnt;
     p->returns = retcnt;
     p->hasvarargs = hasvarargs;
-    l->count++;
 }
 
 

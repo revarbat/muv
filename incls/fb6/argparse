@@ -15,7 +15,7 @@ extern multiple ap_regmatch(txt,pat) = "1 regexp";
 
 var argparse_mode = "";
 var argparse_mode_given = 0;
-var argparse_modes = [""];
+var argparse_modes = [];
 var argparse_flags = [=>];
 var argparse_posargs = [=>];
 var argparse_remainder = ["" => "remainder"];
@@ -115,6 +115,7 @@ func argparse_parse(line) {
         parts = ap_split(ap_strcut(line,1)[1], " ");
         var opt = ap_tolower(parts[0]);
         var found = 0;
+        var exact = 0;
         for (var mode in argparse_modes) {
             if (ap_stringpfx(mode, opt)) {
                 if (argparse_mode_given) {
@@ -127,22 +128,34 @@ func argparse_parse(line) {
                 argparse_mode = mode;
                 argparse_mode_given = 1;
                 found++;
+                if (!ap_stringcmp(mode, opt)) {
+                    exact = 1;
+                    break;
+                }
             }
+        }
+        if (exact) {
+            line = parts[1];
+            continue;
         }
         for (var flag in argparse_flags[argparse_mode]) {
             if (ap_stringpfx(flag, opt)) {
                 opts[flag] = 1;
                 found++;
-                break;
+                if (!ap_stringcmp(mode, opt)) {
+                    exact = 1;
+                    break;
+                }
             }
+        }
+        if (exact || found == 1) {
+            line = parts[1];
+            continue;
         }
         if (found > 1) {
             tell(fmtstring("Option #%s is ambiguous.", opt));
             argparse_show_usage();
             return [];
-        } else if (found == 1) {
-            line = parts[1];
-            continue;
         }
         tell(fmtstring("Option #%s not recognized.", opt));
         argparse_show_usage();

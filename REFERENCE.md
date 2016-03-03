@@ -67,6 +67,10 @@ Dictionaries are declared like:
 
     [ "key1" => "val1", "key2" => "val2", "key3" => "val3" ]
 
+To declare an empty dictionary, which is distinct from a list, use:
+
+    [=>]
+
 
 Global Variables
 ----------------
@@ -147,6 +151,7 @@ items it would return are returned in a list array.
 
 Includes
 --------
+
 You can include the code from other MUV files by using the `include` command:
 
     include "otherfile.muv";
@@ -188,33 +193,34 @@ like `name` and `set` are renamed to `obj_name()` and `obj_set()`, leading to
 far less namespace polution.  The standard namespaced include files are as
 follows, in order of likely importance:
 
-File         | Prefix   | What it declares
--------------|----------|-----------------------------------------------------
-`fb6/stdlib` |          | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
-`fb6/io`     | `io_`    | `notify` and `read` type primitives.
-`fb6/type`   | `type_`  | Type checking and conversion primitives.
-`fb6/str`    | `str_`   | String manipulation primitives.
-`fb6/ansi`   | `ansi_`  | ANSI color code related string primitives.
-`fb6/regex`  | `regex_` | Regular expression primitives.
-`fb6/math`   | `math_`  | Floating point and integer math primitives.
-`fb6/array`  | `array_` | Array/list/dictionary related primitives.
-`fb6/prop`   | `prop_`  | Primitives for reading and writing properties.
-`fb6/obj`    | `obj_`   | DB object related primitives.
-`fb6/time`   | `time_`  | Time based primitives.
-`fb6/lock`   | `lock_`  | Lock related primitives.
-`fb6/conn`   | `conn_`  | Connection based primitives.
-`fb6/descr`  | `descr_` | Descriptor based connection primitives.
-`fb6/event`  | `event_` | Event handling primitives.
-`fb6/mcp`    | `mcp_`   | MCP client-server communication protocol prims.
-`fb6/gui`    | `gui_`   | MCP-GUI related primitives and defines.
-`fb6/proc`   | `proc_`  | MUF process related primitives.
-`fb6/prog`   | `prog_`  | Program calling, editing, and compiling.
-`fb6/sys`    | `sys_`   | System related primitives.
-`fb6/debug`  | `debug_` | Debugging related primitives.
+File           | Prefix      | What it declares
+---------------|-------------|-------------------------------------------------
+`fb6/stdlib`   |             | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
+`fb6/io`       | `io_`       | `notify` and `read` type primitives.
+`fb6/type`     | `type_`     | Type checking and conversion primitives.
+`fb6/str`      | `str_`      | String manipulation primitives.
+`fb6/ansi`     | `ansi_`     | ANSI color code related string primitives.
+`fb6/regex`    | `regex_`    | Regular expression primitives.
+`fb6/math`     | `math_`     | Floating point and integer math primitives.
+`fb6/array`    | `array_`    | Array/list/dictionary related primitives.
+`fb6/prop`     | `prop_`     | Primitives for reading and writing properties.
+`fb6/obj`      | `obj_`      | DB object related primitives.
+`fb6/time`     | `time_`     | Time based primitives.
+`fb6/lock`     | `lock_`     | Lock related primitives.
+`fb6/conn`     | `conn_`     | Connection based primitives.
+`fb6/descr`    | `descr_`    | Descriptor based connection primitives.
+`fb6/event`    | `event_`    | Event handling primitives.
+`fb6/mcp`      | `mcp_`      | MCP client-server communication protocol prims.
+`fb6/gui`      | `gui_`      | MCP-GUI related primitives and defines.
+`fb6/proc`     | `proc_`     | MUF process related primitives.
+`fb6/prog`     | `prog_`     | Program calling, editing, and compiling.
+`fb6/sys`      | `sys_`      | System related primitives.
+`fb6/debug`    | `debug_`    | Debugging related primitives.
+`fb6/argparse` | `argparse_` | Cmd-line argument parsing.
 
 WARNING: You should either use `include "!fb6/prims";` *or* include one or
-more of the namespaced files, but *not both*.  You will get compilation
-errors if you mix them.
+more of the namespaced files, but *not both*.  You will get compilation errors
+if you mix them.
 
 
 Expressions
@@ -268,7 +274,8 @@ Miscellaneous:
 - Grouping: `2 * (3 + 4)`
 - Ternary operator: `x>0 ? 1 : 2` Returns 1 if x > 0, otherwise returns 2.
 - Array subscript: `x[2]` returns the third item of the given array in `x`.
-- Array subscript assignment: `x[2] = 42` sets the third element of the array in `x` to `42`.
+- Array subscript assignment: `x[2] = 42` sets the third element of the array
+  in `x` to `42`.
 
 These expressions can be combined in surprising ways:
 
@@ -360,8 +367,8 @@ Dictionaries
 
 Dictionaries are a special type of array, where the keys are not necessarily
 numeric, and they don't have to be contiguous.  You can use many of the same
-functions and primitives with dictionaries that you use with list arrays.
-MUV Dictionaries are functionally like hash tables in other languages.
+functions and primitives with dictionaries that you use with list arrays.  MUV
+Dictionaries are functionally like hash tables in other languages.
 
 Defining a dictionary is similar to defining a list array, except you also
 specify the keys:
@@ -372,6 +379,10 @@ specify the keys:
         "three" => 3,
         "four" => 4
     ];
+
+To define an empty dictionary, which is distinct from a list, you can use:
+
+    var empty = [=>];
 
 Reading, setting and deleting dictionary elements are very similar to doing
 the same with a list array:
@@ -444,10 +455,11 @@ The default clause is optional:
         }
     }
 
-With the `using` clause, you can specify a primitive or function that takes two
-arguments to use for comparisons.  When the comparison function or primitive
-returns true, then a match is found.  When `using strcmp` it special cases the
-comparison to actually be `strcmp not`.  The same applies for `stringcmp`.
+With the `using` clause, you can specify a primitive or function that takes
+two arguments to use for comparisons.  When the comparison function or
+primitive returns true, then a match is found.  When `using strcmp` it special
+cases the comparison to actually be `strcmp not`.  The same applies for
+`stringcmp`.
 
     switch (val using strcmp) {
         case("one") {
@@ -479,7 +491,8 @@ constants.
 If you use the `break` statement inside a case clause, you can exit the case
 clause early, and execution resumes after the end of the switch.  If you use a
 `continue` statement inside a case clause, the entire switch statement is
-re-evaluated.  This can be useful for, perhaps, running a looping state machine.
+re-evaluated.  This can be useful for, perhaps, running a looping state
+machine.
 
     const FIRST = 1;
     const SECOND = 2;
@@ -556,8 +569,8 @@ Using a variation on loops and conditionals, you can quickly create lists and
 dictionaries that are mutations of already existing arrays.  The original
 array is untouched.
 
-For example, if you have a list of strings in the variable `words`, you can create
-a list of uppercased versions of those words like this:
+For example, if you have a list of strings in the variable `words`, you can
+create a list of uppercased versions of those words like this:
 
     var words = ["fee", "fie", "foe", "fum"];
     var uppers = [for (var word in words) toupper(word)]
@@ -620,7 +633,9 @@ If you just want to trap any errors without doing anything, you can just do:
         setname(obj, "Foobar");
     } catch();
 
-If you need to throw your own custom exception, you can do it with the `throw("MyError")` command.
+If you need to throw your own custom exception, you can do it like:
+
+    throw("MyError")
 
 
 MUF Interaction
@@ -676,9 +691,9 @@ will tell MUV that a function or primitive named `fleegul` exists, that takes
 no arguments, and returns two or more values on the stack.  When you call this
 function, it will return a list containing all the returned stack items.
 
-If you need to create an extern for a primitive or function that is
-problematic to describe with a normal extern, you can give raw custom MUF
-code at the end of the extern to coerce it to a normal form:
+If you need to create an extern for a primitive or function that is problematic
+to describe with a normal extern, you can give raw custom MUF code at the end
+of the extern to coerce it to a normal form:
 
     extern single concat(args*) = "array_interpret";
 
@@ -691,12 +706,12 @@ code at the end of the extern to coerce it to a normal form:
     ";
 
 The arguments for the extern will be the topmost stack items, with the first
-argument being deepest on the stack.  In the case of varargs, like above,
-the topmost stack item will be a list containing all the remaining args.
-If the extern is `void`, then nothing is expected to be left on the stack.
-If the extern is `single`, then one item is expected to be left on the stack.
-If the extern is `multiple`, then all items left on the stack will be
-bundled into a list to be returned to the caller.
+argument being deepest on the stack.  In the case of varargs, like above, the
+topmost stack item will be a list containing all the remaining args.  If the
+extern is `void`, then nothing is expected to be left on the stack.  If the
+extern is `single`, then one item is expected to be left on the stack.  If the
+extern is `multiple`, then all items left on the stack will be bundled into a
+list to be returned to the caller.
 
 The raw MUF code given is used INSTEAD of a call to the name of the declared
 extern.  A normal extern:
@@ -716,22 +731,22 @@ Debugging MUV
 When you are debugging a program compiled into MUF from MUV, there are
 a few things you should be aware of:
 
-- To prevent namespace collision with the built-in primitives of MUF,
-  the functions and variables that MUV generates are renamed slightly
-  from what was given in the MUV sources.
+- To prevent namespace collision with the built-in primitives of MUF, the
+  functions and variables that MUV generates are renamed slightly from what
+  was given in the MUV sources.
 - To keep consistent with expressions returning values, some extra `dup`s
-  and `pop`s will appear throughout the code.  Some of this will get
-  optimized out by the MUF compiler, and some won't, but they are very
-  fast primitives that shouldn't affect performance *too* horribly.
-  This is all because you can chain expressions in MUV.
-- Calls to an `extern void` defined primitives or function will be
-  followed by a `0` to fake that the call returned `0`.
+  and `pop`s will appear throughout the code.  Some of this will get optimized
+  out by the MUF compiler, and some won't, but they are very fast primitives
+  that shouldn't affect performance *too* horribly.  This is all because you
+  can chain expressions in MUV.
+- Calls to an `extern void` defined primitives or function will be followed
+  by a `0` to fake that the call returned `0`.
 - Calls to an `extern multiple` defined primitives or function will be
-  wrapped in `{` and `}list` to collapse the multiple return values
-  into a single list array.
-- Because in MUV *all* calls have a return value, for those functions
-  that don't have a `return` statement, a `0` is put at the end of a
-  generated function, just in case.
+  wrapped in `{` and `}list` to collapse the multiple return values into
+  a single list array.
+- Because in MUV *all* calls have a return value, for those functions that
+  don't have a `return` statement, a `0` is put at the end of a generated
+  function, just in case.
 
 For example, the following MUV source:
 
@@ -748,7 +763,6 @@ Will compile to MUF as:
     : _foo[ _bar -- ret ]
         var _baz
         _bar @ toupper me @ swap notify 0 pop
-
         { me @ stats }list
         dup _baz ! pop 0
     ;
@@ -756,24 +770,24 @@ Will compile to MUF as:
 There are several things to note here:
 
 - The user declared function `foo` has been renamed to `_foo`.
-- The user declared variables `bar` and `baz` have been renamed to
-  `_bar` and `_baz`.
+- The user declared variables `bar` and `baz` have been renamed to `_bar`
+  and `_baz`.
 - The system variable `me`, however, remains unchanged.  
 - Since `toupper()` is declared to return a `single` value, that value is
   returned unmolested after the call to `toupper`.
-- The call to the `extern` declared function `tell`, is replaced by
-  the code `me @ swap notify`.
-- Since `tell` is declared `void`, a `0` is pushed onto the stack, so
-  that `tell()` always appears to return `0`.
+- The call to the `extern` declared function `tell`, is replaced by the
+  code `me @ swap notify`.
+- Since `tell` is declared `void`, a `0` is pushed onto the stack, so that
+  `tell()` always appears to return `0`.
 - Since the expression `tell(toupper(bar))` does not store its returned
   value in any variable, a `pop` is added to get rid of the unused value.
 - Since `stats()` is declared to return `multiple` values, the entire
   expression is wrapped in `{` and `}list` to collapse all those values
   into a single list array.
-- When storing a value in the variable `baz`, a `dup` is performed on
-  the value, just in case that value is needed for chained assigns, or
-  in another expression.
+- When storing a value in the variable `baz`, a `dup` is performed on the
+  value, just in case that value is needed for chained assigns, or in
+  another expression.
 - Since that value was NOT needed after all, it it `pop`ed away.
-- As the function `foo()` reaches its end without `return`ing a value,
-  a `0` is pushed onto the stack, so `foo()` always returns at least `0`.
+- As the function `foo()` reaches its end without `return`ing a value, a
+  `0` is pushed onto the stack, so `foo()` always returns at least `0`.
 

@@ -52,26 +52,15 @@ func handle_mode_insert(obj, list, pos, val) {
 }
 
 
-func handle_mode_replace(obj, list, pos, val) {
-    var lines = prop_list_get(obj, list);
-    lines = array_delitem(lines, pos-1);
-    lines = array_insertitem(val, lines, pos-1);
-    prop_list_put(obj, list, lines);
-    tell("Line inserted.");
-}
-
-
 func main(arg) {
     argparse_init();
 
     argparse_set_mode("list");
-    argparse_add_mode("list",    [],        "obj=prop");
-    argparse_add_mode("append",  ["force"], "obj=prop:val");
-    argparse_add_mode("delete",  ["force"], "obj=prop:pos");
-    argparse_add_mode("insert",  ["force"], "obj=prop:pos:val");
-    argparse_add_mode("replace", ["force"], "obj=prop:pos:val");
+    argparse_add_mode("list",   [],        "obj=prop");
+    argparse_add_mode("append", ["force"], "obj=prop:val");
+    argparse_add_mode("del",    ["force"], "obj=prop:pos");
+    argparse_add_mode("insert", ["force"], "obj=prop:pos:val");
     argparse_add_flag("verbose");
-    argparse_add_flag("verb");
 
     if (!var opts = argparse_parse(arg)) {
         return;
@@ -107,17 +96,15 @@ func main(arg) {
             }
             if (verify(opts.force, "append a line to the list")) {
                 handle_mode_append(opts.obj, opts.prop, opts.val);
-                handle_mode_list(opts.obj, opts.prop);
             }
         }
-        case("delete") {
+        case("del") {
             opts.pos = str_to_int(opts.pos);
             if (!opts.pos) {
                 return argparse_show_usage();
             }
             if (verify(opts.force, "delete a line from the list")) {
                 handle_mode_del(opts.obj, opts.prop, opts.pos);
-                handle_mode_list(opts.obj, opts.prop);
             }
         }
         case("insert") {
@@ -127,17 +114,6 @@ func main(arg) {
             }
             if (verify(opts.force, "insert a line into the list")) {
                 handle_mode_insert(opts.obj, opts.prop, opts.pos, opts.val);
-                handle_mode_list(opts.obj, opts.prop);
-            }
-        }
-        case("replace") {
-            opts.pos = str_to_int(opts.pos);
-            if (!opts.pos || !opts.val) {
-                return argparse_show_usage();
-            }
-            if (verify(opts.force, "replace a line in the list")) {
-                handle_mode_replace(opts.obj, opts.prop, opts.pos, opts.val);
-                handle_mode_list(opts.obj, opts.prop);
             }
         }
     }

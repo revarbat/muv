@@ -1,7 +1,8 @@
 %{
 
-#define MAXIDENTLEN 128
-#define MAXSTRLEN 1024
+#define MAX_IDENT_LEN 128
+#define MAX_STR_LEN 1024
+#define MAX_INCLUDE_LEVELS 64
 #define FUNC_PREFIX "_"
 #define VAR_PREFIX "_"
 
@@ -18,17 +19,20 @@
 #include "strutils.h"
 
 
-struct kvmap global_consts;
-struct kvmap function_consts;
-struct kvmap global_vars;
-struct kvmap function_vars;
-struct strlist vardecl_list;
 struct strlist inits_list;
 struct strlist using_list;
 struct funclist funcs_list;
+struct kvmap included_files;
+
+struct kvmap global_consts;
+struct kvmap global_vars;
+
+struct kvmap function_consts;
+struct kvmap function_vars;
+struct strlist vardecl_list;
 
 FILE *yyin=NULL;
-FILE *outf;
+FILE *outf=NULL;
 int yylineno = 1;
 const char *yydirname = ".";
 const char *yyfilename = "STDIN";
@@ -38,7 +42,7 @@ struct bookmark_t {
     const char *fname;
     long pos;
     long lineno;
-} bookmarks[64];
+} bookmarks[MAX_INCLUDE_LEVELS];
 int bookmark_count = 0;
 
 int bookmark_push(const char *fname);
@@ -100,11 +104,10 @@ void yyerror(char *s);
 %type <str> good_proposed_funcname bad_proposed_funcname
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> externdef simple_statement statement statements paren_expr
-%type <str> compr_loop compr_cond lvardef
+%type <str> compr_loop compr_cond lvardef subscript
 %type <str> function_call expr attribute
 %type <str> using_clause case_clause case_clauses default_clause
-%type <list> arglist arglist_or_null dictlist argvarlist
-%type <list> subscripts attributes
+%type <list> arglist arglist_or_null dictlist argvarlist index_parts
 %type <getset> lvalue
 %type <num_int> ret_count_type opt_varargs
 
@@ -113,8 +116,8 @@ void yyerror(char *s);
 %%
 
 program: /* nothing */ { }
-    | program globalstatement { fprintf(outf, "%s", $2);  free($2); }
-    | program funcdef { fprintf(outf, "%s", $2);  free($2); }
+    | program globalstatement { if (outf) fprintf(outf, "%s", $2);  free($2); }
+    | program funcdef { if (outf) fprintf(outf, "%s", $2);  free($2); }
     | program externdef { }
     ;
 
@@ -498,47 +501,9 @@ lvalue: VAR proposed_varname {
             $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             keyval_free(&$1);
         }
-    | DECLARED_VAR DOT attributes {
-            char *idx = strlist_wrap(&$3, 0, -1);
-            char *selfidx = strlist_wrap(&$3, 0, $3.count-2);
-            const char *methd = $3.list[$3.count-1];
-            char *errmsg = savefmt("Method %s not found in %s line %d", methd, yyfilename, yylineno);
-            char *errstr = format_muv_str(errmsg);
-            char *self_pre, *self_post;
-            if ($3.count == 1) {
-                $$.get = savefmt("%s @ %s []", $1.val, idx);
-                $$.set = savefmt("%s @ %s ->[] %s !", $1.val, idx, $1.val);
-                $$.del = savefmt("%s @ %s array_delitem %s !", $1.val, idx, $1.val);
-                $$.oper_pre = savefmt("%s @ %s over over []", $1.val, idx);
-                $$.oper_post = savefmt("4 rotate 4 rotate ->[] %s !", $1.val);
-            } else {
-                $$.get = savefmt("%s @ { %s }list array_nested_get", $1.val, idx);
-                $$.set = savefmt("%s @ { %s }list array_nested_set %s !", $1.val, idx, $1.val);
-                $$.del = savefmt("%s @ { %s }list array_nested_del %s !", $1.val, idx, $1.val);
-                $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", $1.val, idx);
-                $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", $1.val);
-            }
-            if ($3.count > 2) {
-                self_pre = savefmt("%s @ { %s }list array_nested_get", $1.val, selfidx);
-                self_post = savefmt("%s @ { %s }list array_nested_set %s !", $1.val, selfidx, $1.val);
-            } else if ($3.count > 1) {
-                self_pre = savefmt("%s @ %s []", $1.val, selfidx);
-                self_post = savefmt("%s @ %s ->[] %s !", $1.val, selfidx, $1.val);
-            } else {
-                self_pre = savefmt("%s @", $1.val);
-                self_post = savefmt("%s !", $1.val);
-            }
-            $$.call = savefmt("%s dup %s []\ndup address? if\n    execute %s\nelse\n    } popn %s abort\nthen", self_pre, methd, self_post, errstr);
-            free(selfidx);
-            free(errstr);
-            free(errmsg);
-            free(idx);
-            keyval_free(&$1);
-            strlist_free(&$3);
-        }
-    | DECLARED_VAR '[' subscripts  %prec SUFFIX {
-            char *idx = strlist_wrap(&$3, 0, -1);
-            if ($3.count == 1) {
+    | DECLARED_VAR index_parts  %prec SUFFIX {
+            char *idx = strlist_wrap(&$2, 0, -1);
+            if ($2.count == 1) {
                 $$.get = savefmt("%s @ %s []", $1.val, idx);
                 $$.set = savefmt("%s @ %s ->[] %s !", $1.val, idx, $1.val);
                 $$.del = savefmt("%s @ %s array_delitem %s !", $1.val, idx, $1.val);
@@ -554,22 +519,23 @@ lvalue: VAR proposed_varname {
             $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(idx);
             keyval_free(&$1);
-            strlist_free(&$3);
+            strlist_free(&$2);
         }
     ;
 
-subscripts: expr ']' { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
-    | subscripts '[' expr ']' { $$ = $1; strlist_add(&$$, $3); free($3); }
+index_parts:
+      subscript { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+    | attribute { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+    | index_parts subscript { $$ = $1; strlist_add(&$$, $2); free($2); }
+    | index_parts attribute { $$ = $1; strlist_add(&$$, $2); free($2); }
     ;
 
-attributes: attribute { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
-    | attributes DOT attribute { $$ = $1; strlist_add(&$$, $3); free($3); }
-    ;
+subscript: '[' expr ']' { $$ = $2; }
 
-attribute: IDENT { $$ = format_muv_str($1);  free($1); }
-    | DECLARED_CONST  { $$ = format_muv_str($1.key); keyval_free(&$1); }
-    | DECLARED_VAR    { $$ = format_muv_str($1.key); keyval_free(&$1); }
-    | DECLARED_FUNC   { $$ = format_muv_str($1.name); }
+attribute: DOT IDENT     { $$ = format_muv_str($2);     free($2); }
+    | DOT DECLARED_CONST { $$ = format_muv_str($2.key); keyval_free(&$2); }
+    | DOT DECLARED_VAR   { $$ = format_muv_str($2.key); keyval_free(&$2); }
+    | DOT DECLARED_FUNC  { $$ = format_muv_str($2.name); }
     ;
 
 compr_cond: /* nothing */ { $$ = savestring(""); }
@@ -688,7 +654,7 @@ expr: paren_expr { $$ = $1; }
             /* dictionary initializer */
             char *items = strlist_wrap(&$2, 0, -1);
             char *body = indent(items);
-            $$ = savefmt("{\n%s}dict", body);
+            $$ = savefmt("{%s%s}dict", (*items? "\n" : " "), body);
             free(body); free(items);
             strlist_free(&$2);
         }
@@ -789,16 +755,8 @@ bookmark_push(const char *fname)
     char buf[1024];
     const char *ptr, *dirmk;
     char *ptr2;
-
-    bookmarks[bookmark_count].dname = savestring(yydirname);
-    bookmarks[bookmark_count].fname = savestring(yyfilename);
-    bookmarks[bookmark_count].lineno = yylineno;
-    if (yyin) {
-        bookmarks[bookmark_count].pos = ftell(yyin);
-    } else {
-        bookmarks[bookmark_count].pos = 0;
-    }
-    bookmark_count++;
+    char *dir, *fil;
+    FILE *f;
 
     // If file to include starts with '!', it's a global include file.
     if (*fname == '!') {
@@ -823,7 +781,7 @@ bookmark_push(const char *fname)
     while (ptr < dirmk)
         *ptr2++ = *ptr++;
     *ptr2 = '\0';
-    yydirname = savestring(buf);
+    dir = savestring(buf);
 
     while (*dirmk == '/')
         dirmk++;
@@ -831,29 +789,55 @@ bookmark_push(const char *fname)
     while (*dirmk)
         *ptr2++ = *dirmk++;
     *ptr2 = '\0';
-    yyfilename = savestring(buf);
+    fil = savestring(buf);
 
-    if (yyin != NULL)
-        fclose(yyin);
     if (*yyfilename) {
-        snprintf(buf, sizeof(buf), "%s/%s", yydirname, yyfilename);
-        yyin = fopen(buf, "r");
-        if (!yyin) {
-            free((void*)yydirname);
-            free((void*)yyfilename);
-            bookmark_count--;
-            yydirname = bookmarks[bookmark_count].dname;
-            yyfilename = bookmarks[bookmark_count].fname;
-            yylineno = bookmarks[bookmark_count].lineno;
-            char *errstr = savefmt("Could not include file %s", buf);
-            yyerror(errstr);
-            free(errstr);
-            return 0;
-        }
-    } else {
-        yyin = stdin;
+        snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
     }
+
+    if (kvmap_get(&included_files, buf)) {
+        free(dir);
+        free(fil);
+        return 1;
+    }
+
+    f = *fil? fopen(buf, "r") : stdin;
+    if (!f) {
+        char *errstr = savefmt("Could not include file %s", buf);
+        yyerror(errstr);
+        free(errstr);
+        free(dir);
+        free(fil);
+        return 0;
+    }
+
+    if (bookmark_count >= MAX_INCLUDE_LEVELS-1) {
+        yyerror("Too many levels of includes!");
+        free(dir);
+        free(fil);
+        return 0;
+    }
+
+    kvmap_add(&included_files, buf, buf);
+
+    bookmarks[bookmark_count].dname = savestring(yydirname);
+    bookmarks[bookmark_count].fname = savestring(yyfilename);
+    bookmarks[bookmark_count].lineno = yylineno;
+    if (yyin) {
+        bookmarks[bookmark_count].pos = ftell(yyin);
+    } else {
+        bookmarks[bookmark_count].pos = 0;
+    }
+    bookmark_count++;
+
+    if (yyin != NULL) {
+        fclose(yyin);
+    }
+    yydirname = dir;
+    yyfilename = fil;
+    yyin = *yyfilename? f : stdin;
     yylineno = 1;
+
     return 1;
 }
 
@@ -966,7 +950,7 @@ lookup(char *s, int *bval)
 int
 yylex()
 {
-    char in[MAXSTRLEN];
+    char in[MAX_STR_LEN];
     char *p = in;
     int c, digit;
     struct funcinfo_t* pinfo;
@@ -1111,7 +1095,7 @@ yylex()
         const char *cp;
 
         while ((c = fgetc(yyin)) != EOF && (isalnum(c) || c == '_' || c == '?')) {
-            if (++cnt + 1 >= MAXIDENTLEN) {
+            if (++cnt + 1 >= MAX_IDENT_LEN) {
                 yyerror("Identifier too long.");
             }
             *p++ = c;
@@ -1392,6 +1376,7 @@ yyerror(char *arg)
 void
 parser_data_init()
 {
+    kvmap_init(&included_files);
     strlist_init(&inits_list);
     strlist_init(&using_list);
     strlist_init(&vardecl_list);
@@ -1418,6 +1403,7 @@ parser_data_init()
 void
 parser_data_free()
 {
+    kvmap_free(&included_files);
     strlist_free(&inits_list);
     strlist_free(&using_list);
     strlist_free(&vardecl_list);
@@ -1436,7 +1422,7 @@ process_file(struct strlist *files, const char *progname)
     int res = 0;
     int filenum;
 
-    if (progname) {
+    if (progname && outf) {
         fprintf(outf, "@program %s\n", progname);
         fprintf(outf, "1 99999 d\n1 i\n");
     }
@@ -1473,12 +1459,14 @@ process_file(struct strlist *files, const char *progname)
         /* We don't actually need to pop the base bookmark. */
         bookmark_count--;
 
-        if (*basename) {
-            fprintf(outf, "( Generated from %s by the MUV compiler. )\n", basename);
-        } else {
-            fprintf(outf, "( Generated by the MUV compiler. )\n");
+        if (outf) {
+            if (*basename) {
+                fprintf(outf, "( Generated from %s by the MUV compiler. )\n", basename);
+            } else {
+                fprintf(outf, "( Generated by the MUV compiler. )\n");
+            }
+            fprintf(outf, "(   https://github.com/revarbat/muv )\n  \n");
         }
-        fprintf(outf, "(   https://github.com/revarbat/muv )\n  \n");
 
         do {
             res = yyparse();
@@ -1496,7 +1484,7 @@ process_file(struct strlist *files, const char *progname)
         }
     }
 
-    if (res == 0) {
+    if (res == 0 && outf) {
         const char *mainfunc;
         char *inits = strlist_join(&inits_list, "\n", 0, -1);
         char *inits2 = indent(inits);
@@ -1528,7 +1516,7 @@ process_file(struct strlist *files, const char *progname)
 void
 usage(const char* execname)
 {
-    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE] FILE ...\n", execname);
+    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE | -c] FILE ...\n", execname);
 }
 
 
@@ -1554,6 +1542,8 @@ main(int argc, char **argv)
             }
             argc--; argv++;
             progname = argv[0];
+        } else if (!strcmp(argv[0], "-c") || !strcmp(argv[0], "--check")) {
+            outf = NULL;
         } else if (!strcmp(argv[0], "-o") || !strcmp(argv[0], "--outfile")) {
             if (argc < 2) {
                 usage(execname);
