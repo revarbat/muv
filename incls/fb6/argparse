@@ -14,7 +14,6 @@ extern single ap_trigname() = "trig name \";\" split pop strip";
 extern multiple ap_regmatch(txt,pat) = "1 regexp";
 
 var argparse_mode = "";
-var argparse_mode_given = 0;
 var argparse_modes = [];
 var argparse_flags = [=>];
 var argparse_posargs = [=>];
@@ -22,7 +21,6 @@ var argparse_remainder = ["" => "remainder"];
 
 func argparse_init() {
     argparse_mode = "";
-    argparse_mode_given = 0;
     argparse_modes = [];
     argparse_flags = [=>];
     argparse_posargs = [=>];
@@ -110,56 +108,73 @@ func argparse_show_usage() {
 
 func argparse_parse(line) {
     var parts;
+    var mode;
+    var flag;
     var opts = [=>];
+    var mode_given = 0;
     while (ap_stringpfx(line, "#")) {
         parts = ap_split(ap_strcut(line,1)[1], " ");
         var opt = ap_tolower(parts[0]);
         var found = 0;
-        var exact = 0;
-        for (var mode in argparse_modes) {
-            if (ap_stringpfx(mode, opt)) {
-                if (argparse_mode_given) {
-                    if (ap_stringcmp(mode, argparse_mode)) {
-                        tell("Cannot mix modes.");
-                        argparse_show_usage();
-                        return [];
-                    }
-                }
+
+	// Check for exact mode match.
+        for (mode in argparse_modes) {
+	    if (!ap_stringcmp(mode, opt)) {
                 argparse_mode = mode;
-                argparse_mode_given = 1;
                 found++;
-                if (!ap_stringcmp(mode, opt)) {
-                    exact = 1;
-                    break;
-                }
-            }
-        }
-        if (exact) {
+	        break;
+	    }
+	}
+	if (found) {
+	    mode_given++;
             line = parts[1];
             continue;
+	}
+
+	// Check for exact flag match.
+        for (flag in argparse_flags[argparse_mode]) {
+	    if (!ap_stringcmp(flag, opt)) {
+                opts[flag] = 1;
+                found++;
+		break;
+            }
         }
-        for (var flag in argparse_flags[argparse_mode]) {
+	if (found) {
+            line = parts[1];
+            continue;
+	}
+
+	// Check for mode prefix.
+        for (mode in argparse_modes) {
+            if (ap_stringpfx(mode, opt)) {
+                argparse_mode = mode;
+                found++;
+            }
+        }
+
+	// Check for flag prefix.
+        for (flag in argparse_flags[argparse_mode]) {
             if (ap_stringpfx(flag, opt)) {
                 opts[flag] = 1;
                 found++;
-                if (!ap_stringcmp(mode, opt)) {
-                    exact = 1;
-                    break;
-                }
             }
         }
-        if (exact || found == 1) {
+
+        if (found == 1) {
             line = parts[1];
             continue;
-        }
-        if (found > 1) {
+        } else if (found > 1) {
             tell(fmtstring("Option #%s is ambiguous.", opt));
-            argparse_show_usage();
-            return [];
-        }
-        tell(fmtstring("Option #%s not recognized.", opt));
-        argparse_show_usage();
-        return [];
+        } else {
+	    tell(fmtstring("Option #%s not recognized.", opt));
+	}
+	argparse_show_usage();
+	return [];
+    }
+    if (mode_given > 1) {
+	tell("Cannot mix modes.");
+	argparse_show_usage();
+	return [];
     }
     for (var posarg in argparse_posargs[argparse_mode]) {
         parts = ap_split(line, posarg[1]);
