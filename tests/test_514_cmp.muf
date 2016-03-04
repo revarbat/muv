@@ -250,8 +250,8 @@ lvar _argparse_remainder
 ;
 : _verify[ _override _msg -- ret ]
     _override @ if 1 exit then
-    { "Are you sure you want to " _msg @ "?" }list array_interpret
-    me @ swap notify 0 pop
+    { "Are you sure you want to " _msg @ "?" }list
+    array_interpret me @ swap notify 0 pop
     { read 1 strcut }list 0 [] "y" stringcmp not if 1 exit then
     "Cancelled." me @ swap notify 0 pop
     0 exit

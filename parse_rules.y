@@ -349,32 +349,26 @@ statement: ';' { $$ = savestring(""); }
             free($2); free($4);
         }
     | FOR '(' lvalue IN expr ')' statement {
-            char *body = indent($7);
-            $$ = savefmt("%s\nforeach %s pop\n%s\nrepeat", $5, $3.set, body);
+            char *pfx = savefmt("%s\nforeach %s pop", $5, $3.set);
+            $$ = wrapit(pfx, $7, "repeat");
+            free(pfx);
             getset_free(&$3); free($5); free($7);
-            free(body);
         }
     | FOR '(' lvalue KEYVAL lvalue IN expr ')' statement {
-            char *body = indent($9);
-            $$ = savefmt("%s\nforeach %s %s\n%s\nrepeat", $7, $5.set, $3.set, body);
+            char *pfx = savefmt("%s\nforeach %s %s", $7, $5.set, $3.set);
+            $$ = wrapit(pfx, $9, "repeat");
+            free(pfx);
             getset_free(&$3); getset_free(&$5); free($7); free($9);
-            free(body);
         }
     | TRY statement CATCH '(' ')' statement {
-            char *trybody = indent($2);
-            char *catchbody = indent($6);
-            $$ = savefmt("0 try\n%s\ncatch pop\n%s\nendcatch", trybody, catchbody);
+            $$ = wrapit2("0 try", $2, "catch pop", $6, "endcatch");
             free($2); free($6);
-            free(trybody);
-            free(catchbody);
         }
     | TRY statement CATCH '(' lvalue ')' statement {
-            char *trybody = indent($2);
-            char *catchbody = indent($7);
-            $$ = savefmt("0 try\n%s\ncatch_detailed %s\n%s\nendcatch", trybody, $5.set, catchbody);
+            char *mid = savefmt("catch_detailed %s", $5.set);
+            $$ = wrapit2("0 try", $2, mid, $7, "endcatch");
+            free(mid);
             free($2); getset_free(&$5); free($7);
-            free(trybody);
-            free(catchbody);
         }
     | SWITCH '(' expr using_clause ')' '{' case_clauses default_clause '}' {
             char *exp = indent($3);
@@ -462,29 +456,16 @@ function_call: DECLARED_FUNC '(' arglist_or_null ')' {
             }
         }
         if ($1.hasvarargs) {
-            char* fargs = strlist_wrap(&$3, 0, $1.expects);
-            char* vargs = strlist_wrap(&$3, $1.expects, -1);
+            char *vargs = strlist_wrap(&$3, $1.expects, -1);
             char *vlist = wrapit("{", vargs, "}list");
-            char* fadiv = "\n";
-            if (!*fargs) {
-                fadiv = "";
-            } else if (lastlen(fargs) + firstlen(vlist) < 60) {
-                fadiv = " ";
-            }
-            basecall = savefmt("%s%s%s %s", fargs, fadiv, vlist, $1.code);
+            basecall = strlist_wrap(&$3, 0, $1.expects);
+            basecall = appendstr(basecall, vlist);
+            basecall = appendstr(basecall, $1.code);
             free(vlist);
-            free(fargs);
             free(vargs);
         } else {
-            char* fargs = strlist_wrap(&$3, 0, -1);
-            char* fadiv = "\n";
-            if (!*fargs) {
-                fadiv = "";
-            } else if (lastlen(fargs) + firstlen($1.code) < 60) {
-                fadiv = " ";
-            }
-            basecall = savefmt("%s%s%s", fargs, fadiv, $1.code);
-            free(fargs);
+            basecall = strlist_wrap(&$3, 0, -1);
+            basecall = appendstr(basecall, $1.code);
         }
         if ($1.returns == 0) {
             $$ = savefmt("%s 0", basecall);

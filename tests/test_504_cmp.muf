@@ -11,8 +11,8 @@
     _num @ pop
     _valid_numbers @
     foreach _num ! pop
-        { _num @ " bottles of beer on the wall!" }list array_interpret
-        me @ swap notify 0 pop
+        { _num @ " bottles of beer on the wall!" }list
+        array_interpret me @ swap notify 0 pop
     repeat
     0
 ;

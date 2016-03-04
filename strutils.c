@@ -22,10 +22,12 @@ appendstr(char *s1, const char *s2)
     size_t len1 = strlen(s1);
     size_t len2 = strlen(s2);
     s1 = (char*)realloc(s1, len1 + len2 + 2);
-    if (lastlen(s1) + firstlen(s2) > 60) {
-        strcat(&s1[len1], "\n");
-    } else {
-        strcat(&s1[len1], " ");
+    if (len1 != 0 && len2 != 0) {
+        if (lastlen(s1) + firstlen(s2) > 60) {
+            strcat(&s1[len1], "\n");
+        } else {
+            strcat(&s1[len1], " ");
+        }
     }
     strcat(&s1[len1], s2);
     return s1;

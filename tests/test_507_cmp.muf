@@ -33,7 +33,8 @@
     dup _newobj ! pop
     _arg @ _first_word
     dup _word ! pop
-    { me @ name "'s submission (" _word @ ")" }list array_interpret
+    { me @ name "'s submission (" _word @ ")" }list
+    array_interpret
     dup _newname ! pop
     _newobj @ _newname @ setname 0 pop
     _newobj @ _arg @ setdesc 0 pop
