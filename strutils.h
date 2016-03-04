@@ -6,8 +6,14 @@
 
 char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
+char *appendstr(char *s1, const char *s2);
 char *indent(const char *);
 char *format_muv_str(const char *);
+size_t firstlen(const char *);
+size_t lastlen(const char *);
+size_t linecount(const char *);
+char *wrapit(const char *pfx, const char *s, const char *sfx);
+char *wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const char *sfx);
 
 struct gettersetter {
     const char *get;

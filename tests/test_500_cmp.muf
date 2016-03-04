@@ -1,6 +1,5 @@
 ( Generated from test_500_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-  
 : _main[ _arg -- ret ]
     var _k
     var _v
@@ -16,9 +15,7 @@
     var _listeners
     _k @ pop
     _v @ pop
-    {
-        3 4 5 6 7 8 9
-    }list
+    { 3 4 5 6 7 8 9 }list
     dup _mylist ! pop
     { }list _mylist @
     foreach _v ! pop
@@ -41,12 +38,7 @@
         then
     repeat
     dup _evens ! pop
-    {
-        "a" 1
-        "b" 2
-        "c" 3
-        "d" 4
-    }dict
+    { "a" 1 "b" 2 "c" 3 "d" 4 }dict
     dup _mydict ! pop
     { }dict _mydict @
     foreach _v ! _k !
@@ -83,10 +75,7 @@
     dup _listeners ! pop
     0
 ;
-  
 : __start
-    "me" match me !
-    me @ location loc !
-    trig trigger !
+    "me" match me ! me @ location loc ! trig trigger !
     _main
 ;

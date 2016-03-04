@@ -764,7 +764,8 @@ Will compile to MUF as:
         var _baz
         _bar @ toupper me @ swap notify 0 pop
         { me @ stats }list
-        dup _baz ! pop 0
+        dup _baz ! pop
+        0
     ;
 
 There are several things to note here:

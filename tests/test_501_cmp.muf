@@ -1,6 +1,5 @@
 ( Generated from test_501_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-  
 : _dump[ _arr _indent -- ret ]
     var _key
     var _val
@@ -12,36 +11,20 @@
     _arr @
     foreach _val ! _key !
         _val @ array? _val @ dictionary? or if
-            _key @
-            _indent @
-            "%s%~ => ["
-            fmtstring me @ swap notify 0 pop
-            _val @ {
-                _indent @
-                "  "
-            }list array_interpret _dump pop
-            _indent @
-            "%s]"
-            fmtstring me @ swap notify 0 pop
+            _key @ _indent @ "%s%~ => [" fmtstring me @ swap notify 0 pop
+            _val @ { _indent @ "  " }list array_interpret _dump pop
+            _indent @ "%s]" fmtstring me @ swap notify 0 pop
         else
-            _val @
-            _key @
-            _indent @
-            "%s%~ => %~"
-            fmtstring me @ swap notify 0 pop
+            _val @ _key @ _indent @ "%s%~ => %~" fmtstring
+            me @ swap notify 0 pop
         then
     repeat
     0
 ;
-  
 : _dictfunc[  -- ret ]
     var _mydict
     var _myvar
-    {
-        "one" "First"
-        "two" "Second"
-        "three" "Third"
-    }dict
+    { "one" "First" "two" "Second" "three" "Third" }dict
     dup _mydict ! pop
     _mydict @ "" _dump pop
     _mydict @ "two" []
@@ -52,7 +35,6 @@
     _mydict @ "three" array_delitem _mydict ! 0 pop
     0
 ;
-  
 : _main[  -- ret ]
     var _arr
     var _idx
@@ -74,34 +56,16 @@
     dup _empty ! pop
     _arr @
     foreach _word ! _idx !
-        me @ _word @
-        _idx @
-        "%d: %s"
-        fmtstring notify 0 pop
+        me @ _word @ _idx @ "%d: %s" fmtstring notify 0 pop
     repeat
     {
-        {
-            1 2 3 4
-        }list {
-            "a" "b" "c" "d"
-        }list {
-            "One" "Two" "Three" "Four"
-        }list
-        {
-            {
-                3 1 4
-            }list {
-                9 1 16
-            }list {
-                81 1 256
-            }list
-        }list
+        { 1 2 3 4 }list { "a" "b" "c" "d" }list
+        { "One" "Two" "Three" "Four" }list
+        { { 3 1 4 }list { 9 1 16 }list { 81 1 256 }list }list
     }list
     dup _nested ! pop
     _nested @ { 2 1 }list array_nested_get me @ swap notify 0 pop
-    {
-        "Fee" "Fie" "Foe" "Fum"
-    }list
+    { "Fee" "Fie" "Foe" "Fum" }list
     dup _nested @ 1 ->[] _nested ! pop
     23
     dup _nested @ { 0 3 }list array_nested_set _nested ! pop
@@ -118,10 +82,7 @@
     _nested @ "" _dump pop
     0
 ;
-  
 : __start
-    "me" match me !
-    me @ location loc !
-    trig trigger !
+    "me" match me ! me @ location loc ! trig trigger !
     _main
 ;

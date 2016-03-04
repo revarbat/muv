@@ -16,6 +16,7 @@ int strlist_find(struct strlist *l, const char *s);
 char *strlist_join(struct strlist *l, const char *s, int start, int end);
 char *strlist_wrap(struct strlist *l, int start, int end);
 void strlist_reverse(struct strlist *l);
+char *strlist_wrapit(const char *pfx, struct strlist *l, const char *sfx);
 
 #endif
 

@@ -140,14 +140,14 @@ globalstatement:
 
 lvardef: proposed_varname {
             char *vname = savefmt("%s%s", VAR_PREFIX, $1);
-            $$ = savefmt("lvar %s\n", vname);
+            $$ = savefmt("lvar %s", vname);
             kvmap_add(&global_vars, $1, vname);
             free(vname);
             free($1);
         }
     | proposed_varname ASGN expr {
             char *vname = savefmt("%s%s", VAR_PREFIX, $1);
-            $$ = savefmt("lvar %s\n", vname);
+            $$ = savefmt("lvar %s", vname);
             kvmap_add(&global_vars, $1, vname);
             char *init = savefmt("%s %s !", $3, vname);
             strlist_add(&inits_list, init);
@@ -171,7 +171,7 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
         char *decls = strlist_join(&vardecl_list, "", 0, -1);
         char *idecls = indent(decls);
         free(decls);
-        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s\n    0\n;\n  \n", FUNC_PREFIX, $2, vars, idecls, body);
+        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s\n    0\n;\n", FUNC_PREFIX, $2, vars, idecls, body);
         kvmap_clear(&function_vars);
         strlist_clear(&vardecl_list);
         kvmap_clear(&function_consts);
@@ -284,14 +284,16 @@ simple_statement:
 statement: ';' { $$ = savestring(""); }
     | simple_statement ';' { $$ = $1; }
     | simple_statement IF paren_expr ';' {
-            char *body = indent($1);
-            $$ = savefmt("%s if\n%s\nthen", $3, body);
+            char *body = wrapit("if", $1, "then");
+            $$ = savestring($3);
+            $$ = appendstr($$, body);
             free($1); free($3);
             free(body);
         }
     | simple_statement UNLESS paren_expr ';' {
-            char *body = indent($1);
-            $$ = savefmt("%s not if\n%s\nthen", $3, body);
+            char *body = wrapit("not if", $1, "then");
+            $$ = savestring($3);
+            $$ = appendstr($$, body);
             free($1); free($3);
             free(body);
         }
@@ -301,45 +303,50 @@ statement: ';' { $$ = savestring(""); }
             free($2); free($4);
         }
     | IF paren_expr statement  %prec BARE {
-            char *body = indent($3);
-            $$ = savefmt("%s if\n%s\nthen", $2, body);
+            char *pfx = savefmt("%s if", $2);
+            $$ = wrapit(pfx, $3, "then");
+            free(pfx);
             free($2); free($3);
-            free(body);
         }
     | IF paren_expr statement ELSE statement {
-            char *ifbody = indent($3);
-            char *elsebody = indent($5);
-            $$ = savefmt("%s if\n%s\nelse\n%s\nthen", $2, ifbody, elsebody);
+            char *pfx = savefmt("%s if", $2);
+            $$ = wrapit2(pfx, $3, "else", $5, "then");
+            free(pfx);
             free($2); free($3); free($5);
-            free(ifbody); free(elsebody);
         }
     | WHILE paren_expr statement {
-            char *cond = indent($2);
-            char *body = indent($3);
-            $$ = savefmt("begin\n%s\nwhile\n%s\nrepeat", cond, body);
+            if (!strcmp($2, "1")) {
+                $$ = wrapit("begin", $3, "repeat");
+            } else {
+                $$ = wrapit2("begin", $2, "while", $3, "repeat");
+            }
             free($2); free($3);
-            free(cond); free(body);
         }
     | UNTIL paren_expr statement {
-            char *cond = indent($2);
-            char *body = indent($3);
-            $$ = savefmt("begin\n%s not\nwhile\n%s\nrepeat", cond, body);
+            if (!strcmp($2, "0")) {
+                $$ = wrapit("begin", $3, "repeat");
+            } else {
+                $$ = wrapit2("begin", $2, "not while", $3, "repeat");
+            }
             free($2); free($3);
-            free(cond); free(body);
         }
     | DO statement WHILE paren_expr ';' {
-            char *body = indent($2);
-            char *cond = indent($4);
-            $$ = savefmt("begin\n%s\n(conditional follows)\n%s not\nuntil", body, cond);
+            if (!strcmp($4, "1")) {
+                $$ = wrapit("begin", $2, "repeat");
+            } else {
+                $2 = appendstr($2, $4);
+                $$ = wrapit("begin", $2, "not until");
+            }
             free($2); free($4);
-            free(cond); free(body);
         }
     | DO statement UNTIL paren_expr ';' {
-            char *body = indent($2);
-            char *cond = indent($4);
-            $$ = savefmt("begin\n%s\n(conditional follows)\n%s\nuntil", body, cond);
+            if (!strcmp($4, "0")) {
+                $$ = wrapit("begin", $2, "repeat");
+            } else {
+                $2 = appendstr($2, $4);
+                $$ = wrapit("begin", $2, "until");
+            }
             free($2); free($4);
-            free(cond); free(body);
         }
     | FOR '(' lvalue IN expr ')' statement {
             char *body = indent($7);
@@ -408,7 +415,7 @@ case_clauses: case_clause { $$ = $1; }
 case_clause: CASE paren_expr statement {
         char *body = indent($3);
         const char *comp = using_list.list[using_list.count-1];
-        $$ = savefmt("(case)\ndup %s %s if\n%s break\nthen\n", $2, comp, body);
+        $$ = savefmt("dup %s %s if\n%s break\nthen\n", $2, comp, body);
         free(body);
         free($2); free($3);
     } ;
@@ -456,23 +463,35 @@ function_call: DECLARED_FUNC '(' arglist_or_null ')' {
         }
         if ($1.hasvarargs) {
             char* fargs = strlist_wrap(&$3, 0, $1.expects);
-            char* vargs = strlist_join(&$3, "\n", $1.expects, -1);
-            char* ivargs = indent(vargs);
-            basecall = savefmt("%s%s{\n%s\n}list %s", fargs, (*fargs? " ":""), ivargs, $1.code);
+            char* vargs = strlist_wrap(&$3, $1.expects, -1);
+            char *vlist = wrapit("{", vargs, "}list");
+            char* fadiv = "\n";
+            if (!*fargs) {
+                fadiv = "";
+            } else if (lastlen(fargs) + firstlen(vlist) < 60) {
+                fadiv = " ";
+            }
+            basecall = savefmt("%s%s%s %s", fargs, fadiv, vlist, $1.code);
+            free(vlist);
             free(fargs);
             free(vargs);
-            free(ivargs);
         } else {
-            char* funcargs = strlist_wrap(&$3, 0, -1);
-            basecall = savefmt("%s%s%s", funcargs, (*funcargs?" ":""), $1.code);
-            free(funcargs);
+            char* fargs = strlist_wrap(&$3, 0, -1);
+            char* fadiv = "\n";
+            if (!*fargs) {
+                fadiv = "";
+            } else if (lastlen(fargs) + firstlen($1.code) < 60) {
+                fadiv = " ";
+            }
+            basecall = savefmt("%s%s%s", fargs, fadiv, $1.code);
+            free(fargs);
         }
         if ($1.returns == 0) {
             $$ = savefmt("%s 0", basecall);
         } else if ($1.returns == 1) {
             $$ = savestring(basecall);
         } else {
-            $$ = savefmt("{ %s }list", basecall);
+            $$ = wrapit("{", basecall, "}list");
         }
         free(basecall);
         strlist_free(&$3);
@@ -503,6 +522,7 @@ lvalue: VAR proposed_varname {
         }
     | DECLARED_VAR index_parts  %prec SUFFIX {
             char *idx = strlist_wrap(&$2, 0, -1);
+            char *idxlist = strlist_wrapit("{", &$2, "}list");
             if ($2.count == 1) {
                 $$.get = savefmt("%s @ %s []", $1.val, idx);
                 $$.set = savefmt("%s @ %s ->[] %s !", $1.val, idx, $1.val);
@@ -510,14 +530,15 @@ lvalue: VAR proposed_varname {
                 $$.oper_pre = savefmt("%s @ %s over over []", $1.val, idx);
                 $$.oper_post = savefmt("4 rotate 4 rotate ->[] %s !", $1.val);
             } else {
-                $$.get = savefmt("%s @ { %s }list array_nested_get", $1.val, idx);
-                $$.set = savefmt("%s @ { %s }list array_nested_set %s !", $1.val, idx, $1.val);
-                $$.del = savefmt("%s @ { %s }list array_nested_del %s !", $1.val, idx, $1.val);
-                $$.oper_pre = savefmt("%s @ { %s }list over over array_nested_get", $1.val, idx);
+                $$.get = savefmt("%s @ %s array_nested_get", $1.val, idxlist);
+                $$.set = savefmt("%s @ %s array_nested_set %s !", $1.val, idxlist, $1.val);
+                $$.del = savefmt("%s @ %s array_nested_del %s !", $1.val, idxlist, $1.val);
+                $$.oper_pre = savefmt("%s @ %s over over array_nested_get", $1.val, idxlist);
                 $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", $1.val);
             }
             $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(idx);
+            free(idxlist);
             keyval_free(&$1);
             strlist_free(&$2);
         }
@@ -579,8 +600,8 @@ expr: paren_expr { $$ = $1; }
             char* fargs = strlist_wrap(&$3, 0, -1);
             char *body, *ibody;
             body = savefmt("%s%s%s", fargs, (*fargs?"\n":""), $1.call);
-            ibody = indent(body);
-            $$ = savefmt("{\n%s\n}list\ndup array_count 2 < if 0 [] then", ibody);
+            ibody = wrapit("{", body, "}list");
+            $$ = savefmt("%s\ndup array_count 2 < if 0 [] then", ibody);
             free(ibody);
             free(body);
             free(fargs);
@@ -615,8 +636,8 @@ expr: paren_expr { $$ = $1; }
                 YYERROR;
             }
             strlist_reverse(&$3);
-            fargs = strlist_join(&$3, "\n", 0, -1);
-            $$ = savefmt("%s\nfmtstring", fargs);
+            fargs = strlist_wrap(&$3, 0, -1);
+            $$ = savefmt("%s%sfmtstring", fargs, (lastlen(fargs) < 60? " " : "\n"));
             free(fargs);
             strlist_free(&$3);
         }
@@ -625,14 +646,7 @@ expr: paren_expr { $$ = $1; }
     | INSERT { $$ = savestring("{ }list"); }
     | '[' arglist_or_null ']' {
             /* list initializer */
-            char *items = strlist_wrap(&$2, 0, -1);
-            char *body = indent(items);
-            if ($2.count == 0) {
-                $$ = savestring("{ }list");
-            } else {
-                $$ = savefmt("{\n%s\n}list", body);
-            }
-            free(body); free(items);
+            $$ = strlist_wrapit("{", &$2, "}list");
             strlist_free(&$2);
         }
     | '[' FOR compr_loop compr_cond expr ']' {
@@ -652,10 +666,11 @@ expr: paren_expr { $$ = $1; }
         }
     | '[' dictlist ']' {
             /* dictionary initializer */
-            char *items = strlist_wrap(&$2, 0, -1);
-            char *body = indent(items);
-            $$ = savefmt("{%s%s}dict", (*items? "\n" : " "), body);
-            free(body); free(items);
+            if ($2.count == 0) {
+                $$ = savestring("{ }dict");
+            } else {
+                $$ = strlist_wrapit("{", &$2, "}dict");
+            }
             strlist_free(&$2);
         }
     | '[' FOR compr_loop compr_cond expr KEYVAL expr ']' {
@@ -730,14 +745,14 @@ arglist:
 
 dictlist: KEYVAL { strlist_init(&$$); }
     | expr KEYVAL expr {
-            char *vals = savefmt("%s %s\n", $1, $3);
+            char *vals = savefmt("%s %s", $1, $3);
             strlist_init(&$$);
             strlist_add(&$$, vals);
             free(vals);
             free($1); free($3);
         }
     | dictlist ',' expr KEYVAL expr {
-            char *vals = savefmt("%s %s\n", $3, $5);
+            char *vals = savefmt("%s %s", $3, $5);
             $$ = $1;
             strlist_add(&$$, vals);
             free(vals);
@@ -1465,7 +1480,7 @@ process_file(struct strlist *files, const char *progname)
             } else {
                 fprintf(outf, "( Generated by the MUV compiler. )\n");
             }
-            fprintf(outf, "(   https://github.com/revarbat/muv )\n  \n");
+            fprintf(outf, "(   https://github.com/revarbat/muv )\n");
         }
 
         do {
@@ -1486,7 +1501,7 @@ process_file(struct strlist *files, const char *progname)
 
     if (res == 0 && outf) {
         const char *mainfunc;
-        char *inits = strlist_join(&inits_list, "\n", 0, -1);
+        char *inits = strlist_wrap(&inits_list, 0, -1);
         char *inits2 = indent(inits);
 
         if (funcs_list.count > 0) {

@@ -157,5 +157,16 @@ strlist_reverse(struct strlist *l)
 }
 
 
+char *
+strlist_wrapit(const char *pfx, struct strlist *l, const char *sfx)
+{
+    char *items = strlist_wrap(l, 0, -1);
+    char *out = wrapit(pfx, items, sfx);
+    free(items);
+    return out;
+}
+
+
+
 
 /* vim: set ts=4 sw=4 et ai hlsearch nowrap : */

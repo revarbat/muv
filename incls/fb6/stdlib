@@ -15,4 +15,10 @@ extern single cat(args*) = "array_interpret";
 const true = 1;
 const false = 0;
 
+extern single match_verbose(obj) = "
+match
+dup #-1 dbcmp if me @ \"I don't see that here!\" notify then
+dup #-2 dbcmp if me @ \"I don't know which object you mean!\" notify then
+dup #-3 dbcmp if pop me @ getlink then";
+
 

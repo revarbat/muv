@@ -1,6 +1,5 @@
 ( Generated from test_504_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-  
 : _main[ _arg -- ret ]
     var _valid_numbers
     var _num
@@ -12,17 +11,12 @@
     _num @ pop
     _valid_numbers @
     foreach _num ! pop
-        {
-            _num @
-            " bottles of beer on the wall!"
-        }list array_interpret me @ swap notify 0 pop
+        { _num @ " bottles of beer on the wall!" }list array_interpret
+        me @ swap notify 0 pop
     repeat
     0
 ;
-  
 : __start
-    "me" match me !
-    me @ location loc !
-    trig trigger !
+    "me" match me ! me @ location loc ! trig trigger !
     _main
 ;

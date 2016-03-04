@@ -24,6 +24,8 @@ func main(arg) {
     var b = arr.foo.fie;
     arr.bar.bloo = 43;
     arr.bar.blat += 7;
+    arr["bar"].blat += 8;
+    arr.bar["blat"] += 9;
     sub(5,4,3);
     arr.baz(4, 6, 2);
     arr.bar.boo(4, 6, 2);

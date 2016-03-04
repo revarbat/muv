@@ -1,11 +1,9 @@
 ( Generated from test_507_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-  
 : _helloworld[  -- ret ]
     "Hello World!" exit
     0
 ;
-  
 : _arraydemo[  -- ret ]
     var _myarr
     { }list
@@ -15,7 +13,6 @@
     _myarr @ 23 [] me @ swap notify 0 pop
     0
 ;
-  
 : _first_word[ _thing -- ret ]
     var _words
     { _thing @ " " split }list
@@ -23,7 +20,6 @@
     _words @ 0 [] exit
     0
 ;
-  
 : _submit[ _arg -- ret ]
     var _newobj
     var _word
@@ -37,12 +33,7 @@
     dup _newobj ! pop
     _arg @ _first_word
     dup _word ! pop
-    {
-        me @ name
-        "'s submission ("
-        _word @
-        ")"
-    }list array_interpret
+    { me @ name "'s submission (" _word @ ")" }list array_interpret
     dup _newname ! pop
     _newobj @ _newname @ setname 0 pop
     _newobj @ _arg @ setdesc 0 pop
@@ -50,10 +41,7 @@
     "Thank you for the submission." me @ swap notify 0 pop
     0
 ;
-  
 : __start
-    "me" match me !
-    me @ location loc !
-    trig trigger !
+    "me" match me ! me @ location loc ! trig trigger !
     _submit
 ;
