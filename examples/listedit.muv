@@ -112,7 +112,7 @@ func main(arg) {
         return;
     }
 
-    var obj = match_verbose(opts.obj);
+    var obj = match_controlled(opts.obj);
     if (obj < 0) return;
 
     if (opts.verbose) {
