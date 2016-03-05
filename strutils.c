@@ -25,7 +25,7 @@ appendstr(char *s1, const char *s2)
     if (len1 != 0 && len2 != 0) {
         if (lastlen(s1) + firstlen(s2) > 60) {
             strcat(&s1[len1], "\n");
-        } else {
+        } else if (lastlen(s1) > 0 && firstlen(s2) > 0) {
             strcat(&s1[len1], " ");
         }
     }
@@ -39,7 +39,7 @@ char *
 savefmt(const char *fmt, ...)
 {
     va_list aptr;
-    size_t buflen = 2048;
+    size_t buflen = 128;
     char *buf = (char*)malloc(buflen);
     int len;
 
@@ -56,6 +56,34 @@ savefmt(const char *fmt, ...)
     }
 
     return buf;
+}
+
+
+
+char *
+appendfmt(char *s, const char *fmt, ...)
+{
+    va_list aptr;
+    size_t buflen = 128;
+    char *buf = (char*)malloc(buflen);
+    int len;
+
+    va_start(aptr, fmt);
+    len = vsnprintf(buf, buflen, fmt, aptr);
+    va_end(aptr);
+
+    if (len >= buflen-1) {
+        buflen = len + 2;
+        buf = (char*)realloc(buf, buflen);
+        va_start(aptr, fmt);
+        len = vsnprintf(buf, buflen, fmt, aptr);
+        va_end(aptr);
+    }
+
+    s = appendstr(s, buf);
+    free(buf);
+
+    return s;
 }
 
 

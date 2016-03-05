@@ -4,9 +4,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-char *savefmt(const char *fmt, ...);
 char *savestring(const char *);
+char *savefmt(const char *fmt, ...);
 char *appendstr(char *s1, const char *s2);
+char *appendfmt(char *s, const char *fmt, ...);
 char *indent(const char *);
 char *format_muv_str(const char *);
 size_t firstlen(const char *);

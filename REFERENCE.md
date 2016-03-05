@@ -593,6 +593,25 @@ You can also filter a list or dictionary by adding an `if` or `unless` clause:
     var evens = [for (x in nums) unless (x % 2) x]
 
 
+Tuple Assignment
+---------------
+
+If an expression or function call returns an array of known size, you can
+assign each array item to an individual variable using tuple assignment:
+
+    extern multiple split(s, delim);
+    <var a, var b> = split("Hello, World!", " ");
+
+    <a, b> = split("foo=bar", "=");
+
+You can also use tuple assignment inside a loop or comprehension:
+
+    for (<a, b> in list_generator()) {
+        tell(cat(b, a));
+    }
+
+    var foo = [for (<a, b> in list_generator()) if (a != b) a + b];
+
 
 Exceptions
 ----------

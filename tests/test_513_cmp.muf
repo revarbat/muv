@@ -5,8 +5,7 @@
     0
 ;
 : _main[ _arg -- ret ]
-    var _arr
-    var _b
+    var _arr var _b
     {
         "foo" { "fee" 2 "fie" 8 "foe" 7 "fum" 42 }dict
         "bar" { "blah" 1 "blat" 3 "bloo" 5 "bleh" 7 "boo" '_sub }dict
@@ -33,7 +32,7 @@
         dup address? if
             execute
         else
-            } popn "Tried to execute a non-address in test_513_in.muv line 30" abort
+            } popn "Tried to execute a non-address in test_513_in.muv:30" abort
         then
     }list
     dup array_count 2 < if 0 [] then pop
@@ -43,7 +42,7 @@
         dup address? if
             execute
         else
-            } popn "Tried to execute a non-address in test_513_in.muv line 31" abort
+            } popn "Tried to execute a non-address in test_513_in.muv:31" abort
         then
     }list
     dup array_count 2 < if 0 [] then pop

@@ -21,9 +21,7 @@
     0
 ;
 : _submit[ _arg -- ret ]
-    var _newobj
-    var _word
-    var _newname
+    var _newobj var _word var _newname
     _arg @ "" strcmp not if
         "Enter your submission here:" me @ swap notify 0 pop
         read

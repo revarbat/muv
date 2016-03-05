@@ -1,17 +1,8 @@
 ( Generated from test_500_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    var _k
-    var _v
-    var _mylist
-    var _squares
-    var _odds
-    var _evens
-    var _mydict
-    var _squarevals
-    var _foo
-    var _bar
-    var _obj
+    var _k var _v var _mylist var _squares var _odds var _evens
+    var _mydict var _squarevals var _foo var _bar var _obj
     var _listeners
     _k @ pop
     _v @ pop

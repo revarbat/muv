@@ -1,8 +1,7 @@
 ( Generated from test_032_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    var _a
-    var _b
+    var _a var _b
     42
     dup _a ! pop
     13

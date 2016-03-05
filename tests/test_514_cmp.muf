@@ -111,13 +111,8 @@ lvar _argparse_remainder
     0
 ;
 : _argparse_show_usage[  -- ret ]
-    var _cmd
-    var _mode
-    var _flags
-    var _flag
-    var _posargs
-    var _posarg
-    var _line
+    var _cmd var _mode var _flags var _flag var _posargs
+    var _posarg var _line
     trig name ";" split pop strip
     dup _cmd ! pop
     "Usage:" me @ swap notify 0 pop
@@ -143,14 +138,8 @@ lvar _argparse_remainder
     0
 ;
 : _argparse_parse[ _line -- ret ]
-    var _parts
-    var _mode
-    var _flag
-    var _opts
-    var _mode_given
-    var _opt
-    var _found
-    var _posarg
+    var _parts var _mode var _flag var _opts var _mode_given
+    var _opt var _found var _posarg
     _parts @ pop
     _mode @ pop
     _flag @ pop
@@ -258,9 +247,7 @@ lvar _argparse_remainder
     0
 ;
 : _handle_mode_list[ _obj _list -- ret ]
-    var _lines
-    var _i
-    var _line
+    var _lines var _i var _line
     _obj @ _list @ array_get_proplist
     dup _lines ! pop
     _lines @

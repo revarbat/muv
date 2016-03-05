@@ -36,6 +36,22 @@ FILE *outf=NULL;
 int yylineno = 1;
 const char *yydirname = ".";
 const char *yyfilename = "STDIN";
+int yylex(void);
+int yyparse(void);
+void yyerror(char *s);
+
+int debugging_level = 0;
+int has_tuple_check = 0;
+const char *tuple_check =
+    ": tuple_check[ arr expect pos -- ]\n"
+    "    arr @ array? not if\n"
+    "        \"Cannot unpack from non-array in \" pos @ strcat abort\n"
+    "    then\n"
+    "    arr @ array_count expect @ = not if\n"
+    "        \"Wrong number of values to unpack in \" pos @ strcat abort\n"
+    "    then\n"
+    ";\n";
+
 
 struct bookmark_t {
     const char *dname;
@@ -47,10 +63,6 @@ int bookmark_count = 0;
 
 int bookmark_push(const char *fname);
 int bookmark_pop();
-
-int yylex(void);
-int yyparse(void);
-void yyerror(char *s);
 
 
 /* compiler state exception flag */
@@ -105,9 +117,10 @@ void yyerror(char *s);
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
 %type <str> externdef simple_statement statement statements paren_expr
 %type <str> compr_loop compr_cond lvardef subscript
-%type <str> function_call expr attribute
+%type <str> function_call expr attribute settable
 %type <str> using_clause case_clause case_clauses default_clause
-%type <list> arglist arglist_or_null dictlist argvarlist index_parts
+%type <list> arglist arglist_or_null dictlist argvarlist
+%type <list> index_parts tuple_parts
 %type <getset> lvalue
 %type <num_int> ret_count_type opt_varargs
 
@@ -168,8 +181,11 @@ funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
     } '{' statements '}' {
         char *body = indent($9);
         char *vars = strlist_join(&$4, " ", 0, -1);
-        char *decls = strlist_join(&vardecl_list, "", 0, -1);
+        char *decls = strlist_wrap(&vardecl_list, 0, -1);
         char *idecls = indent(decls);
+        if (*idecls) {
+            idecls = appendstr(idecls, "\n");
+        }
         free(decls);
         $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s\n    0\n;\n", FUNC_PREFIX, $2, vars, idecls, body);
         kvmap_clear(&function_vars);
@@ -348,17 +364,32 @@ statement: ';' { $$ = savestring(""); }
             }
             free($2); free($4);
         }
-    | FOR '(' lvalue IN expr ')' statement {
-            char *pfx = savefmt("%s\nforeach %s pop", $5, $3.set);
+    | FOR '(' settable IN expr ')' statement {
+            char *pfx;
+            if (linecount($3) > 1) {
+                char *ind = indent($3);
+                pfx = savefmt("%s\nforeach\n%s pop", $5, ind);
+                free(ind);
+            } else {
+                pfx = savefmt("%s\nforeach %s pop", $5, $3);
+            }
             $$ = wrapit(pfx, $7, "repeat");
             free(pfx);
-            getset_free(&$3); free($5); free($7);
+            free($3); free($5); free($7);
         }
-    | FOR '(' lvalue KEYVAL lvalue IN expr ')' statement {
-            char *pfx = savefmt("%s\nforeach %s %s", $7, $5.set, $3.set);
+    | FOR '(' settable KEYVAL settable IN expr ')' statement {
+            char *pfx;
+            if (linecount($3)+linecount($5) > 2) {
+                char *set = appendstr(savestring($5), $3);
+                char *iset = indent(set);
+                pfx = savefmt("%s\nforeach\n%s", $7, iset);
+                free(iset);
+            } else {
+                pfx = savefmt("%s\nforeach %s %s", $7, $5, $3);
+            }
             $$ = wrapit(pfx, $9, "repeat");
             free(pfx);
-            getset_free(&$3); getset_free(&$5); free($7); free($9);
+            free($3); free($5); free($7); free($9);
         }
     | TRY statement CATCH '(' ')' statement {
             $$ = wrapit2("0 try", $2, "catch pop", $6, "endcatch");
@@ -422,11 +453,14 @@ paren_expr: '(' expr ')' { $$ = $2; } ;
 
 statements: /* nothing */ { $$ = savestring(""); }
     | statements statement {
-            if (*$1) {
-                $$ = savefmt("%s\n%s", $1, $2);
-            } else {
-                $$ = $2;
+            $$ = savestring($1);
+            if (*$$) {
+                $$ = appendstr($$, "\n");
             }
+            if (debugging_level > 0) {
+                $$ = appendfmt($$, "\"%s:%d\" pop\n", yyfilename, yylineno);
+            }
+            $$ = appendfmt($$, "%s", $2);
         }
     ;
 
@@ -480,7 +514,7 @@ function_call: DECLARED_FUNC '(' arglist_or_null ')' {
 
 lvalue: VAR proposed_varname {
             char *vname = savefmt("%s%s", VAR_PREFIX, $2);
-            char *vardecl = savefmt("var %s\n", vname);
+            char *vardecl = savefmt("var %s", vname);
             strlist_add(&vardecl_list, vardecl);
             kvmap_add(&function_vars, $2, vname);
             $$.get = savefmt("%s @", vname);
@@ -488,7 +522,7 @@ lvalue: VAR proposed_varname {
             $$.del = savefmt("0 %s !", vname);
             $$.oper_pre = savefmt("%s @", vname);
             $$.oper_post = savefmt("%s !", vname);
-            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s:%d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(vname);
             free(vardecl);
         }
@@ -498,7 +532,7 @@ lvalue: VAR proposed_varname {
             $$.del = savefmt("0 %s !", $1.val);
             $$.oper_pre = savefmt("%s @", $1.val);
             $$.oper_post = savefmt("%s !", $1.val);
-            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s:%d\" abort\nthen", $$.get, yyfilename, yylineno);
             keyval_free(&$1);
         }
     | DECLARED_VAR index_parts  %prec SUFFIX {
@@ -517,11 +551,39 @@ lvalue: VAR proposed_varname {
                 $$.oper_pre = savefmt("%s @ %s over over array_nested_get", $1.val, idxlist);
                 $$.oper_post = savefmt("4 rotate 4 rotate array_nested_set %s !", $1.val);
             }
-            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s line %d\" abort\nthen", $$.get, yyfilename, yylineno);
+            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s:%d\" abort\nthen", $$.get, yyfilename, yylineno);
             free(idx);
             free(idxlist);
             keyval_free(&$1);
             strlist_free(&$2);
+        }
+    ;
+
+settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
+    | LT tuple_parts GT {
+            if (!has_tuple_check) {
+                if (outf) {
+                    fprintf(outf, "%s", tuple_check);
+                }
+                has_tuple_check = 1;
+            }
+            $$ = savefmt("dup %d \"%s:%d\" tuple_check", $2.count, yyfilename, yylineno);
+            for (int i = 0; i < $2.count; i++) {
+                $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
+            }
+            $$ = appendstr($$, "pop");
+            strlist_free(&$2);
+        };
+
+tuple_parts: lvalue {
+            strlist_init(&$$);
+            strlist_add(&$$, $1.set);
+            getset_free(&$1);
+        }
+    | tuple_parts ',' lvalue {
+            $$ = $1;
+            strlist_add(&$$, $3.set);
+            getset_free(&$3);
         }
     ;
 
@@ -552,13 +614,27 @@ compr_cond: /* nothing */ { $$ = savestring(""); }
     ;
 
 compr_loop:
-      '(' lvalue IN expr ')' {
-            $$ = savefmt("%s\nforeach %s pop", $4, $2.set);
-            getset_free(&$2); free($4);
+      '(' settable IN expr ')' {
+            if (linecount($2) > 1) {
+                char *ind = indent($2);
+                $$ = savefmt("%s\nforeach\n%s pop", $4, ind);
+                free(ind);
+            } else {
+                $$ = savefmt("%s\nforeach %s pop", $4, $2);
+            }
+            free($2); free($4);
         }
-    | '(' lvalue KEYVAL lvalue IN expr ')' {
-            $$ = savefmt("%s\nforeach %s %s", $6, $4.set, $2.set);
-            getset_free(&$2); getset_free(&$4); free($6);
+    | '(' settable KEYVAL settable IN expr ')' {
+            if (linecount($2)+linecount($4) > 2) {
+                char *set = appendstr(savestring($4), $2);
+                char *iset = indent(set);
+                $$ = savefmt("%s\nforeach\n%s", $6, iset);
+                free(iset);
+                free(set);
+            } else {
+                $$ = savefmt("%s\nforeach %s %s", $6, $4, $2);
+            }
+            free($2); free($4); free($6);
         }
     ;
 
@@ -697,7 +773,7 @@ expr: paren_expr { $$ = $1; }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | lvalue ASGN expr         { $$ = savefmt("%s\ndup %s", $3, $1.set); getset_free(&$1); free($3); }
+    | settable ASGN expr { $$ = savefmt("%s\ndup %s", $3, $1); free($1); free($3); }
     | lvalue INSERT ASGN expr  { $$ = savefmt("%s\n%s dup rot []<-\n%s", $1.oper_pre, $4, $1.oper_post); getset_free(&$1); free($4); }
     | lvalue PLUSASGN expr     { $$ = savefmt("%s\n%s +\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
     | lvalue MINUSASGN expr    { $$ = savefmt("%s\n%s -\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
@@ -1364,7 +1440,7 @@ yylex()
 void
 yyerror(char *arg)
 {
-    fprintf(stderr, "ERROR in %s/%s line %d: %s\n", yydirname, yyfilename, yylineno, arg);
+    fprintf(stderr, "ERROR in %s/%s:%d: %s\n", yydirname, yyfilename, yylineno, arg);
 }
 
 
@@ -1512,7 +1588,14 @@ process_file(struct strlist *files, const char *progname)
 void
 usage(const char* execname)
 {
-    fprintf(stderr, "Usage: %s [-h] [-w PROGNAME] [-o OUTFILE | -c] FILE ...\n", execname);
+    fprintf(stderr, "Usage: %s [-h] [-d] [-w PROGNAME] [-o OUTFILE | -c] FILE ...\n", execname);
+    fprintf(stderr, "     -h, --help          Show this help message.\n");
+    fprintf(stderr, "     -d, --debug         Insert code to help debugging.\n");
+    fprintf(stderr, "     -c, --check         Don't output code.  Just check for errors.\n");
+    fprintf(stderr, "     -w PROGNAME\n");
+    fprintf(stderr, "     --wrapper PROGNAME  Wrap code for upload into PROGNAME.\n");
+    fprintf(stderr, "     -o FILE\n");
+    fprintf(stderr, "     --outfile FILE      Save code to given file, not stdout.\n");
 }
 
 
@@ -1540,6 +1623,8 @@ main(int argc, char **argv)
             progname = argv[0];
         } else if (!strcmp(argv[0], "-c") || !strcmp(argv[0], "--check")) {
             outf = NULL;
+        } else if (!strcmp(argv[0], "-d") || !strcmp(argv[0], "--debug")) {
+            debugging_level++;
         } else if (!strcmp(argv[0], "-o") || !strcmp(argv[0], "--outfile")) {
             if (argc < 2) {
                 usage(execname);

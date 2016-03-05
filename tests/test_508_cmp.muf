@@ -1,9 +1,7 @@
 ( Generated from test_508_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _loopy[ _count -- ret ]
-    var _i
-    var _val
-    var _key
+    var _i var _val var _key
     1
     dup _i ! pop
     begin

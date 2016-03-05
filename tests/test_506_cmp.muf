@@ -2,9 +2,7 @@
 (   https://github.com/revarbat/muv )
 lvar _foo
 : _arrrr[  -- ret ]
-    var _bar
-    var _key
-    var _val
+    var _bar var _key var _val
     { "one" "two" "three" "four" "five" }list
     dup _bar ! pop
     _bar @ 3 [] me @ swap notify 0 pop
@@ -15,8 +13,7 @@ lvar _foo
     0
 ;
 : _trys[  -- ret ]
-    var _bar
-    var _err
+    var _bar var _err
     _bar @ pop
     0 try
         me @ desc
