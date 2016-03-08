@@ -198,16 +198,32 @@ globalstatement:
             free($4);
         }
     | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
-            funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
+            char *fname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                fname = savefmt("%s::%s", ns, $3);
+            } else {
+                fname = savestring($3);
+            }
+            funclist_add(&funcs_list, fname, $3, $5.count - ($6?1:0), $2, $6);
             $$ = savestring("");
+            free(fname);
             free($3);
             strlist_free(&$5);
             kvmap_clear(&function_vars);
             strlist_clear(&vardecl_list);
         }
     | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ASGN STR ';' {
-            funclist_add(&funcs_list, $3, $9, $5.count - ($6?1:0), $2, $6);
+            char *fname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                fname = savefmt("%s::%s", ns, $3);
+            } else {
+                fname = savestring($3);
+            }
+            funclist_add(&funcs_list, fname, $9, $5.count - ($6?1:0), $2, $6);
             $$ = savestring("");
+            free(fname);
             free($3);
             strlist_free(&$5);
             free($9);

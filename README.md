@@ -20,7 +20,7 @@ Instead of writing cryptic code like:
                 fmtstring
                 me @ swap notify
             then
-        repeat 
+        repeat
     ;
 
 You can write:

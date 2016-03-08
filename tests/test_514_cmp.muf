@@ -1,134 +1,137 @@
 ( Generated from test_514_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
-lvar _argparse_mode
-lvar _argparse_modes
-lvar _argparse_flags
-lvar _argparse_posargs
-lvar _argparse_remainder
-: _argparse_init[  -- ret ]
+lvar _argparse::current_mode
+lvar _argparse::modes_list
+lvar _argparse::flags_map
+lvar _argparse::posargs_map
+lvar _argparse::remainder_map
+: _argparse::init[  -- ret ]
     ""
-    dup _argparse_mode ! pop
+    dup _argparse::current_mode ! pop
     { }list
-    dup _argparse_modes ! pop
+    dup _argparse::modes_list ! pop
     { }dict
-    dup _argparse_flags ! pop
+    dup _argparse::flags_map ! pop
     { }dict
-    dup _argparse_posargs ! pop
+    dup _argparse::posargs_map ! pop
     { "" "remainder" }dict
-    dup _argparse_remainder ! pop
+    dup _argparse::remainder_map ! pop
     0
 ;
-: _argparse_parse_posargs[ _mode _posargs -- ret ]
+: _argparse::parse_posargs[ _mode _posargs -- ret ]
     var _tok
     begin
         { _posargs @ "^([a-z0-9_]*)([^a-z0-9_])(.*)$" 1 regexp }list 0 []
         dup _tok ! pop
         _tok @ if
-            _argparse_posargs @ _mode @ [] not if
+            _argparse::posargs_map @ _mode @ [] not if
                 { }list
-                dup _argparse_posargs @ _mode @ ->[] _argparse_posargs ! pop
+                dup _argparse::posargs_map @ _mode @ ->[] _argparse::posargs_map ! pop
             then
-            _argparse_posargs @ _mode @ over over []
+            _argparse::posargs_map @ _mode @ over over []
             { _tok @ 1 [] tolower _tok @ 2 [] }list dup rot []<-
-            4 rotate 4 rotate ->[] _argparse_posargs ! pop
+            4 rotate 4 rotate ->[] _argparse::posargs_map ! pop
             _tok @ 3 []
             dup _posargs ! pop
         else
             _posargs @ tolower
-            dup _argparse_remainder @ _mode @ ->[] _argparse_remainder ! pop
+            dup _argparse::remainder_map @ _mode @ ->[] _argparse::remainder_map ! pop
+
             break
         then
     repeat
     0
 ;
-: _argparse_set_mode[ _name -- ret ]
+: _argparse::set_mode[ _name -- ret ]
     _name @ tolower
     dup _name ! pop
     _name @
-    dup _argparse_mode ! pop
+    dup _argparse::current_mode ! pop
     0
 ;
-: _argparse_add_mode[ _name _flags _posargs -- ret ]
+: _argparse::add_mode[ _name _flags _posargs -- ret ]
     var _flag
     _name @ tolower
     dup _name ! pop
-    _argparse_modes @
+    _argparse::modes_list @
     _name @ dup rot []<-
-    _argparse_modes ! pop
+    _argparse::modes_list ! pop
     { }list
-    dup _argparse_flags @ _name @ ->[] _argparse_flags ! pop
+    dup _argparse::flags_map @ _name @ ->[] _argparse::flags_map ! pop
+
     { }list
-    dup _argparse_posargs @ _name @ ->[] _argparse_posargs ! pop
+    dup _argparse::posargs_map @ _name @ ->[] _argparse::posargs_map ! pop
+
     _flags @
     foreach _flag ! pop
-        _argparse_flags @ _name @ [] not if
+        _argparse::flags_map @ _name @ [] not if
             { }list
-            dup _argparse_flags @ _name @ ->[] _argparse_flags ! pop
+            dup _argparse::flags_map @ _name @ ->[] _argparse::flags_map ! pop
         then
-        _argparse_flags @ _name @ over over []
+        _argparse::flags_map @ _name @ over over []
         _flag @ tolower dup rot []<-
-        4 rotate 4 rotate ->[] _argparse_flags ! pop
+        4 rotate 4 rotate ->[] _argparse::flags_map ! pop
     repeat
-    _name @ _posargs @ _argparse_parse_posargs pop
+    _name @ _posargs @ _argparse::parse_posargs pop
     0
 ;
-: _argparse_add_flag[ _name -- ret ]
+: _argparse::add_flag[ _name -- ret ]
     var _mode
     _name @ tolower
     dup _name ! pop
-    _argparse_modes @
+    _argparse::modes_list @
     foreach _mode ! pop
         _mode @ tolower
         dup _mode ! pop
-        _argparse_modes @ _mode @ array_findval not if
+        _argparse::modes_list @ _mode @ array_findval not if
             _mode @ _name @
             "ArgParse: Option '%s' declared as part of non-existent mode '%s'!"
             fmtstring abort 0 pop
         then
-        _argparse_flags @ _mode @ [] not if
+        _argparse::flags_map @ _mode @ [] not if
             { }list
-            dup _argparse_flags @ _mode @ ->[] _argparse_flags ! pop
+            dup _argparse::flags_map @ _mode @ ->[] _argparse::flags_map ! pop
         then
-        _argparse_flags @ _mode @ over over []
+        _argparse::flags_map @ _mode @ over over []
         _name @ dup rot []<-
-        4 rotate 4 rotate ->[] _argparse_flags ! pop
+        4 rotate 4 rotate ->[] _argparse::flags_map ! pop
     repeat
     0
 ;
-: _argparse_add_posargs[ _posargs -- ret ]
+: _argparse::add_posargs[ _posargs -- ret ]
     var _mode
-    _argparse_modes @
+    _argparse::modes_list @
     foreach _mode ! pop
         _mode @ tolower
         dup _mode ! pop
-        _argparse_modes @ _mode @ array_findval not if
+        _argparse::modes_list @ _mode @ array_findval not if
             _mode @ _mode @
             "ArgParse: Option '%s' declared as part of non-existent mode '%s'!"
             fmtstring abort 0 pop
         then
-        _mode @ _posargs @ _argparse_parse_posargs pop
+        _mode @ _posargs @ _argparse::parse_posargs pop
     repeat
     0
 ;
-: _argparse_show_usage[  -- ret ]
+: _argparse::show_usage[  -- ret ]
     var _cmd var _mode var _flags var _flag var _posargs
     var _posarg var _line
     trig name ";" split pop strip
     dup _cmd ! pop
     "Usage:" me @ swap notify 0 pop
-    _argparse_modes @
+    _argparse::modes_list @
     foreach _mode ! pop
-        { }list _argparse_flags @ _mode @ []
+        { }list _argparse::flags_map @ _mode @ []
         foreach _flag ! pop
             { "[#" _flag @ "]" }list array_interpret swap []<-
         repeat
         dup _flags ! pop
-        { }list _argparse_posargs @ _mode @ []
+        { }list _argparse::posargs_map @ _mode @ []
         foreach _posarg ! pop
             { _posarg @ 0 [] toupper _posarg @ 1 [] }list array_interpret swap []<-
         repeat
         dup _posargs ! pop
-        _argparse_remainder @ _mode @ [] toupper
+        _argparse::remainder_map @ _mode @ [] toupper
         _posargs @ "" array_join _flags @ if " " else "" then
         _flags @ " " array_join _mode @ _mode @ if "#" else "" then
         _cmd @ "%s %s%s %s%s%s%s" fmtstring
@@ -137,7 +140,7 @@ lvar _argparse_remainder
     repeat
     0
 ;
-: _argparse_parse[ _line -- ret ]
+: _argparse::parse[ _line -- ret ]
     var _parts var _mode var _flag var _opts var _mode_given
     var _opt var _found var _posarg
     _parts @ pop
@@ -156,11 +159,11 @@ lvar _argparse_remainder
         dup _opt ! pop
         0
         dup _found ! pop
-        _argparse_modes @
+        _argparse::modes_list @
         foreach _mode ! pop
             _mode @ _opt @ stringcmp not if
                 _mode @
-                dup _argparse_mode ! pop
+                dup _argparse::current_mode ! pop
                 _found @ dup 1 + _found ! pop
                 break
             then
@@ -171,7 +174,7 @@ lvar _argparse_remainder
             dup _line ! pop
             continue
         then
-        _argparse_flags @ _argparse_mode @ []
+        _argparse::flags_map @ _argparse::current_mode @ []
         foreach _flag ! pop
             _flag @ _opt @ stringcmp not if
                 1
@@ -185,15 +188,15 @@ lvar _argparse_remainder
             dup _line ! pop
             continue
         then
-        _argparse_modes @
+        _argparse::modes_list @
         foreach _mode ! pop
             _mode @ _opt @ stringpfx if
                 _mode @
-                dup _argparse_mode ! pop
+                dup _argparse::current_mode ! pop
                 _found @ dup 1 + _found ! pop
             then
         repeat
-        _argparse_flags @ _argparse_mode @ []
+        _argparse::flags_map @ _argparse::current_mode @ []
         foreach _flag ! pop
             _flag @ _opt @ stringpfx if
                 1
@@ -213,15 +216,15 @@ lvar _argparse_remainder
                 me @ swap notify 0 pop
             then
         then
-        _argparse_show_usage pop
+        _argparse::show_usage pop
         { }list exit
     repeat
     _mode_given @ 1 > if
         "Cannot mix modes." me @ swap notify 0 pop
-        _argparse_show_usage pop
+        _argparse::show_usage pop
         { }list exit
     then
-    _argparse_posargs @ _argparse_mode @ []
+    _argparse::posargs_map @ _argparse::current_mode @ []
     foreach _posarg ! pop
         { _line @ _posarg @ 1 [] split }list
         dup _parts ! pop
@@ -231,8 +234,9 @@ lvar _argparse_remainder
         dup _line ! pop
     repeat
     _line @
-    dup _opts @ _argparse_remainder @ _argparse_mode @ [] ->[] _opts ! pop
-    _argparse_mode @
+    dup _opts @ _argparse::remainder_map @ _argparse::current_mode @ [] ->[] _opts ! pop
+
+    _argparse::current_mode @
     dup _opts @ "mode" ->[] _opts ! pop
     _opts @ exit
     0
@@ -246,9 +250,9 @@ lvar _argparse_remainder
     0 exit
     0
 ;
-: _handle_mode_list[ _obj _list -- ret ]
+: _handle_mode_list[ _obj _prop -- ret ]
     var _lines var _i var _line
-    _obj @ _list @ array_get_proplist
+    _obj @ _prop @ array_get_proplist
     dup _lines ! pop
     _lines @
     foreach _line ! _i !
@@ -257,87 +261,117 @@ lvar _argparse_remainder
     "Done." me @ swap notify 0 pop
     0
 ;
-: _handle_mode_append[ _obj _list _line -- ret ]
+: _handle_mode_append[ _obj _prop _val _force -- ret ]
     var _lines
-    _obj @ _list @ array_get_proplist
-    dup _lines ! pop
-    _lines @
-    _line @ dup rot []<-
-    _lines ! pop
-    _obj @ _list @ _lines @ array_put_proplist 0 pop
-    "Line appended." me @ swap notify 0 pop
-    _obj @ _list @ _handle_mode_list pop
+    _val @ not if
+        _argparse::show_usage pop
+        0 exit
+    then
+    _force @ "append a line to the list" _verify if
+        _obj @ _prop @ array_get_proplist
+        dup _lines ! pop
+        _lines @
+        _val @ dup rot []<-
+        _lines ! pop
+        _obj @ _prop @ _lines @ array_put_proplist 0 pop
+        "Line appended." me @ swap notify 0 pop
+        _obj @ _prop @ _handle_mode_list pop
+    then
     0
 ;
-: _handle_mode_del[ _obj _list _pos -- ret ]
+: _handle_mode_delete[ _obj _prop _pos _force -- ret ]
     var _lines
-    _obj @ _list @ array_get_proplist
-    dup _lines ! pop
-    _lines @ _pos @ 1 - array_delitem
-    dup _lines ! pop
-    _obj @ _list @ _lines @ array_put_proplist 0 pop
-    "Line deleted." me @ swap notify 0 pop
-    _obj @ _list @ _handle_mode_list pop
+    _pos @ atoi
+    dup _pos ! pop
+    _pos @ not if
+        _argparse::show_usage pop
+        0 exit
+    then
+    _force @ "delete a line from the list" _verify if
+        _obj @ _prop @ array_get_proplist
+        dup _lines ! pop
+        _lines @ _pos @ 1 - array_delitem
+        dup _lines ! pop
+        _obj @ _prop @ _lines @ array_put_proplist 0 pop
+        "Line deleted." me @ swap notify 0 pop
+        _obj @ _prop @ _handle_mode_list pop
+    then
     0
 ;
-: _handle_mode_insert[ _obj _list _pos _val -- ret ]
+: _handle_mode_insert[ _obj _prop _pos _val _force -- ret ]
     var _lines
-    _obj @ _list @ array_get_proplist
-    dup _lines ! pop
-    _val @ _lines @ _pos @ 1 - array_insertitem
-    dup _lines ! pop
-    _obj @ _list @ _lines @ array_put_proplist 0 pop
-    "Line inserted." me @ swap notify 0 pop
-    _obj @ _list @ _handle_mode_list pop
+    _pos @ atoi
+    dup _pos ! pop
+    _pos @ not _val @ not or if
+        _argparse::show_usage pop
+        0 exit
+    then
+    _force @ "insert a line into the list" _verify if
+        _obj @ _prop @ array_get_proplist
+        dup _lines ! pop
+        _val @ _lines @ _pos @ 1 - array_insertitem
+        dup _lines ! pop
+        _obj @ _prop @ _lines @ array_put_proplist 0 pop
+        "Line inserted." me @ swap notify 0 pop
+        _obj @ _prop @ _handle_mode_list pop
+    then
     0
 ;
-: _handle_mode_replace[ _obj _list _pos _val -- ret ]
+: _handle_mode_replace[ _obj _prop _pos _val _force -- ret ]
     var _lines
-    _obj @ _list @ array_get_proplist
-    dup _lines ! pop
-    _lines @ _pos @ 1 - array_delitem
-    dup _lines ! pop
-    _val @ _lines @ _pos @ 1 - array_insertitem
-    dup _lines ! pop
-    _obj @ _list @ _lines @ array_put_proplist 0 pop
-    "Line inserted." me @ swap notify 0 pop
-    _obj @ _list @ _handle_mode_list pop
+    _pos @ atoi
+    dup _pos ! pop
+    _pos @ not _val @ not or if
+        _argparse::show_usage pop
+        0 exit
+    then
+    _force @ "replace a line in the list" _verify if
+        _obj @ _prop @ array_get_proplist
+        dup _lines ! pop
+        _lines @ _pos @ 1 - array_delitem
+        dup _lines ! pop
+        _val @ _lines @ _pos @ 1 - array_insertitem
+        dup _lines ! pop
+        _obj @ _prop @ _lines @ array_put_proplist 0 pop
+        "Line inserted." me @ swap notify 0 pop
+        _obj @ _prop @ _handle_mode_list pop
+    then
     0
 ;
 : _main[ _arg -- ret ]
-    var _opts
-    _argparse_init pop
-    "list" _argparse_set_mode pop
-    "list" { }list "obj=prop" _argparse_add_mode pop
-    "append" { "force" }list "obj=prop:val" _argparse_add_mode pop
-    "delete" { "force" }list "obj=prop:pos" _argparse_add_mode pop
+    var _opts var _obj
+    _argparse::init pop
+    "list" _argparse::set_mode pop
+    "list" { }list "obj=prop" _argparse::add_mode pop
+
+    "append" { "force" }list "obj=prop:val" _argparse::add_mode pop
+
+
+    "delete" { "force" }list "obj=prop:pos" _argparse::add_mode pop
+
     "insert" { "force" }list "obj=prop:pos:val"
-    _argparse_add_mode pop
+    _argparse::add_mode pop
     "replace" { "force" }list "obj=prop:pos:val"
-    _argparse_add_mode pop
-    "verbose" _argparse_add_flag pop
-    "verb" _argparse_add_flag pop
-    _arg @ _argparse_parse
-    dup _opts ! not if 0 exit then
+    _argparse::add_mode pop
+    "verbose" _argparse::add_flag pop
+    _arg @ _argparse::parse
+    dup _opts ! pop
+    _opts @ not if 0 exit then
     _opts @ "obj" [] not _opts @ "prop" [] not or if
-        _argparse_show_usage exit
+        _argparse::show_usage pop
+        0 exit
     then
     _opts @ "obj" [] match
-    dup _opts @ "obj" ->[] _opts ! pop
-    0 begin pop (switch)
-        _opts @ "obj" []
-        dup #-1 dbcmp if
-            "I don't see that here!" me @ swap notify 0 exit break
+    dup #-1 dbcmp if me @ "I don't see that here!" notify then
+    dup #-2 dbcmp if me @ "I don't know which one you mean!" notify then
+    dup #-3 dbcmp if pop me @ getlink then
+    dup ok? if
+        me @ over controls not if
+            pop #-1 me @ "Permission denied." notify
         then
-        dup #-2 dbcmp if
-            "I don't know which object you mean!" me @ swap notify 0 exit break
-        then
-        dup #-3 dbcmp if
-            me @ getlinks_array 0 []
-            dup _opts @ "obj" ->[] _opts ! pop break
-        then
-        break
-    repeat pop
+    then
+    dup _obj ! pop
+    _obj @ 0 < if 0 exit then
     _opts @ "verbose" [] if
         { "Mode = " _opts @ "mode" [] }list array_interpret
         me @ swap notify 0 pop
@@ -345,45 +379,23 @@ lvar _argparse_remainder
     0 begin pop (switch)
         _opts @ "mode" []
         dup "list" stringcmp not if
-            _opts @ "obj" [] _opts @ "prop" [] _handle_mode_list pop break
+            _obj @ _opts @ "prop" [] _handle_mode_list pop break
         then
         dup "append" stringcmp not if
-            _opts @ "val" [] not if _argparse_show_usage exit then
-            _opts @ "force" [] "append a line to the list" _verify if
-                _opts @ "obj" [] _opts @ "prop" [] _opts @ "val" []
-                _handle_mode_append pop
-            then break
+            _obj @ _opts @ "prop" [] _opts @ "val" [] _opts @ "force" []
+            _handle_mode_append pop break
         then
         dup "delete" stringcmp not if
-            _opts @ "pos" [] atoi
-            dup _opts @ "pos" ->[] _opts ! pop
-            _opts @ "pos" [] not if _argparse_show_usage exit then
-            _opts @ "force" [] "delete a line from the list" _verify if
-                _opts @ "obj" [] _opts @ "prop" [] _opts @ "pos" []
-                _handle_mode_del pop
-            then break
+            _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "force" []
+            _handle_mode_delete pop break
         then
         dup "insert" stringcmp not if
-            _opts @ "pos" [] atoi
-            dup _opts @ "pos" ->[] _opts ! pop
-            _opts @ "pos" [] not _opts @ "val" [] not or if
-                _argparse_show_usage exit
-            then
-            _opts @ "force" [] "insert a line into the list" _verify if
-                _opts @ "obj" [] _opts @ "prop" [] _opts @ "pos" []
-                _opts @ "val" [] _handle_mode_insert pop
-            then break
+            _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "val" []
+            _opts @ "force" [] _handle_mode_insert pop break
         then
         dup "replace" stringcmp not if
-            _opts @ "pos" [] atoi
-            dup _opts @ "pos" ->[] _opts ! pop
-            _opts @ "pos" [] not _opts @ "val" [] not or if
-                _argparse_show_usage exit
-            then
-            _opts @ "force" [] "replace a line in the list" _verify if
-                _opts @ "obj" [] _opts @ "prop" [] _opts @ "pos" []
-                _opts @ "val" [] _handle_mode_replace pop
-            then break
+            _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "val" []
+            _opts @ "force" [] _handle_mode_replace pop break
         then
         break
     repeat pop
@@ -391,8 +403,9 @@ lvar _argparse_remainder
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !
-    "" _argparse_mode ! { }list _argparse_modes !
-    { }dict _argparse_flags ! { }dict _argparse_posargs !
-    { "" "remainder" }dict _argparse_remainder !
+    "" _argparse::current_mode ! { }list _argparse::modes_list !
+    { }dict _argparse::flags_map !
+    { }dict _argparse::posargs_map !
+    { "" "remainder" }dict _argparse::remainder_map !
     _main
 ;

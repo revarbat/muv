@@ -31,7 +31,7 @@ func handle_mode_list(obj, prop) {
 
 func handle_mode_append(obj, prop, val, force) {
     if (!val) {
-        argparse_show_usage();
+        argparse::show_usage();
         return;
     }
     if (verify(force, "append a line to the list")) {
@@ -47,7 +47,7 @@ func handle_mode_append(obj, prop, val, force) {
 func handle_mode_delete(obj, prop, pos, force) {
     pos = str_to_int(pos);
     if (!pos) {
-        argparse_show_usage();
+        argparse::show_usage();
         return;
     }
     if (verify(force, "delete a line from the list")) {
@@ -63,7 +63,7 @@ func handle_mode_delete(obj, prop, pos, force) {
 func handle_mode_insert(obj, prop, pos, val, force) {
     pos = str_to_int(pos);
     if (!pos || !val) {
-        argparse_show_usage();
+        argparse::show_usage();
         return;
     }
     if (verify(force, "insert a line into the list")) {
@@ -79,7 +79,7 @@ func handle_mode_insert(obj, prop, pos, val, force) {
 func handle_mode_replace(obj, prop, pos, val, force) {
     pos = str_to_int(pos);
     if (!pos || !val) {
-        argparse_show_usage();
+        argparse::show_usage();
         return;
     }
     if (verify(force, "replace a line in the list")) {
@@ -94,21 +94,21 @@ func handle_mode_replace(obj, prop, pos, val, force) {
 
 
 func main(arg) {
-    argparse_init();
+    argparse::init();
 
-    argparse_set_mode("list");
-    argparse_add_mode("list",    [],        "obj=prop");
-    argparse_add_mode("append",  ["force"], "obj=prop:val");
-    argparse_add_mode("delete",  ["force"], "obj=prop:pos");
-    argparse_add_mode("insert",  ["force"], "obj=prop:pos:val");
-    argparse_add_mode("replace", ["force"], "obj=prop:pos:val");
-    argparse_add_flag("verbose");
+    argparse::set_mode("list");
+    argparse::add_mode("list",    [],        "obj=prop");
+    argparse::add_mode("append",  ["force"], "obj=prop:val");
+    argparse::add_mode("delete",  ["force"], "obj=prop:pos");
+    argparse::add_mode("insert",  ["force"], "obj=prop:pos:val");
+    argparse::add_mode("replace", ["force"], "obj=prop:pos:val");
+    argparse::add_flag("verbose");
 
-    var opts = argparse_parse(arg);
+    var opts = argparse::parse(arg);
     if (!opts) return;
 
     if (!opts.obj || !opts.prop) {
-        argparse_show_usage();
+        argparse::show_usage();
         return;
     }
 
