@@ -657,6 +657,39 @@ If you need to throw your own custom exception, you can do it like:
     throw("MyError")
 
 
+Namespaces
+----------
+
+If you declare global variables and function within a namespace block, then
+those variables and functions become part of that namespace:
+
+    namespace math {
+        const pi = 3.14159;
+    }
+
+Will define the constant `math::pi`.  To refer to that variable, you will
+need to either use the `math::` prefix, or specify that you want to use that
+namespace like this:
+
+    using namespace math;
+
+Here's more examples:
+
+    namespace math {
+        const pi = 3.14159;
+        func rad2deg(x) {
+            return x*180.0/pi;
+        }
+    }
+    func thirdpi(arg) {
+        return math::rad2deg(math::pi/3.0);
+    }
+    using namespace math;
+    func halfpi(arg) {
+        return rad2deg(pi/2.0);
+    }
+
+
 MUF Interaction
 ---------------
 

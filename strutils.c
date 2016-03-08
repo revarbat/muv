@@ -251,18 +251,30 @@ wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const c
 
 void getset_free(struct gettersetter *x)
 {
-    free((char*)x->get);
-    free((char*)x->set);
-    free((char*)x->del);
-    free((char*)x->call);
-    free((char*)x->oper_pre);
-    free((char*)x->oper_post);
-    x->get = NULL;
-    x->set = NULL;
-    x->del = NULL;
-    x->call = NULL;
-    x->oper_pre = NULL;
-    x->oper_post = NULL;
+    if (x->get) {
+        free((char*)x->get);
+        x->get = NULL;
+    }
+    if (x->set) {
+        free((char*)x->set);
+        x->set = NULL;
+    }
+    if (x->del) {
+        free((char*)x->del);
+        x->del = NULL;
+    }
+    if (x->call) {
+        free((char*)x->call);
+        x->call = NULL;
+    }
+    if (x->oper_pre) {
+        free((char*)x->oper_pre);
+        x->oper_pre = NULL;
+    }
+    if (x->oper_post) {
+        free((char*)x->oper_post);
+        x->oper_post = NULL;
+    }
 }
 
 

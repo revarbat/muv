@@ -13,6 +13,7 @@ void strlist_clear(struct strlist *l);
 void strlist_add(struct strlist *l, const char *s);
 void strlist_pop(struct strlist *l);
 int strlist_find(struct strlist *l, const char *s);
+const char *strlist_top(struct strlist *l);
 char *strlist_join(struct strlist *l, const char *s, int start, int end);
 char *strlist_wrap(struct strlist *l, int start, int end);
 void strlist_reverse(struct strlist *l);

@@ -21,6 +21,8 @@
 
 struct strlist inits_list;
 struct strlist using_list;
+struct strlist namespaces_active;
+struct strlist namespace_list;
 struct funclist funcs_list;
 struct kvmap included_files;
 
@@ -85,7 +87,7 @@ int bookmark_pop();
 %token <prim> DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR CONST
 %token <keyval> DECLARED_CONST DECLARED_VAR
-%token <token> INCLUDE UNARY
+%token <token> INCLUDE UNARY NAMESPACE
 %token <token> IF ELSE UNLESS
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
@@ -112,11 +114,11 @@ int bookmark_pop();
 %right UNARY NOT BITNOT
 %left '[' ']' '(' ')' INSERT DOT
 
-%type <str> globalstatement funcdef proposed_funcname
-%type <str> good_proposed_funcname bad_proposed_funcname
+%type <str> globalstatement ns_ident
+%type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
 %type <str> proposed_varname good_proposed_varname bad_proposed_varname
-%type <str> externdef simple_statement statement statements paren_expr
-%type <str> compr_loop compr_cond lvardef subscript
+%type <str> simple_statement statement statements paren_expr
+%type <str> compr_loop compr_cond subscript
 %type <str> function_call expr attribute settable
 %type <str> using_clause case_clause case_clauses default_clause
 %type <list> arglist arglist_or_null dictlist argvarlist
@@ -130,12 +132,29 @@ int bookmark_pop();
 
 program: /* nothing */ { }
     | program globalstatement { if (outf) fprintf(outf, "%s", $2);  free($2); }
-    | program funcdef { if (outf) fprintf(outf, "%s", $2);  free($2); }
-    | program externdef { }
+    | program nsdecl '{' program '}' {
+            strlist_pop(&namespace_list);
+        }
+    ;
+
+nsdecl: NAMESPACE ns_ident {
+            char full[MAX_IDENT_LEN];
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                snprintf(full, sizeof(full), "%s::%s", ns, $2);
+            } else {
+                strcpy(full, $2);
+            }
+            strlist_add(&namespace_list, full);
+        }
     ;
 
 globalstatement:
-      VAR lvardef ';' { $$ = savefmt("%s\n", $2); free($2); }
+      USING NAMESPACE ns_ident ';' {
+            strlist_add(&namespaces_active, $3);
+            $$ = savestring("");
+            free($3);
+        }
     | CONST proposed_varname ASGN expr ';' {
             $$ = savestring("");
             kvmap_add(&global_consts, $2, $4);
@@ -148,60 +167,39 @@ globalstatement:
             free($2);
         }
     | MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
-    ;
-
-
-lvardef: proposed_varname {
-            char *vname = savefmt("%s%s", VAR_PREFIX, $1);
-            $$ = savefmt("lvar %s", vname);
-            kvmap_add(&global_vars, $1, vname);
+    | VAR proposed_varname ';' {
+            char *vname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+            } else {
+                vname = savefmt("%s%s", VAR_PREFIX, $2);
+            }
+            $$ = savefmt("lvar %s\n", vname);
+            kvmap_add(&global_vars, $2, vname);
             free(vname);
-            free($1);
+            free($2);
         }
-    | proposed_varname ASGN expr {
-            char *vname = savefmt("%s%s", VAR_PREFIX, $1);
-            $$ = savefmt("lvar %s", vname);
-            kvmap_add(&global_vars, $1, vname);
-            char *init = savefmt("%s %s !", $3, vname);
+    | VAR proposed_varname ASGN expr ';' {
+            char *vname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+            } else {
+                vname = savefmt("%s%s", VAR_PREFIX, $2);
+            }
+            $$ = savefmt("lvar %s\n", vname);
+            kvmap_add(&global_vars, $2, vname);
+            char *init = savefmt("%s %s !", $4, vname);
             strlist_add(&inits_list, init);
             free(init);
             free(vname);
-            free($1);
-            free($3);
+            free($2);
+            free($4);
         }
-    ;
-
-
-funcdef: FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
-        /* Mid-rule action to make sure function is declared
-         * before statements, to allow possible recursion. */
-        char *code = savefmt("%s%s", FUNC_PREFIX, $2);
-        funclist_add(&funcs_list, $2, code, $4.count - ($5?1:0), 1, $5);
-        free(code);
-    } '{' statements '}' {
-        char *body = indent($9);
-        char *vars = strlist_join(&$4, " ", 0, -1);
-        char *decls = strlist_wrap(&vardecl_list, 0, -1);
-        char *idecls = indent(decls);
-        if (*idecls) {
-            idecls = appendstr(idecls, "\n");
-        }
-        free(decls);
-        $$ = savefmt(": %s%s[ %s -- ret ]\n%s%s\n    0\n;\n", FUNC_PREFIX, $2, vars, idecls, body);
-        kvmap_clear(&function_vars);
-        strlist_clear(&vardecl_list);
-        kvmap_clear(&function_consts);
-        free(idecls);
-        free(vars);
-        free(body);
-        free($2);
-        strlist_free(&$4);
-        free($9);
-    } ;
-
-externdef:
-      EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
+    | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ';' {
             funclist_add(&funcs_list, $3, $3, $5.count - ($6?1:0), $2, $6);
+            $$ = savestring("");
             free($3);
             strlist_free(&$5);
             kvmap_clear(&function_vars);
@@ -209,12 +207,63 @@ externdef:
         }
     | EXTERN ret_count_type proposed_funcname '(' argvarlist opt_varargs ')' ASGN STR ';' {
             funclist_add(&funcs_list, $3, $9, $5.count - ($6?1:0), $2, $6);
+            $$ = savestring("");
             free($3);
             strlist_free(&$5);
             free($9);
             kvmap_clear(&function_vars);
             strlist_clear(&vardecl_list);
         }
+    | FUNC proposed_funcname '(' argvarlist opt_varargs ')' {
+            /* Mid-rule action to make sure function is declared
+             * before statements, to allow possible recursion. */
+            char *fname;
+            char *code;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                fname = savefmt("%s::%s", ns, $2);
+                code = savefmt("%s%s::%s", FUNC_PREFIX, ns, $2);
+            } else {
+                fname = savestring($2);
+                code = savefmt("%s%s", FUNC_PREFIX, $2);
+            }
+            funclist_add(&funcs_list, fname, code, $4.count - ($5?1:0), 1, $5);
+            free(fname);
+            free(code);
+        } '{' statements '}' {
+            char *fname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                fname = savefmt("%s%s::%s", FUNC_PREFIX, ns, $2);
+            } else {
+                fname = savefmt("%s%s", FUNC_PREFIX, $2);
+            }
+            char *body = indent($9);
+            char *vars = strlist_join(&$4, " ", 0, -1);
+            char *decls = strlist_wrap(&vardecl_list, 0, -1);
+            char *idecls = indent(decls);
+            if (*idecls) {
+                idecls = appendstr(idecls, "\n");
+            }
+            free(decls);
+            $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n    0\n;\n", fname, vars, idecls, body);
+            kvmap_clear(&function_vars);
+            strlist_clear(&vardecl_list);
+            kvmap_clear(&function_consts);
+            free(idecls);
+            free(vars);
+            free(body);
+            free(fname);
+            free($2);
+            strlist_free(&$4);
+            free($9);
+        }
+    ;
+
+ns_ident: IDENT { $$ = savestring($1); }
+    | DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
+    | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
+    | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
 bad_proposed_funcname:
@@ -982,6 +1031,7 @@ lookup(char *s, int *bval)
         {"include",   INCLUDE,   -1},
         {"muf",       MUF,       -1},
         {"multiple",  MULTIPLE,  -1},
+        {"namespace", NAMESPACE, -1},
         {"push",      PUSH,      -1},
         {"return",    RETURN,    -1},
         {"single",    SINGLE,    -1},
@@ -1017,6 +1067,63 @@ lookup(char *s, int *bval)
     return(-1);
 }
 
+
+const char *
+lookup_namespaced_keyval(struct kvmap *m, const char *name)
+{
+    char full[MAX_IDENT_LEN];
+    const char *ns;
+    const char *cp;
+    int i;
+    for (i = namespaces_active.count; i-->0; ) {
+        ns = namespaces_active.list[i];
+        snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = kvmap_get(m, full);
+        if (cp) {
+            return cp;
+        }
+    }
+    for (i = namespace_list.count; i-->0; ) {
+        ns = namespace_list.list[i];
+        snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = kvmap_get(m, full);
+        if (cp) {
+            return cp;
+        }
+    }
+    snprintf(full, sizeof(full), "%s", name);
+    cp = kvmap_get(m, full);
+    return cp;
+}
+
+
+struct funcinfo_t *
+lookup_namespaced_func(struct funclist *l, const char *name)
+{
+    char full[MAX_IDENT_LEN];
+    struct funcinfo_t *cp;
+    const char *ns;
+    int i;
+    for (i = namespaces_active.count; i-->0; ) {
+        ns = namespaces_active.list[i];
+        snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = funclist_find(l, full);
+        if (cp) {
+            return cp;
+        }
+    }
+    for (i = namespace_list.count; i-->0; ) {
+        ns = namespace_list.list[i];
+        snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = funclist_find(l, full);
+        if (cp) {
+            return cp;
+        }
+    }
+    snprintf(full, sizeof(full), "%s", name);
+    cp = funclist_find(l, full);
+    return cp;
+}
 
 
 int
@@ -1166,7 +1273,23 @@ yylex()
         int bltin;
         const char *cp;
 
-        while ((c = fgetc(yyin)) != EOF && (isalnum(c) || c == '_' || c == '?')) {
+        for (;;) {
+            c = fgetc(yyin);
+            if (c == EOF) {
+                break;
+            }
+            if (c == ':') {
+                c = fgetc(yyin);
+                if (c == ':') {
+                    *p++ = c;
+                    cnt++;
+                } else {
+                    (void)ungetc(c, yyin);
+                    break;
+                }
+            } else if (!isalnum(c) && c != '_' && c != '?') {
+                break;
+            }
             if (++cnt + 1 >= MAX_IDENT_LEN) {
                 yyerror("Identifier too long.");
             }
@@ -1189,7 +1312,7 @@ yylex()
             yylval.keyval.val = savestring(cp);
             return DECLARED_VAR;
         }
-        cp = kvmap_get(&global_vars, in);
+        cp = lookup_namespaced_keyval(&global_vars, in);
         if (cp) {
             yylval.keyval.key = savestring(in);
             yylval.keyval.val = savestring(cp);
@@ -1197,7 +1320,7 @@ yylex()
         }
 
         /* Declared functions should override primitives. */
-        pinfo = funclist_find(&funcs_list, in);
+        pinfo = lookup_namespaced_func(&funcs_list, in);
         if (pinfo) {
             yylval.prim = *pinfo;
             return DECLARED_FUNC;
@@ -1212,7 +1335,7 @@ yylex()
         }
 
         /* global constants */
-        cp = kvmap_get(&global_consts, in);
+        cp = lookup_namespaced_keyval(&global_consts, in);
         if (cp) {
             yylval.keyval.key = savestring(in);
             yylval.keyval.val = savestring(cp);
@@ -1276,42 +1399,23 @@ yylex()
     }
 
     switch(c) {
-        case '.':
-            return DOT;
-
-        case '<':
+        case '!':
             c = fgetc(yyin);
-            if (c == '<') {
-                c = fgetc(yyin);
-                if (c == '=') {
-                    return BITLEFTASGN;
-                } else {
-                    (void)ungetc(c,yyin);
-                }
-                return BITLEFT;
-            } else if (c == '=') {
-                return LTE;
+            if (c == '=') {
+                return NEQ;
             } else {
                 (void)ungetc(c,yyin);
             }
-            return LT;
+            return NOT;
 
-        case '>':
+        case '%':
             c = fgetc(yyin);
-            if (c == '>') {
-                c = fgetc(yyin);
-                if (c == '=') {
-                    return BITRIGHTASGN;
-                } else {
-                    (void)ungetc(c,yyin);
-                }
-                return BITRIGHT;
-            } else if (c == '=') {
-                return GTE;
+            if (c == '=') {
+                return MODASGN;
             } else {
                 (void)ungetc(c,yyin);
             }
-            return GT;
+            return MOD;
 
         case '&':
             c = fgetc(yyin);
@@ -1324,27 +1428,14 @@ yylex()
             }
             return BITAND;
 
-        case '|':
+        case '*':
             c = fgetc(yyin);
-            if (c == '|') {
-                return OR;
-            } else if (c == '=') {
-                return BITORASGN;
+            if (c == '=') {
+                return MULTASGN;
             } else {
                 (void)ungetc(c,yyin);
             }
-            return BITOR;
-
-        case '^':
-            c = fgetc(yyin);
-            if (c == '^') {
-                return XOR;
-            } else if (c == '=') {
-                return BITXORASGN;
-            } else {
-                (void)ungetc(c,yyin);
-            }
-            return BITXOR;
+            return MULT;
 
         case '+':
             c = fgetc(yyin);
@@ -1368,14 +1459,8 @@ yylex()
             }
             return MINUS;
 
-        case '*':
-            c = fgetc(yyin);
-            if (c == '=') {
-                return MULTASGN;
-            } else {
-                (void)ungetc(c,yyin);
-            }
-            return MULT;
+        case '.':
+            return DOT;
 
         case '/':
             c = fgetc(yyin);
@@ -1386,17 +1471,22 @@ yylex()
             }
             return DIV;
 
-        case '%':
+        case '<':
             c = fgetc(yyin);
-            if (c == '=') {
-                return MODASGN;
+            if (c == '<') {
+                c = fgetc(yyin);
+                if (c == '=') {
+                    return BITLEFTASGN;
+                } else {
+                    (void)ungetc(c,yyin);
+                }
+                return BITLEFT;
+            } else if (c == '=') {
+                return LTE;
             } else {
                 (void)ungetc(c,yyin);
             }
-            return MOD;
-
-        case '~':
-            return BITNOT;
+            return LT;
 
         case '=':
             c = fgetc(yyin);
@@ -1409,14 +1499,22 @@ yylex()
             }
             return ASGN;
 
-        case '!':
+        case '>':
             c = fgetc(yyin);
-            if (c == '=') {
-                return NEQ;
+            if (c == '>') {
+                c = fgetc(yyin);
+                if (c == '=') {
+                    return BITRIGHTASGN;
+                } else {
+                    (void)ungetc(c,yyin);
+                }
+                return BITRIGHT;
+            } else if (c == '=') {
+                return GTE;
             } else {
                 (void)ungetc(c,yyin);
             }
-            return NOT;
+            return GT;
 
         case '[':
             c = fgetc(yyin);
@@ -1426,6 +1524,31 @@ yylex()
                 (void)ungetc(c,yyin);
             }
             return '[';
+
+        case '^':
+            c = fgetc(yyin);
+            if (c == '^') {
+                return XOR;
+            } else if (c == '=') {
+                return BITXORASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return BITXOR;
+
+        case '|':
+            c = fgetc(yyin);
+            if (c == '|') {
+                return OR;
+            } else if (c == '=') {
+                return BITORASGN;
+            } else {
+                (void)ungetc(c,yyin);
+            }
+            return BITOR;
+
+        case '~':
+            return BITNOT;
     }
 
     /* punt */
@@ -1452,6 +1575,8 @@ parser_data_init()
     strlist_init(&inits_list);
     strlist_init(&using_list);
     strlist_init(&vardecl_list);
+    strlist_init(&namespaces_active);
+    strlist_init(&namespace_list);
     funclist_init(&funcs_list);
     kvmap_init(&global_consts);
     kvmap_init(&global_vars);
@@ -1484,6 +1609,8 @@ parser_data_free()
     kvmap_free(&global_vars);
     kvmap_free(&function_consts);
     kvmap_free(&function_vars);
+    strlist_free(&namespaces_active);
+    strlist_free(&namespace_list);
 }
 
 

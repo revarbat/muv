@@ -58,6 +58,16 @@ strlist_pop(struct strlist *l)
 }
 
 
+const char *
+strlist_top(struct strlist *l)
+{
+    if (l->count > 0) {
+        return l->list[l->count-1];
+    }
+    return NULL;
+}
+
+
 int
 strlist_find(struct strlist *l, const char *s)
 {
