@@ -27,6 +27,6 @@ func main(arg) {
     for (<a, b, c, d> in listgen()) {
         tell(cat(a, b));
     }
-    return [for (<a, b, c, d> in listgen()) if (str_cmp(a,b)) cat(c, d)];
+    return [for (<a, b, c, d> in listgen()) if (str::strcmp(a,b)) cat(c, d)];
 }
 

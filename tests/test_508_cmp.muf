@@ -2,30 +2,26 @@
 (   https://github.com/revarbat/muv )
 : _loopy[ _count -- ret ]
     var _i var _val var _key
-    1
-    dup _i ! pop
+    1 dup _i ! pop
     begin
         _i @ _count @ >
     not while
         _i @ intostr me @ swap notify 0 pop
         _i @ dup 1 + _i ! pop
     repeat
-    1
-    dup _i ! pop
+    1 dup _i ! pop
     begin
         _i @ _count @ <=
     while
         _i @ intostr me @ swap notify 0 pop
         _i @ dup 1 + _i ! pop
     repeat
-    1
-    dup _i ! pop
+    1 dup _i ! pop
     begin
         _i @ intostr me @ swap notify 0 pop
         _i @ dup 1 + _i ! pop _i @ _count @ <=
     not until
-    1
-    dup _i ! pop
+    1 dup _i ! pop
     begin
         _i @ intostr me @ swap notify 0 pop
         _i @ dup 1 + _i ! pop _i @ _count @ >

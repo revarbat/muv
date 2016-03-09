@@ -1,47 +1,56 @@
 //////////////////////////////////
 // str namespace for strings
 
+namespace str {
+
 extern single   str_int_to_str(x) = "intostr";
 extern single   str_int_to_char(x) = "itoc";
 extern single   str_char_to_int(x) = "ctoi";
-
 extern single   str_to_int(x) = "atoi";
 extern single   str_to_float(x) = "stod";
 
-extern single   str_len(x) = "strlen";
-extern single   str_cat(args*) = "array_interpret";
+extern single   intostr(x);
+extern single   itoc(x);
+extern single   ctoi(x);
+extern single   atoi(x);
+extern single   stod(x);
 
-extern single   str_instr(x,y) = "instr";
-extern single   str_rinstr(x,y) = "rinstr";
-extern single   str_instring(x,y) = "instring";
-extern single   str_rinstring(x,y) = "rinstring";
+extern single   strlen(x);
+extern single   strcat(args*) = "array_interpret";
 
-extern multiple str_cut(x,y) = "strcut";
-extern single   str_midstr(x,y,z) = "midstr";
-extern multiple str_split(x,y) = "split";
-extern multiple str_rsplit(x,y) = "rsplit";
-extern single   str_explode(x,y) = "explode_array";
+extern single   instr(x,y);
+extern single   rinstr(x,y);
+extern single   instring(x,y);
+extern single   rinstring(x,y);
 
-extern multiple str_tokensplit(x,y,z) = "tokensplit";
-extern single   str_match(x,y) = "smatch";
+extern multiple strcut(x,y);
+extern single   midstr(x,y,z);
+extern multiple split(x,y);
+extern multiple rsplit(x,y);
+extern single   explode(x,y) = "explode_array";
 
-extern single   str_cmp(x,y) = "strcmp";
-extern single   str_cmpi(x,y) = "stringcmp";
-extern single   str_cmpn(x,y,z) = "strncmp";
-extern single   str_startswith(x,y) = "stringpfx";
+extern multiple tokensplit(x,y,z);
+extern single   smatch(x,y);
 
-extern single   str_strip(x) = "strip";
-extern single   str_striplead(x) = "striplead";
-extern single   str_striptail(x) = "striptail";
+extern single   strcmp(x,y);
+extern single   strcmpi(x,y) = "stringcmp";
+extern single   strncmp(x,y,z);
+extern single   startswith(x,y) = "stringpfx";
+extern single   stringpfx(x,y);
 
-extern single   str_subst(x,y,z) = "subst";
-extern single   str_tolower(x) = "tolower";
-extern single   str_toupper(x) = "toupper";
-extern single   str_pronouns(x,y) = "pronoun_sub";
+extern single   strip(x);
+extern single   striplead(x);
+extern single   striptail(x);
 
-extern single   str_encrypt(x,y) = "strencrypt";
-extern single   str_decrypt(x,y) = "strdecrypt";
+extern single   subst(x,y,z);
+extern single   tolower(x);
+extern single   toupper(x);
+extern single   pronoun_sub(x,y);
 
-extern single   str_fmtstrings(x,y) = "array_fmtstrings";
+extern single   strencrypt(x,y);
+extern single   strdecrypt(x,y);
 
+extern single   fmtstrings(x,y) = "array_fmtstrings";
+
+}
 

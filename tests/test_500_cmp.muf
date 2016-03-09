@@ -6,37 +6,31 @@
     var _listeners
     _k @ pop
     _v @ pop
-    { 3 4 5 6 7 8 9 }list
-    dup _mylist ! pop
+    { 3 4 5 6 7 8 9 }list dup _mylist ! pop
     { }list _mylist @
     foreach _v ! pop
         _v @ _v @ * swap []<-
-    repeat
-    dup _squares ! pop
+    repeat dup _squares ! pop
     { }list _mylist @
     foreach _v ! pop
         _v @ 2 %
         if
             _v @ swap []<-
         then
-    repeat
-    dup _odds ! pop
+    repeat dup _odds ! pop
     { }list _mylist @
     foreach _v ! pop
         _v @ 2 %
         not if
             _v @ swap []<-
         then
-    repeat
-    dup _evens ! pop
-    { "a" 1 "b" 2 "c" 3 "d" 4 }dict
-    dup _mydict ! pop
+    repeat dup _evens ! pop
+    { "a" 1 "b" 2 "c" 3 "d" 4 }dict dup _mydict ! pop
     { }dict _mydict @
     foreach _v ! _k !
         _v @ _v @ * swap
         _k @ ->[]
-    repeat
-    dup _squarevals ! pop
+    repeat dup _squarevals ! pop
     { }dict _mydict @
     foreach _v ! _k !
         _k @ "b" strcmp 0 >
@@ -44,8 +38,7 @@
             _v @ _v @ * swap
             _k @ ->[]
         then
-    repeat
-    dup _foo ! pop
+    repeat dup _foo ! pop
     { }dict _mydict @
     foreach _v ! _k !
         _v @ 2 >
@@ -53,8 +46,7 @@
             _v @ _v @ * swap
             _k @ ->[]
         then
-    repeat
-    dup _bar ! pop
+    repeat dup _bar ! pop
     _obj @ pop
     { }list loc @ contents_array
     foreach _obj ! pop
@@ -62,8 +54,7 @@
         if
             _obj @ name swap []<-
         then
-    repeat
-    dup _listeners ! pop
+    repeat dup _listeners ! pop
     0
 ;
 : __start

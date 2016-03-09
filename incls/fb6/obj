@@ -1,86 +1,91 @@
 /////////////////////////////
 // obj namespace
 
-extern single   obj_dbref(x) = "dbref";
+namespace obj {
 
-extern single   obj_top() = "dbtop";
-extern single   obj_cmp(x,y) = "dbcmp";
-extern single   obj_nextowned(x) = "nextowned";
+extern single   dbref(x) = "dbref";
 
-extern single   obj_match(x) = "match";
-extern single   obj_rmatch(x,y) = "rmatch";
-extern single   obj_pmatch(x) = "pmatch";
-extern single   obj_part_pmatch(x) = "part_pmatch";
+extern single   dbtop() = "dbtop";
+extern single   dbcmp(x,y) = "dbcmp";
+extern single   nextowned(x) = "nextowned";
 
-extern single   obj_name_ok?(x) = "name-ok?";
-extern single   obj_pname_ok?(x) = "pname-ok?";
-extern single   obj_ext_name_ok?(x,y) = "ext-name-ok?";
+extern single   match(x) = "match";
+extern single   rmatch(x,y) = "rmatch";
+extern single   pmatch(x) = "pmatch";
+extern single   part_pmatch(x) = "part_pmatch";
 
-extern single   obj_unparse(x) = "unparseobj";
-extern multiple obj_timestamps(x) = "timestamps";
-extern single   obj_objmem(x) = "objmem";
-extern multiple obj_stats(x) = "stats";
+extern single   name_ok?(x) = "name-ok?";
+extern single   pname_ok?(x) = "pname-ok?";
+extern single   ext_name_ok?(x,y) = "ext-name-ok?";
 
-extern single   obj_controls(x,y) = "controls";
-extern single   obj_owner(x) = "owner";
-extern void     obj_setown(x,y) = "setown";
-extern void     obj_moveto(x,y) = "moveto";
-extern single   obj_location(x) = "location";
-extern single   obj_contents(x) = "contents";
-extern single   obj_contents_array(x) = "contents_array";
+extern single   unparse(x) = "unparseobj";
+extern multiple timestamps(x) = "timestamps";
+extern single   objmem(x) = "objmem";
+extern multiple stats(x) = "stats";
 
-extern single   obj_next(x) = "next";
-extern single   obj_exits(x) = "exits";
-extern single   obj_exits_array(x) = "exits_array";
-extern single   obj_getlinks(x) = "getlinks_array";
-extern void     obj_setlinks(x,y) = "setlinks_array";
-extern single   obj_entrances(x) = "entrances_array";
-extern single   obj_nextentrance(x,y) = "nextentrance";
-extern single   obj_findnext(w,x,y,z) = "findnext";
+extern single   controls(x,y) = "controls";
+extern single   owner(x) = "owner";
+extern void     setown(x,y) = "setown";
+extern void     moveto(x,y) = "moveto";
+extern single   location(x) = "location";
+extern single   first_contents(x) = "contents";
+extern single   contents_array(x) = "contents_array";
 
-extern single   obj_copyobj(x) = "copyobj";
-extern single   obj_copyplayer(x,y,z) = "copyplayer";
-extern void     obj_toadplayer(x,y) = "toadplayer";
-extern single   obj_newplayer(x,y) = "newplayer";
-extern single   obj_newroom(x,y) = "newroom";
-extern single   obj_newobject(x,y) = "newobject";
-extern single   obj_newexit(x,y) = "newexit";
-extern single   obj_newprogram(x,y) = "newprogram";
-extern void     obj_recycle(x) = "recycle";
+extern single   next(x) = "next";
+extern single   first_exit(x) = "exits";
+extern single   exits_array(x) = "exits_array";
+extern single   getlinks(x) = "getlinks_array";
+extern void     setlinks(x,y) = "setlinks_array";
+extern single   entrances(x) = "entrances_array";
+extern single   nextentrance(x,y) = "nextentrance";
+extern single   findnext(w,x,y,z) = "findnext";
 
-extern single   obj_pennies(x) = "pennies";
-extern void     obj_addpennies(x,y) = "addpennies";
-extern void     obj_movepennies(x,y,z) = "movepennies";
+extern single   copyobj(x) = "copyobj";
+extern single   copyplayer(x,y,z) = "copyplayer";
+extern void     toadplayer(x,y) = "toadplayer";
+extern single   newplayer(x,y) = "newplayer";
+extern single   newroom(x,y) = "newroom";
+extern single   newobject(x,y) = "newobject";
+extern single   newexit(x,y) = "newexit";
+extern single   newprogram(x,y) = "newprogram";
+extern void     recycle(x) = "recycle";
 
-extern single   obj_checkpassword(x,y) = "checkpassword";
-extern void     obj_newpassword(x,y) = "newpassword";
-extern void     obj_set(x,y) = "set";
-extern single   obj_flag?(x,y) = "flag?";
-extern single   obj_mlevel(x) = "mlevel";
+extern single   pennies(x) = "pennies";
+extern void     addpennies(x,y) = "addpennies";
+extern void     movepennies(x,y,z) = "movepennies";
 
-extern single   obj_ok?(x) = "ok?";
-extern single   obj_player?(x) = "player?";
-extern single   obj_room?(x) = "room?";
-extern single   obj_thing?(x) = "thing?";
-extern single   obj_exit?(x) = "exit?";
-extern single   obj_program?(x) = "program?";
+extern single   checkpassword(x,y) = "checkpassword";
+extern void     newpassword(x,y) = "newpassword";
+extern void     setflag(x,y) = "set";
+extern single   flag?(x,y) = "flag?";
+extern single   mlevel(x) = "mlevel";
 
-extern single   obj_desc(x) = "desc";
-extern single   obj_drop(x) = "drop";
-extern single   obj_fail(x) = "fail";
-extern single   obj_name(x) = "name";
-extern single   obj_odrop(x) = "odrop";
-extern single   obj_ofail(x) = "ofail";
-extern single   obj_osucc(x) = "osucc";
-extern void     obj_setdesc(x,y) = "setdesc";
-extern void     obj_setdrop(x,y) = "setdrop";
-extern void     obj_setfail(x,y) = "setfail";
-extern void     obj_setname(x,y) = "setname";
-extern void     obj_setodrop(x,y) = "setodrop";
-extern void     obj_setofail(x,y) = "setofail";
-extern void     obj_setosucc(x,y) = "setosucc";
-extern void     obj_setsucc(x,y) = "setsucc";
-extern single   obj_succ(x) = "succ";
-extern single   obj_truename(x) = "truename";
+extern single   ok?(x) = "ok?";
+extern single   player?(x) = "player?";
+extern single   room?(x) = "room?";
+extern single   thing?(x) = "thing?";
+extern single   exit?(x) = "exit?";
+extern single   program?(x) = "program?";
 
+extern single   name(x) = "name";
+extern single   truename(x) = "truename";
+extern void     setname(x,y) = "setname";
+
+extern single   desc(x) = "desc";
+extern single   succ(x) = "succ";
+extern single   fail(x) = "fail";
+extern single   drop(x) = "drop";
+extern single   osucc(x) = "osucc";
+extern single   ofail(x) = "ofail";
+extern single   odrop(x) = "odrop";
+
+extern void     setdesc(x,y) = "setdesc";
+extern void     setsucc(x,y) = "setsucc";
+extern void     setfail(x,y) = "setfail";
+extern void     setdrop(x,y) = "setdrop";
+extern void     setosucc(x,y) = "setosucc";
+extern void     setofail(x,y) = "setofail";
+extern void     setodrop(x,y) = "setodrop";
+
+}
 

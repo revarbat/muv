@@ -1,9 +1,7 @@
 ( Generated from test_041_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _sub[ _a _b -- ret ]
-    _b @
-    _a @ dup rot []<-
-    _b ! pop
+    _b @ _a @ dup rot []<- _b ! pop
     _b @ exit
     0
 ;

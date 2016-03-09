@@ -6,7 +6,7 @@
 
 char *savestring(const char *);
 char *savefmt(const char *fmt, ...);
-char *appendstr(char *s1, const char *s2);
+char *appendstr(char *s, ...);
 char *appendfmt(char *s, const char *fmt, ...);
 char *indent(const char *);
 char *format_muv_str(const char *);

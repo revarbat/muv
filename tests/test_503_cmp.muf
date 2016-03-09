@@ -14,8 +14,7 @@
 ;
 : _main[ _arg -- ret ]
     var _i
-    2
-    dup _i ! pop
+    2 dup _i ! pop
     0 begin pop (switch)
         _i @
         dup 1 = if

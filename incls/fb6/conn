@@ -1,15 +1,19 @@
 /////////////////////////////////
-// conn and descr namespace
+// conn Connections namespace
 
-extern single conn_awake?(x) = "awake?";
-extern single conn_boot(x) = "conboot";
-extern single conn_count() = "concount";
-extern single conn_dbref(x) = "condbref";
-extern single conn_descr(x) = "condescr";
-extern single conn_host(x) = "conhost";
-extern single conn_idle(x) = "conidle";
-extern void   conn_notify(x,y) = "connotify";
-extern single conn_online() = "online_array";
-extern single conn_time(x) = "contime";
-extern single conn_user(x) = "conuser";
+namespace conn {
+
+extern single awake?(x);
+extern single conboot(x);
+extern single concount();
+extern single condbref(x);
+extern single condescr(x);
+extern single conhost(x);
+extern single conidle(x);
+extern void   connotify(x,y);
+extern single online() = "online_array";
+extern single contime(x);
+extern single conuser(x);
+
+}
 

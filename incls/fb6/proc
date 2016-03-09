@@ -1,23 +1,26 @@
 ///////////////////////////////
 // proc namespace
 
-extern single proc_mode() = "mode";
-extern void   proc_setmode(x) = "setmode";
-extern void   proc_preempt() = "preempt";
-extern void   proc_foreground() = "foreground";
-extern void   proc_background() = "background";
-extern single proc_interp(x,y,z) = "interp";
-extern single proc_queue(x,y,z) = "queue";
-extern single proc_fork() = "fork";
-extern single proc_kill(x) = "kill";
-extern single proc_pid() = "pid";
-extern single proc_ispid?(x) = "ispid?";
-extern single proc_getpids(x) = "getpids";
-extern single proc_getpidinfo(x) = "getpidinfo";
-extern single proc_instances(x) = "instances";
+namespace proc {
 
-const PROC_PREEMPT = muf("pr_mode");
-const PROC_FOREGROUND = muf("fg_mode");
-const PROC_BACKGROUND = muf("bg_mode");
+extern single mode() = "mode";
+extern void   setmode(x) = "setmode";
+extern void   preempt() = "preempt";
+extern void   foreground() = "foreground";
+extern void   background() = "background";
+extern single interp(x,y,z) = "interp";
+extern single queue(x,y,z) = "queue";
+extern single fork() = "fork";
+extern single kill(x) = "kill";
+extern single pid() = "pid";
+extern single ispid?(x) = "ispid?";
+extern single getpids(x) = "getpids";
+extern single getpidinfo(x) = "getpidinfo";
+extern single instances(x) = "instances";
 
+const PREEMPT = muf("pr_mode");
+const FOREGROUND = muf("fg_mode");
+const BACKGROUND = muf("bg_mode");
+
+}
 

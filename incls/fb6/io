@@ -1,20 +1,24 @@
 ////////////////////////////////
 // io namespace
 
-extern void io_tell(x) = "me @ swap notify";
-extern void io_notify(x,y) = "notify";
-extern void io_notify_except(x,y,z) = "notify_except";
-extern void io_array_notify(x,y) = "array_notify";
-extern void io_notify_exclude(x,y,z) = "swap array_vals dup 2 + rotate notify_exclude";
+namespace io {
 
-extern void     io_user_log(x) = "user_log";
-extern single   io_read() = "read";
-extern multiple io_timed_read(x) = "tread";
-extern void     io_read_wants_blanks() = "read_wants_blanks";
+extern void     tell(x) = "me @ swap notify";
+extern void     notify(x,y);
+extern void     notify_except(x,y,z);
+extern void     array_notify(x,y);
+extern void     notify_exclude(x,y,z) = "swap array_vals dup 2 + rotate notify_exclude";
 
-extern single   io_ignoring?(x,y) = "ignoring?";
-extern void     io_ignore_add(x,y) = "ignore_add";
-extern void     io_ignore_del(x,y) = "ignore_del";
-extern single   io_ignore_list(x) = "array_get_ignorelist";
+extern void     user_log(x);
+extern single   read();
+extern multiple tread(x);
+extern multiple timed_read(x) = "tread";
+extern void     read_wants_blanks();
 
+extern single   ignoring?(x,y);
+extern void     ignore_add(x,y);
+extern void     ignore_del(x,y);
+extern single   ignore_list(x) = "array_get_ignorelist";
+
+}
 

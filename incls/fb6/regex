@@ -1,12 +1,12 @@
 ////////////////////////////
 // regex namespace
 
-extern multiple regex_match(x,y,z) = "regexp";
-extern single   regex_sub(w,x,y,z) = "regsub";
+extern multiple regex::match(x,y,z) = "regexp";
+extern single   regex::sub(w,x,y,z) = "regsub";
 
 // Server defined constants.
-const REGEX_ICASE = muf("reg_icase");
-const REGEX_ALL = muf("reg_all");
-const REGEX_EXTENDED = muf("reg_extended");
+const regex::ICASE = muf("reg_icase");
+const regex::ALL = muf("reg_all");
+const regex::EXTENDED = muf("reg_extended");
 
 

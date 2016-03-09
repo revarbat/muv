@@ -193,30 +193,30 @@ like `name` and `set` are renamed to `obj_name()` and `obj_set()`, leading to
 far less namespace polution.  The standard namespaced include files are as
 follows, in order of likely importance:
 
-File           | Prefix      | What it declares
----------------|-------------|-------------------------------------------------
-`fb6/stdlib`   |             | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
-`fb6/io`       | `io_`       | `notify` and `read` type primitives.
-`fb6/type`     | `type_`     | Type checking and conversion primitives.
-`fb6/str`      | `str_`      | String manipulation primitives.
-`fb6/ansi`     | `ansi_`     | ANSI color code related string primitives.
-`fb6/regex`    | `regex_`    | Regular expression primitives.
-`fb6/math`     | `math_`     | Floating point and integer math primitives.
-`fb6/array`    | `array_`    | Array/list/dictionary related primitives.
-`fb6/prop`     | `prop_`     | Primitives for reading and writing properties.
-`fb6/obj`      | `obj_`      | DB object related primitives.
-`fb6/time`     | `time_`     | Time based primitives.
-`fb6/lock`     | `lock_`     | Lock related primitives.
-`fb6/conn`     | `conn_`     | Connection based primitives.
-`fb6/descr`    | `descr_`    | Descriptor based connection primitives.
-`fb6/event`    | `event_`    | Event handling primitives.
-`fb6/mcp`      | `mcp_`      | MCP client-server communication protocol prims.
-`fb6/gui`      | `gui_`      | MCP-GUI related primitives and defines.
-`fb6/proc`     | `proc_`     | MUF process related primitives.
-`fb6/prog`     | `prog_`     | Program calling, editing, and compiling.
-`fb6/sys`      | `sys_`      | System related primitives.
-`fb6/debug`    | `debug_`    | Debugging related primitives.
-`fb6/argparse` | `argparse_` | Cmd-line argument parsing.
+File           | Prefix       | What it declares
+---------------|--------------|-------------------------------------------------
+`fb6/stdlib`   |              | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
+`fb6/io`       | `io::`       | `notify` and `read` type primitives.
+`fb6/type`     | `type::`     | Type checking and conversion primitives.
+`fb6/str`      | `str::`      | String manipulation primitives.
+`fb6/ansi`     | `ansi::`     | ANSI color code related string primitives.
+`fb6/regex`    | `regex::`    | Regular expression primitives.
+`fb6/math`     | `math::`     | Floating point and integer math primitives.
+`fb6/array`    | `array::`    | Array/list/dictionary related primitives.
+`fb6/prop`     | `prop::`     | Primitives for reading and writing properties.
+`fb6/obj`      | `obj::`      | DB object related primitives.
+`fb6/time`     | `time::`     | Time based primitives.
+`fb6/lock`     | `lock::`     | Lock related primitives.
+`fb6/conn`     | `conn::`     | Connection based primitives.
+`fb6/descr`    | `descr::`    | Descriptor based connection primitives.
+`fb6/event`    | `event::`    | Event handling primitives.
+`fb6/mcp`      | `mcp::`      | MCP client-server communication protocol prims.
+`fb6/gui`      | `gui::`      | MCP-GUI related primitives and defines.
+`fb6/proc`     | `proc::`     | MUF process related primitives.
+`fb6/prog`     | `prog::`     | Program calling, editing, and compiling.
+`fb6/sys`      | `sys::`      | System related primitives.
+`fb6/debug`    | `debug::`    | Debugging related primitives.
+`fb6/argparse` | `argparse::` | Cmd-line argument parsing.
 
 WARNING: You should either use `include "!fb6/prims";` *or* include one or
 more of the namespaced files, but *not both*.  You will get compilation errors
@@ -681,11 +681,11 @@ Here's more examples:
             return x*180.0/pi;
         }
     }
-    func thirdpi(arg) {
+    func thirdpi() {
         return math::rad2deg(math::pi/3.0);
     }
     using namespace math;
-    func halfpi(arg) {
+    func halfpi() {
         return rad2deg(pi/2.0);
     }
 

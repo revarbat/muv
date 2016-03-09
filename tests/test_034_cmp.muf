@@ -2,8 +2,7 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _a
-    { { 42 13 }list { 13 7 }list { 7 42 }list }list
-    dup _a ! pop
+    { { 42 13 }list { 13 7 }list { 7 42 }list }list dup _a ! pop
     _a @ { 1 0 }list array_nested_get exit
     0
 ;

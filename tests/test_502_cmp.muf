@@ -2,8 +2,7 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _foo
-    "This\ris\ra\rtest"
-    dup _foo ! pop
+    "This\ris\ra\rtest" dup _foo ! pop
     {
         _foo @ "Hello \\World!\r" "\[[1;" "Hello, \"" _arg @ "\"!"
         "\[[0;\r" "Hello All!"

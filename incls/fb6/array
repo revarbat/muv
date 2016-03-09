@@ -1,52 +1,55 @@
 //////////////////////////////////
 // array namespace
 
-extern single   array_make(args*) = "";
-extern single   array_make_dict(args*) = "{ swap array_vals pop }dict";
+namespace array {
 
-extern multiple array_first(x) = "array_first";
-extern multiple array_last(x) = "array_last";
-extern multiple array_next(x,y) = "array_next";
-extern multiple array_prev(x,y) = "array_prev";
+extern single   make(args*) = "";
+extern single   make_dict(args*) = "{ swap array_vals pop }dict";
 
-extern single   array_getitem(x,y) = "array_getitem";
-extern single   array_setitem(x,y,z) = "array_setitem";
-extern single   array_insertitem(x,y,z) = "array_insertitem";
-extern single   array_appenditem(x,y) = "array_appenditem";
-extern single   array_delitem(x,y) = "array_delitem";
+extern multiple first(x) = "array_first";
+extern multiple last(x) = "array_last";
+extern multiple next(x,y) = "array_next";
+extern multiple prev(x,y) = "array_prev";
 
-extern single   array_getrange(x,y) = "array_getrange";
-extern single   array_setrange(x,y,z) = "array_setrange";
-extern single   array_insertrange(x,y,z) = "array_insertrange";
-extern single   array_delrange(x,y,z) = "array_delrange";
+extern single   getitem(x,y) = "array_getitem";
+extern single   setitem(x,y,z) = "array_setitem";
+extern single   insertitem(x,y,z) = "array_insertitem";
+extern single   appenditem(x,y) = "array_appenditem";
+extern single   delitem(x,y) = "array_delitem";
 
-extern single   array_union(x,y) = "array_union";
-extern single   array_diff(x,y) = "array_diff";
-extern single   array_intersect(x,y) = "array_intersect";
-extern single   array_nunion(x) = "array_nunion";
-extern single   array_ndiff(x) = "array_ndiff";
-extern single   array_nintersect(x) = "array_nintersect";
+extern single   getrange(x,y) = "array_getrange";
+extern single   setrange(x,y,z) = "array_setrange";
+extern single   insertrange(x,y,z) = "array_insertrange";
+extern single   delrange(x,y,z) = "array_delrange";
 
-extern single   array_compare(x,y) = "array_compare";
-extern single   array_extract(x,y) = "array_extract";
-extern single   array_excludeval(x,y) = "array_excludeval";
-extern single   array_findval(x,y) = "array_findval";
+extern single   union(x,y) = "array_union";
+extern single   diff(x,y) = "array_diff";
+extern single   intersect(x,y) = "array_intersect";
+extern single   nunion(x) = "array_nunion";
+extern single   ndiff(x) = "array_ndiff";
+extern single   nintersect(x) = "array_nintersect";
 
-extern single   array_interpret(x) = "array_interpret";
-extern single   array_join(x,y) = "array_join";
+extern single   compare(x,y) = "array_compare";
+extern single   extract(x,y) = "array_extract";
+extern single   excludeval(x,y) = "array_excludeval";
+extern single   findval(x,y) = "array_findval";
 
-extern single   array_keys(x,y) = "array_keys array_make";
-extern single   array_vals(x,y) = "array_vals array_make";
-extern single   array_matchkey(x,y) = "array_matchkey";
-extern single   array_matchval(x,y) = "array_matchval";
+extern single   interpret(x) = "array_interpret";
+extern single   join(x,y) = "array_join";
 
-extern single   array_nested_get(x,y) = "array_nested_get";
-extern single   array_nested_set(x,y,z) = "array_nested_set";
-extern single   array_nested_del(x,y) = "array_nested_del";
+extern single   keys(x,y) = "array_keys array_make";
+extern single   vals(x,y) = "array_vals array_make";
+extern single   matchkey(x,y) = "array_matchkey";
+extern single   matchval(x,y) = "array_matchval";
 
-extern single   array_sort(x,y) = "array_sort";
-extern single   array_sort_indexed(x,y,z) = "array_sort_indexed";
-extern single   array_reverse(x) = "array_reverse";
-extern multiple array_cut(x,y) = "array_cut";
+extern single   nested_get(x,y) = "array_nested_get";
+extern single   nested_set(x,y,z) = "array_nested_set";
+extern single   nested_del(x,y) = "array_nested_del";
 
+extern single   sort(x,y) = "array_sort";
+extern single   sort_indexed(x,y,z) = "array_sort_indexed";
+extern single   reverse(x) = "array_reverse";
+extern multiple cut(x,y) = "array_cut";
+
+}
 

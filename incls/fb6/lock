@@ -1,12 +1,15 @@
 /////////////////////////////////
 // lock namespace
 
-extern single lock_locked?(x,y) = "locked?";
-extern single lock_parse(x) = "parselock";
-extern single lock_unparse(x) = "unparselock";
-extern single lock_pretty(x) = "prettylock";
-extern single lock_test(x,y) = "testlock";
-extern single lock_set(x,y) = "setlockstr";
-extern single lock_get(x) = "getlockstr";
+namespace lock {
 
+extern single locked?(x,y);
+extern single parselock(x);
+extern single unparselock(x);
+extern single prettylock(x);
+extern single testlock(x,y);
+extern single setlockstr(x,y);
+extern single getlockstr(x);
+
+}
 

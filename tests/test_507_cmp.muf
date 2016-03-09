@@ -6,17 +6,14 @@
 ;
 : _arraydemo[  -- ret ]
     var _myarr
-    { }list
-    dup _myarr ! pop
-    42
-    dup _myarr @ 23 ->[] _myarr ! pop
+    { }list dup _myarr ! pop
+    42 dup _myarr @ 23 ->[] _myarr ! pop
     _myarr @ 23 [] me @ swap notify 0 pop
     0
 ;
 : _first_word[ _thing -- ret ]
     var _words
-    { _thing @ " " split }list
-    dup _words ! pop
+    { _thing @ " " split }list dup _words ! pop
     _words @ 0 [] exit
     0
 ;
@@ -24,16 +21,12 @@
     var _newobj var _word var _newname
     _arg @ "" strcmp not if
         "Enter your submission here:" me @ swap notify 0 pop
-        read
-        dup _arg ! pop
+        read dup _arg ! pop
     then
-    #1981 copyobj
-    dup _newobj ! pop
-    _arg @ _first_word
-    dup _word ! pop
+    #1981 copyobj dup _newobj ! pop
+    _arg @ _first_word dup _word ! pop
     { me @ name "'s submission (" _word @ ")" }list
-    array_interpret
-    dup _newname ! pop
+    array_interpret dup _newname ! pop
     _newobj @ _newname @ setname 0 pop
     _newobj @ _arg @ setdesc 0 pop
     _newobj @ #1976 moveto 0 pop

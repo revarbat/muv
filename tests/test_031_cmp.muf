@@ -2,8 +2,7 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _a
-    42
-    dup _a ! pop
+    42 dup _a ! pop
     _a @ 13 + exit
     0
 ;

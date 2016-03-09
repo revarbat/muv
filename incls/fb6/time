@@ -1,13 +1,16 @@
 /////////////////////////////
 // time namespace
 
-extern multiple time_time() = "time";
-extern multiple time_date() = "date";
-extern single   time_systime() = "systime";
-extern single   time_systime_precise() = "systime_precise";
-extern single   time_gmtoffset() = "gmtoffset";
-extern multiple time_split(x) = "timesplit";
-extern single   time_fmt(x,y) = "timefmt";
-extern void     time_sleep(x) = "sleep";
+namespace time {
 
+extern multiple time();
+extern multiple date();
+extern single   systime();
+extern single   systime_precise();
+extern single   gmtoffset();
+extern multiple timesplit(x);
+extern single   timefmt(x,y);
+extern void     sleep(x);
+
+}
 

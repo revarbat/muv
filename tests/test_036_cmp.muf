@@ -2,10 +2,8 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _a
-    { }list
-    dup _a ! pop
-    "FOO"
-    dup _a @ "foo" ->[] _a ! pop
+    { }list dup _a ! pop
+    "FOO" dup _a @ "foo" ->[] _a ! pop
     _a @ "foo" [] exit
     0
 ;

@@ -1,10 +1,13 @@
 ////////////////////////////////////////////////
-// mcp and gui namespaces.
+// mcp namespaces.
 
-extern void   mcp_register(x,y,z) = "mcp_register";
-extern void   mcp_register_event(x,y,z) = "mcp_register_event";
-extern void   mcp_bind(x,y,z) = "mcp_bind";
-extern single mcp_supports(x,y) = "mcp_supports";
-extern void   mcp_send(w,x,y,z) = "mcp_send";
+namespace mcp {
 
+extern void   mcp_register(x,y,z);
+extern void   mcp_register_event(x,y,z);
+extern void   mcp_bind(x,y,z);
+extern single mcp_supports(x,y);
+extern void   mcp_send(w,x,y,z);
+
+}
 

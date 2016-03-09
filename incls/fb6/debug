@@ -1,8 +1,8 @@
 //////////////////////////
 // debug namespace
 
-extern void debug_on() = "debug_on";
-extern void debug_off() = "debug_off";
-extern void debug_line() = "debug_line";
-extern void debug_break() = "debugger_break";
+extern void debug::on() = "debug_on";
+extern void debug::off() = "debug_off";
+extern void debug::line() = "debug_line";
+extern void debug::break() = "debugger_break";
 

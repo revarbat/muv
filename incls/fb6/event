@@ -1,12 +1,16 @@
 //////////////////////////////
 // event namespace
 
-extern single   event_count() = "event_count";
-extern single   event_exists(x) = "event_exists";
-extern multiple event_wait() = "event_wait";
-extern multiple event_waitfor(x) = "event_waitfor";
-extern void     event_send(x,y,z) = "event_send";
-extern void     event_timer_start(x,y) = "timer_start";
-extern void     event_timer_stop(x) = "timer_stop";
-extern void     event_watchpid(x) = "watchpid";
+namespace event {
+
+extern single   count() = "event_count";
+extern single   exists(x) = "event_exists";
+extern multiple wait() = "event_wait";
+extern multiple waitfor(x) = "event_waitfor";
+extern void     send(x,y,z) = "event_send";
+extern void     timer_start(x,y);
+extern void     timer_stop(x);
+extern void     watchpid(x);
+
+}
 

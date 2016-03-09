@@ -17,20 +17,26 @@ savestring(const char *arg)
 
 
 char *
-appendstr(char *s1, const char *s2)
+appendstr(char *s, ...)
 {
-    size_t len1 = strlen(s1);
-    size_t len2 = strlen(s2);
-    s1 = (char*)realloc(s1, len1 + len2 + 2);
-    if (len1 != 0 && len2 != 0) {
-        if (lastlen(s1) + firstlen(s2) > 60) {
-            strcat(&s1[len1], "\n");
-        } else if (lastlen(s1) > 0 && firstlen(s2) > 0) {
-            strcat(&s1[len1], " ");
+    va_list aptr;
+    const char *p;
+    va_start(aptr, s);
+    while ((p = va_arg(aptr, const char*))) {
+        size_t len1 = strlen(s);
+        size_t len2 = strlen(p);
+        s = (char*)realloc(s, len1 + len2 + 2);
+        if (len1 != 0 && len2 != 0) {
+            if (lastlen(s) + firstlen(p) > 60) {
+                strcat(&s[len1], "\n");
+            } else if (lastlen(s) > 0 && firstlen(p) > 0) {
+                strcat(&s[len1], " ");
+            }
         }
+        strcat(&s[len1], p);
     }
-    strcat(&s1[len1], s2);
-    return s1;
+    va_end(aptr);
+    return s;
 }
 
 
@@ -80,7 +86,7 @@ appendfmt(char *s, const char *fmt, ...)
         va_end(aptr);
     }
 
-    s = appendstr(s, buf);
+    s = appendstr(s, buf, NULL);
     free(buf);
 
     return s;

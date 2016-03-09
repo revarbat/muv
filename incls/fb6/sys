@@ -1,11 +1,11 @@
 /////////////////////////
 // sys namespace
 
-extern single sys_parm(x) = "sysparm";
-extern single sys_parm_array(x) = "sysparm_array";
-extern void   sys_setparm(x,y) = "setsysparm";
+extern single sys::parm(x) = "sysparm";
+extern single sys::parm_array(x) = "sysparm_array";
+extern void   sys::setparm(x,y) = "setsysparm";
 
-extern void   sys_force(x,y) = "force";
-extern single sys_force_level() = "force_level";
+extern void   sys::force(x,y) = "force";
+extern single sys::force_level() = "force_level";
 
 

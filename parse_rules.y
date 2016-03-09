@@ -115,8 +115,8 @@ int bookmark_pop();
 %left '[' ']' '(' ')' INSERT DOT
 
 %type <str> globalstatement ns_ident
-%type <str> proposed_funcname good_proposed_funcname bad_proposed_funcname
-%type <str> proposed_varname good_proposed_varname bad_proposed_varname
+%type <str> proposed_funcname maybe_bad_funcname
+%type <str> proposed_varname maybe_bad_varname
 %type <str> simple_statement statement statements paren_expr
 %type <str> compr_loop compr_cond subscript
 %type <str> function_call expr attribute settable
@@ -150,15 +150,11 @@ nsdecl: NAMESPACE ns_ident {
     ;
 
 globalstatement:
-      USING NAMESPACE ns_ident ';' {
+      MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
+    | USING NAMESPACE ns_ident ';' {
             strlist_add(&namespaces_active, $3);
             $$ = savestring("");
             free($3);
-        }
-    | CONST proposed_varname ASGN expr ';' {
-            $$ = savestring("");
-            kvmap_add(&global_consts, $2, $4);
-            free($2); free($4);
         }
     | INCLUDE STR ';' {
             if (!bookmark_push($2))
@@ -166,31 +162,49 @@ globalstatement:
             $$ = savestring("");
             free($2);
         }
-    | MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
-    | VAR proposed_varname ';' {
+    | CONST proposed_varname ASGN expr ';' {
             char *vname;
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
-                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+                vname = savefmt("%s::%s", ns, $2);
             } else {
-                vname = savefmt("%s%s", VAR_PREFIX, $2);
+                vname = savestring($2);
             }
-            $$ = savefmt("lvar %s\n", vname);
-            kvmap_add(&global_vars, $2, vname);
+            $$ = savestring("");
+            kvmap_add(&global_consts, vname, $4);
+            free(vname);
+            free($2); free($4);
+        }
+    | VAR proposed_varname ';' {
+            char *vname;
+            char *code;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                vname = savefmt("%s::%s", ns, $2);
+                code = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+            } else {
+                vname = savestring($2);
+                code = savefmt("%s%s", VAR_PREFIX, $2);
+            }
+            $$ = savefmt("lvar %s\n", code);
+            kvmap_add(&global_vars, vname, code);
             free(vname);
             free($2);
         }
     | VAR proposed_varname ASGN expr ';' {
             char *vname;
+            char *code;
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
-                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+                vname = savefmt("%s::%s", ns, $2);
+                code = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
             } else {
-                vname = savefmt("%s%s", VAR_PREFIX, $2);
+                vname = savestring($2);
+                code = savefmt("%s%s", VAR_PREFIX, $2);
             }
-            $$ = savefmt("lvar %s\n", vname);
-            kvmap_add(&global_vars, $2, vname);
-            char *init = savefmt("%s %s !", $4, vname);
+            $$ = savefmt("lvar %s\n", code);
+            kvmap_add(&global_vars, vname, code);
+            char *init = savefmt("%s %s !", $4, code);
             strlist_add(&inits_list, init);
             free(init);
             free(vname);
@@ -259,7 +273,7 @@ globalstatement:
             char *decls = strlist_wrap(&vardecl_list, 0, -1);
             char *idecls = indent(decls);
             if (*idecls) {
-                idecls = appendstr(idecls, "\n");
+                idecls = appendstr(idecls, "\n", NULL);
             }
             free(decls);
             $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n    0\n;\n", fname, vars, idecls, body);
@@ -282,46 +296,73 @@ ns_ident: IDENT { $$ = savestring($1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
-bad_proposed_funcname:
+maybe_bad_funcname:
       DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
-good_proposed_funcname: IDENT { $$ = $1; }
+proposed_funcname: IDENT { $$ = $1; }
+    | maybe_bad_funcname {
+            char *vname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $1);
+            } else {
+                vname = savefmt("%s%s", VAR_PREFIX, $1);
+            }
+            if (
+                kvmap_get(&function_consts, $1) ||
+                kvmap_get(&function_vars, $1) ||
+                kvmap_get(&global_consts, vname) ||
+                kvmap_get(&global_vars, vname) ||
+                funclist_find(&funcs_list, vname)
+            ) {
+                char *err = savefmt("Indentifier '%s' already declared.", $1);
+                yyerror(err);
+                free(err);
+                YYERROR;
+            }
+            free(vname);
+            $$ = $1;
+        }
     ;
 
-proposed_funcname:
-      good_proposed_funcname { $$ = $1; }
-    | bad_proposed_funcname {
-        char *err = savefmt("Indentifier '%s' already declared.", $1);
-        yyerror(err);
-        free(err);
-        YYERROR;
-    }
-    ;
-
-bad_proposed_varname:
+maybe_bad_varname:
       DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
-good_proposed_varname: IDENT { $$ = $1; }
-    ;
-
-proposed_varname: good_proposed_varname { $$ = $1; }
-    | bad_proposed_varname {
-        char *err = savefmt("Indentifier '%s' already declared.", $1);
-        yyerror(err);
-        free(err);
-        YYERROR;
-    }
+proposed_varname: IDENT { $$ = $1; }
+    | maybe_bad_varname {
+            char *vname;
+            const char *ns = strlist_top(&namespace_list);
+            if (ns && *ns) {
+                vname = savefmt("%s%s::%s", VAR_PREFIX, ns, $1);
+            } else {
+                vname = savefmt("%s%s", VAR_PREFIX, $1);
+            }
+            if (
+                kvmap_get(&function_consts, $1) ||
+                kvmap_get(&function_vars, $1) ||
+                kvmap_get(&global_consts, vname) ||
+                kvmap_get(&global_vars, vname) ||
+                funclist_find(&funcs_list, vname)
+            ) {
+                char *err = savefmt("Indentifier '%s' already declared.", $1);
+                yyerror(err);
+                free(err);
+                YYERROR;
+            }
+            free(vname);
+            $$ = $1;
+        }
     ;
 
 ret_count_type:
       VOID { $$ = 0; }
-    | SINGLE  { $$ = 1; }
+    | SINGLE { $$ = 1; }
     | MULTIPLE { $$ = 99; }
     ;
 
@@ -329,8 +370,7 @@ opt_varargs: /* nothing */ { $$ = 0; }
     | MULT { $$ = 1; }
     ;
 
-argvarlist:
-    /* nothing */ { strlist_init(&$$); }
+argvarlist: /* nothing */ { strlist_init(&$$); }
     | proposed_varname {
             char *vname = savefmt("%s%s", VAR_PREFIX, $1);
             strlist_init(&$$);
@@ -349,15 +389,9 @@ argvarlist:
         }
     ;
 
-simple_statement:
-      expr { $$ = savefmt("%s pop", $1); free($1); }
-    | RETURN {
-            $$ = savestring("0 exit");
-        }
-    | RETURN expr {
-            $$ = savefmt("%s exit", $2);
-            free($2);
-        }
+simple_statement: expr { $$ = savefmt("%s pop", $1); free($1); }
+    | RETURN { $$ = savestring("0 exit"); }
+    | RETURN expr { $$ = savefmt("%s exit", $2); free($2); }
     | BREAK { $$ = savestring("break"); }
     | CONTINUE { $$ = savestring("continue"); }
     ;
@@ -366,15 +400,13 @@ statement: ';' { $$ = savestring(""); }
     | simple_statement ';' { $$ = $1; }
     | simple_statement IF paren_expr ';' {
             char *body = wrapit("if", $1, "then");
-            $$ = savestring($3);
-            $$ = appendstr($$, body);
+            $$ = appendstr(savestring($3), body, NULL);
             free($1); free($3);
             free(body);
         }
     | simple_statement UNLESS paren_expr ';' {
             char *body = wrapit("not if", $1, "then");
-            $$ = savestring($3);
-            $$ = appendstr($$, body);
+            $$ = appendstr(savestring($3), body, NULL);
             free($1); free($3);
             free(body);
         }
@@ -415,7 +447,7 @@ statement: ';' { $$ = savestring(""); }
             if (!strcmp($4, "1")) {
                 $$ = wrapit("begin", $2, "repeat");
             } else {
-                $2 = appendstr($2, $4);
+                $2 = appendstr($2, $4, NULL);
                 $$ = wrapit("begin", $2, "not until");
             }
             free($2); free($4);
@@ -424,7 +456,7 @@ statement: ';' { $$ = savestring(""); }
             if (!strcmp($4, "0")) {
                 $$ = wrapit("begin", $2, "repeat");
             } else {
-                $2 = appendstr($2, $4);
+                $2 = appendstr($2, $4, NULL);
                 $$ = wrapit("begin", $2, "until");
             }
             free($2); free($4);
@@ -445,7 +477,7 @@ statement: ';' { $$ = savestring(""); }
     | FOR '(' settable KEYVAL settable IN expr ')' statement {
             char *pfx;
             if (linecount($3)+linecount($5) > 2) {
-                char *set = appendstr(savestring($5), $3);
+                char *set = appendstr(savestring($5), $3, NULL);
                 char *iset = indent(set);
                 pfx = savefmt("%s\nforeach\n%s", $7, iset);
                 free(iset);
@@ -520,12 +552,12 @@ statements: /* nothing */ { $$ = savestring(""); }
     | statements statement {
             $$ = savestring($1);
             if (*$$) {
-                $$ = appendstr($$, "\n");
+                $$ = appendstr($$, "\n", NULL);
             }
             if (debugging_level > 0) {
                 $$ = appendfmt($$, "\"%s:%d\" pop\n", yyfilename, yylineno);
             }
-            $$ = appendfmt($$, "%s", $2);
+            $$ = appendstr($$, $2, NULL);
         }
     ;
 
@@ -557,14 +589,11 @@ function_call: DECLARED_FUNC '(' arglist_or_null ')' {
         if ($1.hasvarargs) {
             char *vargs = strlist_wrap(&$3, $1.expects, -1);
             char *vlist = wrapit("{", vargs, "}list");
-            basecall = strlist_wrap(&$3, 0, $1.expects);
-            basecall = appendstr(basecall, vlist);
-            basecall = appendstr(basecall, $1.code);
+            basecall = appendstr(strlist_wrap(&$3, 0, $1.expects), vlist, $1.code, NULL);
             free(vlist);
             free(vargs);
         } else {
-            basecall = strlist_wrap(&$3, 0, -1);
-            basecall = appendstr(basecall, $1.code);
+            basecall = appendstr(strlist_wrap(&$3, 0, -1), $1.code, NULL);
         }
         if ($1.returns == 0) {
             $$ = savefmt("%s 0", basecall);
@@ -636,7 +665,7 @@ settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
             for (int i = 0; i < $2.count; i++) {
                 $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
             }
-            $$ = appendstr($$, "pop");
+            $$ = appendstr($$, "pop", NULL);
             strlist_free(&$2);
         };
 
@@ -659,7 +688,7 @@ index_parts:
     | index_parts attribute { $$ = $1; strlist_add(&$$, $2); free($2); }
     ;
 
-subscript: '[' expr ']' { $$ = $2; }
+subscript: '[' expr ']' { $$ = $2; } ;
 
 attribute: DOT IDENT     { $$ = format_muv_str($2);     free($2); }
     | DOT DECLARED_CONST { $$ = format_muv_str($2.key); keyval_free(&$2); }
@@ -691,7 +720,7 @@ compr_loop:
         }
     | '(' settable KEYVAL settable IN expr ')' {
             if (linecount($2)+linecount($4) > 2) {
-                char *set = appendstr(savestring($4), $2);
+                char *set = appendstr(savestring($4), $2, NULL);
                 char *iset = indent(set);
                 $$ = savefmt("%s\nforeach\n%s", $6, iset);
                 free(iset);
@@ -838,20 +867,20 @@ expr: paren_expr { $$ = $1; }
     | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | settable ASGN expr { $$ = savefmt("%s\ndup %s", $3, $1); free($1); free($3); }
-    | lvalue INSERT ASGN expr  { $$ = savefmt("%s\n%s dup rot []<-\n%s", $1.oper_pre, $4, $1.oper_post); getset_free(&$1); free($4); }
-    | lvalue PLUSASGN expr     { $$ = savefmt("%s\n%s +\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue MINUSASGN expr    { $$ = savefmt("%s\n%s -\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue MULTASGN expr     { $$ = savefmt("%s\n%s *\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue DIVASGN expr      { $$ = savefmt("%s\n%s /\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue MODASGN expr      { $$ = savefmt("%s\n%s %%\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue BITORASGN expr    { $$ = savefmt("%s\n%s bitor\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue BITXORASGN expr   { $$ = savefmt("%s\n%s bitxor\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue BITANDASGN expr   { $$ = savefmt("%s\n%s bitand\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue BITLEFTASGN expr  { $$ = savefmt("%s\n%s bitshift\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue BITRIGHTASGN expr { $$ = savefmt("%s\n0 %s - bitshift\ndup %s", $1.oper_pre, $3, $1.oper_post); getset_free(&$1); free($3); }
-    | lvalue INCR             { $$ = savefmt("%s dup 1 + %s", $1.oper_pre, $1.oper_post); getset_free(&$1); }
-    | lvalue DECR             { $$ = savefmt("%s dup 1 - %s", $1.oper_pre, $1.oper_post); getset_free(&$1); }
+    | settable ASGN expr { $$ = appendfmt(savestring($3), "dup %s", $1); free($1); free($3); }
+    | lvalue INSERT ASGN expr  { $$ = appendstr(savestring($1.oper_pre), $4, "dup rot []<-",  $1.oper_post, NULL); getset_free(&$1); free($4); }
+    | lvalue PLUSASGN expr     { $$ = appendstr(savestring($1.oper_pre), $3, "+ dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue MINUSASGN expr    { $$ = appendstr(savestring($1.oper_pre), $3, "- dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue MULTASGN expr     { $$ = appendstr(savestring($1.oper_pre), $3, "* dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue DIVASGN expr      { $$ = appendstr(savestring($1.oper_pre), $3, "/ dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue MODASGN expr      { $$ = appendstr(savestring($1.oper_pre), $3, "% dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITORASGN expr    { $$ = appendstr(savestring($1.oper_pre), $3, "bitor dup",     $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITXORASGN expr   { $$ = appendstr(savestring($1.oper_pre), $3, "bitxor dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITANDASGN expr   { $$ = appendstr(savestring($1.oper_pre), $3, "bitand dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITLEFTASGN expr  { $$ = appendstr(savestring($1.oper_pre), $3, "bitshift dup",  $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITRIGHTASGN expr { $$ = appendstr(savestring($1.oper_pre), $3, "0 swap - bitshift dup", $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue INCR              { $$ = savefmt("%s dup 1 + %s", $1.oper_pre, $1.oper_post); getset_free(&$1); }
+    | lvalue DECR              { $$ = savefmt("%s dup 1 - %s", $1.oper_pre, $1.oper_post); getset_free(&$1); }
     | INCR lvalue  %prec UNARY { $$ = savefmt("%s 1 + dup %s", $2.oper_pre, $2.oper_post); getset_free(&$2); }
     | DECR lvalue  %prec UNARY { $$ = savefmt("%s 1 - dup %s", $2.oper_pre, $2.oper_post); getset_free(&$2); }
     ;
@@ -860,8 +889,7 @@ arglist_or_null: /* nothing */ { strlist_init(&$$); }
     | arglist { $$ = $1; }
     ;
 
-arglist:
-      expr { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
+arglist: expr { strlist_init(&$$); strlist_add(&$$, $1); free($1); }
     | arglist ',' expr { $$ = $1;  strlist_add(&$$, $3); free($3); }
     ;
 
