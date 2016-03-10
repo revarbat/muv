@@ -1,11 +1,12 @@
 MUV 2.0
 =======
+A C-like language to MUF translator.  Rewritten from the ground up, based
+on the 1990's-era code from Nightfall.
 
-A C-like language to MUF translator.  Rewritten from the ground up, based on the 1990's-era code from Nightfall.
-
-Creating MUF programs is an ugly, painful, nearly write-only experience, and that's coming from the
-coder who designed most of the language.  Why spend massive amounts of time debugging and keeping
-track of stack items, when you can write code in a more modern, readable language?
+Creating MUF programs is an ugly, painful, nearly write-only experience,
+and that's coming from the coder who designed most of the language.  Why
+spend massive amounts of time debugging and keeping track of stack items,
+when you can write code in a more modern, readable language?
 
 Instead of writing cryptic code like:
 
@@ -15,8 +16,9 @@ Instead of writing cryptic code like:
         foreach obj ! pop
             obj @ player? if
                 obj @ "species" getpropstr
+                obj @ "sex" getpropstr
                 obj @
-                "%-30D %-30s"
+                "%-30D %-10s %-30s"
                 fmtstring
                 me @ swap notify
             then
@@ -26,18 +28,23 @@ Instead of writing cryptic code like:
 You can write:
 
     func showspecies() {
-        for (var obj in contents_array(loc))
-            if (player?(obj))
-                fmttell("%-30D %-30s", obj,
-                        getpropstr(obj, "species"));
+        for (var obj in contents_array(loc)) {
+            if (player?(obj)) {
+                fmttell(
+                    "%-30D %-10s %-30s", obj,
+                    getpropstr(obj, "sex"),
+                    getpropstr(obj, "species")
+                );
+            }
+        }
     }
 
 
 Code Status
 -----------
-
-This code is in Alpha.  It compiles and runs cleanly on 32bit and 64bit systems, but the language
-is still being developed.  The output code could use optimization.
+This code is in Alpha.  It compiles and runs cleanly on 32bit and 64bit
+systems, but the language is still being developed.  The output code could
+use optimization.
 
 
 Compiling
@@ -59,10 +66,10 @@ To install under `/usr` instead:
 
 Usage
 -----
-
-The `muv` program expects the input MUV source file to be given on the command-line.
-The MUF output will, by default, be written to `STDOUT`.  Error messages will be
-printed to `STDERR`, and the return code will be non-zero if errors were found.
+The `muv` program expects the input MUV source file to be given on the
+command-line.  The MUF output will, by default, be written to `STDOUT`.
+Error messages will be printed to `STDERR`, and the return code will be
+non-zero if errors were found.
 
     muv sourcefile.muv >outfile.muf
 
@@ -70,7 +77,8 @@ You can use `-w PROGNAME` to wrap the output in MUF editor commands.
 
     muv -w cmd-whospecies whospecies.muv >whospecies.muf
 
-Using `-o OUTFILE` will write the output MUF code to OUTFILE instead of STDOUT.
+Using `-o OUTFILE` will write the output MUF code to OUTFILE instead
+of STDOUT.
 
     muv -o whospecies.muf whospecies.muv
 

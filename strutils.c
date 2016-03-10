@@ -26,10 +26,12 @@ appendstr(char *s, ...)
         size_t len1 = strlen(s);
         size_t len2 = strlen(p);
         s = (char*)realloc(s, len1 + len2 + 2);
-        if (len1 != 0 && len2 != 0) {
-            if (lastlen(s) + firstlen(p) > 60) {
+        len1 = lastlen(s);
+        len2 = firstlen(p);
+        if (len1 > 0 && len2 > 0) {
+            if (len1 + len2 > 60) {
                 strcat(&s[len1], "\n");
-            } else if (lastlen(s) > 0 && firstlen(p) > 0) {
+            } else {
                 strcat(&s[len1], " ");
             }
         }

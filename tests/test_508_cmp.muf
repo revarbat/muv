@@ -1,7 +1,7 @@
 ( Generated from test_508_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _loopy[ _count -- ret ]
-    var _i var _val var _key
+    var _i var _val var _key var _val2
     1 dup _i ! pop
     begin
         _i @ _count @ >
@@ -31,8 +31,8 @@
         _val @ me @ swap notify 0 pop
     repeat
     online_array
-    foreach _val ! _key !
-        { _key @ " = " _val @ }list array_interpret me @ swap notify 0 pop
+    foreach _val2 ! _key !
+        { _key @ " = " _val2 @ }list array_interpret me @ swap notify 0 pop
     repeat
     0
 ;

@@ -6,7 +6,7 @@
 
 
 void
-funcinfo_free(struct funcinfo_t *l)
+funcinfo_free(funcinfo *l)
 {
     free((void*) l->name);
     free((void*) l->code);
@@ -14,16 +14,16 @@ funcinfo_free(struct funcinfo_t *l)
 
 
 void
-funclist_init(struct funclist *l)
+funclist_init(funclist *l)
 {
     l->count = 0;
     l->cmax = 8;
-    l->list = (struct funcinfo_t*)malloc(sizeof(struct funcinfo_t) * l->cmax);
+    l->list = (funcinfo*)malloc(sizeof(funcinfo) * l->cmax);
 }
 
 
 void
-funclist_free(struct funclist *l)
+funclist_free(funclist *l)
 {
     for (int i = 0; i < l->count; i++) {
         funcinfo_free(&l->list[i]);
@@ -36,15 +36,15 @@ funclist_free(struct funclist *l)
 
 
 void
-funclist_add(struct funclist *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs)
+funclist_add(funclist *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs)
 {
-    struct funcinfo_t *p = funclist_find(l, name);
+    funcinfo *p = funclist_find(l, name);
     if (p) {
         funcinfo_free(p);
     } else {
         if (l->count >= l->cmax) {
             l->cmax += (l->cmax < 4096)? l->cmax : 4096;
-            l->list = (struct funcinfo_t*)realloc(l->list, sizeof(struct funcinfo_t) * l->cmax);
+            l->list = (funcinfo*)realloc(l->list, sizeof(funcinfo) * l->cmax);
         }
         p = &l->list[l->count++];
     }
@@ -56,8 +56,8 @@ funclist_add(struct funclist *l, const char *name, const char *code, int argcnt,
 }
 
 
-struct funcinfo_t *
-funclist_find(struct funclist *l, const char *s)
+funcinfo *
+funclist_find(funclist *l, const char *s)
 {
     for (int i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i].name, s)) {

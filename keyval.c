@@ -6,7 +6,7 @@
 
 
 void
-keyval_free(struct keyval_t *x)
+keyval_free(keyval *x)
 {
     free((void*)x->key);
     free((void*)x->val);
@@ -17,16 +17,16 @@ keyval_free(struct keyval_t *x)
 
 
 void
-kvlist_init(struct kvlist *l)
+kvlist_init(kvlist *l)
 {
     l->count = 0;
     l->cmax = 8;
-    l->list = (struct keyval_t*)malloc(sizeof(struct keyval_t) * l->cmax);
+    l->list = (keyval*)malloc(sizeof(keyval) * l->cmax);
 }
 
 
 void
-kvlist_free(struct kvlist *l)
+kvlist_free(kvlist *l)
 {
     for (int i = 0; i < l->count; i++) {
         keyval_free(&l->list[i]);
@@ -39,11 +39,11 @@ kvlist_free(struct kvlist *l)
 
 
 void
-kvlist_add(struct kvlist *l, const char *k, const char *v)
+kvlist_add(kvlist *l, const char *k, const char *v)
 {
     if (l->count >= l->cmax) {
         l->cmax += (l->cmax < 4096)? l->cmax : 4096;
-        l->list = (struct keyval_t *)realloc(l->list, sizeof(struct keyval_t) * l->cmax);
+        l->list = (keyval *)realloc(l->list, sizeof(keyval) * l->cmax);
     }
     l->list[l->count].key = savestring(k);
     l->list[l->count].val = savestring(v);
@@ -52,7 +52,7 @@ kvlist_add(struct kvlist *l, const char *k, const char *v)
 
 
 const char*
-kvlist_get(struct kvlist *l, const char *k)
+kvlist_get(kvlist *l, const char *k)
 {
     for (int i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i].key, k)) {
@@ -78,10 +78,10 @@ kvmap_hash(const char*s)
 
 
 void
-kvmap_init(struct kvmap *m)
+kvmap_init(kvmap *m)
 {
     int i;
-    m->map = (struct kvlist*)malloc(HASHSIZE*sizeof(struct kvlist));
+    m->map = (kvlist*)malloc(HASHSIZE*sizeof(kvlist));
     m->count = 0;
     for (i = 0; i < HASHSIZE; i++) {
         kvlist_init(&m->map[i]);
@@ -90,7 +90,7 @@ kvmap_init(struct kvmap *m)
 
 
 void
-kvmap_free(struct kvmap *m)
+kvmap_free(kvmap *m)
 {
     int i;
     for (i = 0; i < HASHSIZE; i++) {
@@ -102,7 +102,7 @@ kvmap_free(struct kvmap *m)
 
 
 void
-kvmap_clear(struct kvmap *m)
+kvmap_clear(kvmap *m)
 {
     kvmap_free(m);
     kvmap_init(m);
@@ -110,18 +110,80 @@ kvmap_clear(struct kvmap *m)
 
 
 void
-kvmap_add(struct kvmap *m, const char *k, const char *v)
+kvmap_add(kvmap *m, const char *k, const char *v)
 {
     unsigned long h = kvmap_hash(k) % HASHSIZE;
-    return kvlist_add(&m->map[h], k, v);
+    kvlist_add(&m->map[h], k, v);
 }
 
 
 const char *
-kvmap_get(struct kvmap *m, const char *k)
+kvmap_get(kvmap *m, const char *k)
 {
     unsigned long h = kvmap_hash(k) % HASHSIZE;
     return kvlist_get(&m->map[h], k);
+}
+
+
+
+void
+kvmaplist_init(kvmaplist *l)
+{
+    l->count = 0;
+    l->cmax = 8;
+    l->list = (kvmap *)malloc(sizeof(kvmap) * l->cmax);
+}
+
+
+void
+kvmaplist_free(kvmaplist *l)
+{
+    for (int i = 0; i < l->count; i++) {
+        kvmap_free(&l->list[i]);
+    }
+    free(l->list);
+    l->list = NULL;
+    l->count = 0;
+    l->cmax = 0;
+}
+
+
+void
+kvmaplist_add(kvmaplist *l)
+{
+    if (l->count >= l->cmax) {
+        l->cmax += (l->cmax < 4096)? l->cmax : 4096;
+        l->list = (kvmap *)realloc(l->list, sizeof(kvmap) * l->cmax);
+    }
+    kvmap_init(&l->list[l->count]);
+    l->count++;
+}
+
+
+void
+kvmaplist_pop(kvmaplist *l)
+{
+    if (l->count > 0) {
+        kvmap_free(&l->list[--l->count]);
+    }
+}
+
+
+kvmap *
+kvmaplist_top(kvmaplist *l)
+{
+    return (l->count > 0)? &l->list[l->count-1] : NULL;
+}
+
+
+const char*
+kvmaplist_find(kvmaplist *l, const char *name)
+{
+    for (int i = l->count; i-->0; ) {
+        const char *cp = kvmap_get(&l->list[i], name);
+        if (cp) return cp;
+    }
+    return NULL;
 }
 
 

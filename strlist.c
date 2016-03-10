@@ -9,7 +9,7 @@
 
 
 void
-strlist_init(struct strlist *l)
+strlist_init(strlist *l)
 {
     l->count = 0;
     l->cmax = 8;
@@ -18,7 +18,7 @@ strlist_init(struct strlist *l)
 
 
 void
-strlist_free(struct strlist *l)
+strlist_free(strlist *l)
 {
     for (int i = 0; i < l->count; i++) {
         free((void*) l->list[i]);
@@ -31,7 +31,7 @@ strlist_free(struct strlist *l)
 
 
 void
-strlist_clear(struct strlist *l)
+strlist_clear(strlist *l)
 {
     strlist_free(l);
     strlist_init(l);
@@ -39,7 +39,7 @@ strlist_clear(struct strlist *l)
 
 
 void
-strlist_add(struct strlist *l, const char *s)
+strlist_add(strlist *l, const char *s)
 {
     if (l->count >= l->cmax) {
         l->cmax += (l->cmax < 4096)? l->cmax : 4096;
@@ -50,7 +50,7 @@ strlist_add(struct strlist *l, const char *s)
 
 
 void
-strlist_pop(struct strlist *l)
+strlist_pop(strlist *l)
 {
     if (l->count > 0) {
         free((void*) l->list[--l->count]);
@@ -59,7 +59,7 @@ strlist_pop(struct strlist *l)
 
 
 const char *
-strlist_top(struct strlist *l)
+strlist_top(strlist *l)
 {
     if (l->count > 0) {
         return l->list[l->count-1];
@@ -69,7 +69,7 @@ strlist_top(struct strlist *l)
 
 
 int
-strlist_find(struct strlist *l, const char *s)
+strlist_find(strlist *l, const char *s)
 {
     for (int i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i], s)) {
@@ -81,7 +81,7 @@ strlist_find(struct strlist *l, const char *s)
 
 
 char *
-strlist_join(struct strlist *l, const char *s, int start, int end)
+strlist_join(strlist *l, const char *s, int start, int end)
 {
     char *buf;
     const char *ptr;
@@ -108,7 +108,7 @@ strlist_join(struct strlist *l, const char *s, int start, int end)
 
 
 char *
-strlist_wrap(struct strlist *l, int start, int end)
+strlist_wrap(strlist *l, int start, int end)
 {
     char *buf;
     const char *ptr;
@@ -151,7 +151,7 @@ strlist_wrap(struct strlist *l, int start, int end)
 
 
 void
-strlist_reverse(struct strlist *l)
+strlist_reverse(strlist *l)
 {
     int a, b;
     if (l->count < 1)
@@ -168,7 +168,7 @@ strlist_reverse(struct strlist *l)
 
 
 char *
-strlist_wrapit(const char *pfx, struct strlist *l, const char *sfx)
+strlist_wrapit(const char *pfx, strlist *l, const char *sfx)
 {
     char *items = strlist_wrap(l, 0, -1);
     char *out = wrapit(pfx, items, sfx);

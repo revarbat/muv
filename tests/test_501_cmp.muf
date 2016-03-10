@@ -7,7 +7,7 @@
     "" dup _out ! pop
     _arr @
     foreach _val ! _key !
-        _val @ array? _val @ dictionary? or if
+        _val @ array? dup not if _val @ dictionary? or then if
             _key @ _indent @ "%s%~ => [" fmtstring me @ swap notify 0 pop
 
             _val @ { _indent @ "  " }list array_interpret _dump pop

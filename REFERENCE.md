@@ -255,7 +255,10 @@ Logical Operations:
 - Logical XOR: `x > 2 ^^ x < 10`
 - Logical NOT: `!x`
 
-**WARNING: There is no shortcutting in logical expressions!**
+Note: Logical expressions support shortcutting.
+If the left half of a logical `||` (OR) is true, the right half isn't evaluated at all.
+If the left half of a logical `&&` (AND) is false, the right half isn't evaluated at all.
+Both sides of a logical `^^` (XOR) are always evaluated.
 
 Assignment:
 - Simple assignment: `x = 23`
@@ -290,6 +293,10 @@ Arrays
 Declaring a list array is easy:
 
     var listvar = ["First", "Second", "Third", "Forth!"];
+
+To declare an empty list, just use:
+
+    var foo = [];
 
 
 You can fetch an element from a list using a subscript:
@@ -702,10 +709,11 @@ top of the stack and store it in a variable like:
 
     var foo = top;
 
-You can "push" one or more values onto the top of the stack with the
-`push(...)` command:
+You can "push" a value onto the top of the stack with the `push(...)` command:
 
     push("Hi!");
+
+You can push multiple values at once:
 
     push("One", 2, #3, "Fore!");
 

@@ -1,5 +1,5 @@
 CLIBS= 
-CFLAGS=-O -Wall
+CFLAGS=-O -Wall --pedantic
 YFLAGS=-d
 YACC=yacc
 CC=cc

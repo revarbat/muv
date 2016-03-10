@@ -50,7 +50,7 @@
     _obj @ pop
     { }list loc @ contents_array
     foreach _obj ! pop
-        _obj @ player? _obj @ awake? and
+        _obj @ player? dup if _obj @ awake? and then
         if
             _obj @ name swap []<-
         then

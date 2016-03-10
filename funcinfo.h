@@ -1,26 +1,26 @@
 #ifndef FUNCINFO_H
 #define FUNCINFO_H
 
-struct funcinfo_t {
+typedef struct funcinfo_t {
     const char *name;
     const char *code;
     short expects;
     short returns;
     short hasvarargs;
-};
+} funcinfo;
 
-void funcinfo_free(struct funcinfo_t *l);
+void funcinfo_free(funcinfo *l);
 
-struct funclist {
-    struct funcinfo_t* list;
+typedef struct funclist_t {
+    funcinfo* list;
     short count;
     short cmax;
-};
+} funclist;
 
-void funclist_init(struct funclist *l);
-void funclist_free(struct funclist *l);
-void funclist_add(struct funclist *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs);
-struct funcinfo_t *funclist_find(struct funclist *l, const char *s);
+void funclist_init(funclist *l);
+void funclist_free(funclist *l);
+void funclist_add(funclist *l, const char *name, const char *code, int argcnt, int retcnt, int hasvarargs);
+funcinfo *funclist_find(funclist *l, const char *s);
 
 
 #endif

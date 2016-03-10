@@ -1,23 +1,23 @@
 #ifndef STRLIST_H
 #define STRLIST_H
 
-struct strlist {
+typedef struct strlist_t {
     const char** list;
     short count;
     short cmax;
-};
+} strlist;
 
-void strlist_init(struct strlist *l);
-void strlist_free(struct strlist *l);
-void strlist_clear(struct strlist *l);
-void strlist_add(struct strlist *l, const char *s);
-void strlist_pop(struct strlist *l);
-int strlist_find(struct strlist *l, const char *s);
-const char *strlist_top(struct strlist *l);
-char *strlist_join(struct strlist *l, const char *s, int start, int end);
-char *strlist_wrap(struct strlist *l, int start, int end);
-void strlist_reverse(struct strlist *l);
-char *strlist_wrapit(const char *pfx, struct strlist *l, const char *sfx);
+void strlist_init(strlist *l);
+void strlist_free(strlist *l);
+void strlist_clear(strlist *l);
+void strlist_add(strlist *l, const char *s);
+void strlist_pop(strlist *l);
+int strlist_find(strlist *l, const char *s);
+const char *strlist_top(strlist *l);
+char *strlist_join(strlist *l, const char *s, int start, int end);
+char *strlist_wrap(strlist *l, int start, int end);
+void strlist_reverse(strlist *l);
+char *strlist_wrapit(const char *pfx, strlist *l, const char *sfx);
 
 #endif
 

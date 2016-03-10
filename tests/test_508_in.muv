@@ -30,7 +30,7 @@ func loopy(count)
         tell(val);
     }
 
-    for (var key => val in online()) {
+    for (var key => var val in online()) {
         tell(cat(key, " = ", val));
     }
 }

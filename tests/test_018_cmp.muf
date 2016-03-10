@@ -1,7 +1,7 @@
 ( Generated from test_018_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    1 1 or exit
+    1 dup not if 1 or then exit
     0
 ;
 : __start

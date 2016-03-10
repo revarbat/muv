@@ -1,8 +1,10 @@
 ( Generated from test_503_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _complex_match[ _v1 _v2 -- ret ]
-    _v1 @ number? _v2 @ number? and if _v1 @ _v2 @ = exit then
-    _v1 @ string? _v2 @ int? and if
+    _v1 @ number? dup if _v2 @ number? and then if
+        _v1 @ _v2 @ = exit
+    then
+    _v1 @ string? dup if _v2 @ int? and then if
         _v1 @ _v2 @ intostr strcmp not exit
     then
     _v1 @ type _v2 @ type strcmp not if 0 exit then

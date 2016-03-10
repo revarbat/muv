@@ -262,7 +262,7 @@ lvar _argparse::remainder_map
 : _handle_mode_insert[ _obj _prop _pos _val _force -- ret ]
     var _lines
     _pos @ atoi dup _pos ! pop
-    _pos @ not _val @ not or if
+    _pos @ not dup not if _val @ not or then if
         _argparse::show_usage pop
         0 exit
     then
@@ -278,7 +278,7 @@ lvar _argparse::remainder_map
 : _handle_mode_replace[ _obj _prop _pos _val _force -- ret ]
     var _lines
     _pos @ atoi dup _pos ! pop
-    _pos @ not _val @ not or if
+    _pos @ not dup not if _val @ not or then if
         _argparse::show_usage pop
         0 exit
     then
@@ -310,7 +310,8 @@ lvar _argparse::remainder_map
     "verbose" _argparse::add_flag pop
     _arg @ _argparse::parse dup _opts ! pop
     _opts @ not if 0 exit then
-    _opts @ "obj" [] not _opts @ "prop" [] not or if
+
+    _opts @ "obj" [] not dup not if _opts @ "prop" [] not or then if
         _argparse::show_usage pop
         0 exit
     then
