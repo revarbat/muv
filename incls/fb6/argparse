@@ -116,48 +116,49 @@ func parse(line) {
     var mode_given = 0;
     while (stringpfx(line, "#")) {
         parts = split(strcut(line,1)[1], " ");
-        var opt = tolower(parts[0]);
+        var opt = parts[0];
+        var lc_opt = tolower(opt);
         var found = 0;
 
-	// Check for exact mode match.
+        // Check for exact mode match.
         for (mode in modes_list) {
-	    if (!stringcmp(mode, opt)) {
+            if (!stringcmp(mode, lc_opt)) {
                 current_mode = mode;
                 found++;
-	        break;
-	    }
-	}
-	if (found) {
-	    mode_given++;
-            line = parts[1];
-            continue;
-	}
-
-	// Check for exact flag match.
-        for (flag in flags_map[current_mode]) {
-	    if (!stringcmp(flag, opt)) {
-                opts[flag] = 1;
-                found++;
-		break;
+                break;
             }
         }
-	if (found) {
+        if (found) {
+            mode_given++;
             line = parts[1];
             continue;
-	}
+        }
 
-	// Check for mode prefix.
+        // Check for exact flag match.
+        for (flag in flags_map[current_mode]) {
+            if (!stringcmp(flag, lc_opt)) {
+                opts[flag] = opt;
+                found++;
+                break;
+            }
+        }
+        if (found) {
+            line = parts[1];
+            continue;
+        }
+
+        // Check for mode prefix.
         for (mode in modes_list) {
-            if (stringpfx(mode, opt)) {
+            if (stringpfx(mode, lc_opt)) {
                 current_mode = mode;
                 found++;
             }
         }
 
-	// Check for flag prefix.
+        // Check for flag prefix.
         for (flag in flags_map[current_mode]) {
-            if (stringpfx(flag, opt)) {
-                opts[flag] = 1;
+            if (stringpfx(flag, lc_opt)) {
+                opts[flag] = opt;
                 found++;
             }
         }
@@ -168,15 +169,15 @@ func parse(line) {
         } else if (found > 1) {
             tell(fmtstring("Option #%s is ambiguous.", opt));
         } else {
-	    tell(fmtstring("Option #%s not recognized.", opt));
-	}
-	show_usage();
-	return [];
+            tell(fmtstring("Option #%s not recognized.", opt));
+        }
+        show_usage();
+        return [];
     }
     if (mode_given > 1) {
-	tell("Cannot mix modes.");
-	show_usage();
-	return [];
+        tell("Cannot mix modes.");
+        show_usage();
+        return [];
     }
     for (var posarg in posargs_map[current_mode]) {
         parts = split(line, posarg[1]);
