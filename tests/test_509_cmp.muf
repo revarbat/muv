@@ -2,7 +2,6 @@
 (   https://github.com/revarbat/muv )
 : _main[  -- ret ]
     var _v
-    _v @ pop
     voidfoo 0 dup _v ! pop
     singlefoo dup _v ! pop
     { multfoo }list dup _v ! pop

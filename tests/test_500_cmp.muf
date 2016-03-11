@@ -4,8 +4,6 @@
     var _k var _v var _mylist var _squares var _odds var _evens
     var _mydict var _squarevals var _foo var _bar var _obj
     var _listeners
-    _k @ pop
-    _v @ pop
     { 3 4 5 6 7 8 9 }list dup _mylist ! pop
     { }list _mylist @
     foreach _v ! pop
@@ -47,7 +45,6 @@
             _k @ ->[]
         then
     repeat dup _bar ! pop
-    _obj @ pop
     { }list loc @ contents_array
     foreach _obj ! pop
         _obj @ player? dup if _obj @ awake? and then

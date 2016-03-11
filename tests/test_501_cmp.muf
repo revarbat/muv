@@ -2,14 +2,11 @@
 (   https://github.com/revarbat/muv )
 : _dump[ _arr _indent -- ret ]
     var _key var _val var _out
-    _key @ pop
-    _val @ pop
     "" dup _out ! pop
-    _arr @
-    foreach _val ! _key !
+    _arr @ foreach
+        _val ! _key !
         _val @ array? dup not if _val @ dictionary? or then if
             _key @ _indent @ "%s%~ => [" fmtstring me @ swap notify 0 pop
-
             _val @ { _indent @ "  " }list array_interpret _dump pop
             _indent @ "%s]" fmtstring me @ swap notify 0 pop
         else
@@ -36,15 +33,13 @@
         "First" "Second" "Third" "Forth" "Fifth" "Sixth" "Seventh"
         "Eighth" "Ninth" "Tenth" "Eleventh"
     }list dup _arr ! pop
-    _idx @ pop
-    _word @ pop
-    _arr @
-    foreach _word ! pop
+    _arr @ foreach
+        _word ! pop
         _arr @ _idx @ [] me @ swap notify 0 pop
     repeat
     { }list dup _empty ! pop
-    _arr @
-    foreach _word ! _idx !
+    _arr @ foreach
+        _word ! _idx !
         me @ _word @ _idx @ "%d: %s" fmtstring notify 0 pop
     repeat
     {
@@ -52,9 +47,7 @@
         { "One" "Two" "Three" "Four" }list
         { { 3 1 4 }list { 9 1 16 }list { 81 1 256 }list }list
     }list dup _nested ! pop
-
     _nested @ { 2 1 }list array_nested_get me @ swap notify 0 pop
-
     { "Fee" "Fie" "Foe" "Fum" }list
     dup _nested @ 1 ->[] _nested ! pop
     23 dup _nested @ { 0 3 }list array_nested_set _nested ! pop
@@ -64,7 +57,6 @@
     4 rotate 4 rotate ->[] _nested ! pop
     _nested @ { 3 1 }list over over array_nested_get "foo"
     dup rot []<- 4 rotate 4 rotate array_nested_set _nested ! pop
-
     _nested @ 2 array_delitem _nested ! 0 pop
     _nested @ "" _dump pop
     0

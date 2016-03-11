@@ -7,12 +7,12 @@ func dump(arr, indent) {
     var out = "";
     for (key => val in arr) {
         if (array?(val) || dictionary?(val)) {
-	    tell(fmtstring("%s%~ => [", indent, key));
+            tell(fmtstring("%s%~ => [", indent, key));
             dump(val, cat(indent, "  "));
-	    tell(fmtstring("%s]", indent));
+            tell(fmtstring("%s]", indent));
         } else {
-	    tell(fmtstring("%s%~ => %~", indent, key, val));
-	}
+            tell(fmtstring("%s%~ => %~", indent, key, val));
+        }
     }
 }
 

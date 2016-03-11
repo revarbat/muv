@@ -12,7 +12,7 @@ func dump_item_r(x, indent) {
     var kpart;
     var vpart;
     var out = "";
-    if (type_dictionary?(x)) {
+    if (type::dictionary?(x)) {
         out = fmtstring("%s{", indent);
         for (key => val in x) {
             kpart = dump_item_r(key, cat(indent, ind));
@@ -20,21 +20,21 @@ func dump_item_r(x, indent) {
             out = fmtstring("%s\n%s =>\n%s", out, kpart, vpart);
         }
         out = fmtstring("%s\n%s}dict", out, indent);
-    } else if (type_array?(x)) {
+    } else if (type::array?(x)) {
         out = fmtstring("%s{", indent);
         for (val in x) {
             vpart = dump_item_r(val, cat(indent, ind));
             out = fmtstring("%s\n%s", out, vpart);
         }
         out = fmtstring("%s\n%s}list", out, indent);
-    } else if (type_string?(x)) {
+    } else if (type::string?(x)) {
         out = fmtstring("%s\"%~\"", indent, x);
-    } else if (type_dbref?(x)) {
-	if (obj_ok?(x)) {
-	    out = fmtstring("%s%D(%d)", indent, x, x);
-	} else {
-	    out = fmtstring("%s%d", indent, x);
-	}
+    } else if (type::dbref?(x)) {
+        if (obj::ok?(x)) {
+            out = fmtstring("%s%D(%d)", indent, x, x);
+        } else {
+            out = fmtstring("%s%d", indent, x);
+        }
     } else {
         out = fmtstring("%s%~", indent, x);
     }

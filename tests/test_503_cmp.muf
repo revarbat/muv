@@ -19,15 +19,9 @@
     2 dup _i ! pop
     0 begin pop (switch)
         _i @
-        dup 1 = if
-            "One." me @ swap notify 0 pop break
-        then
-        dup 2 = if
-            "Two." me @ swap notify 0 pop break
-        then
-        dup 3 = if
-            "Three." me @ swap notify 0 pop break
-        then
+        dup 1 = if "One." me @ swap notify 0 pop break then
+        dup 2 = if "Two." me @ swap notify 0 pop break then
+        dup 3 = if "Three." me @ swap notify 0 pop break then
         break
     repeat pop
     0 begin pop (switch)
@@ -39,7 +33,8 @@
             "I'm called MUV." me @ swap notify 0 pop break
         then
         dup "what" strcmp not if
-            "I'm a nicer language to use than MUF." me @ swap notify 0 pop break
+            "I'm a nicer language to use than MUF." me @ swap notify 0 pop
+            break
         then
         (default)
         "I don't understand." me @ swap notify 0 pop break

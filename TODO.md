@@ -10,6 +10,7 @@ Short List
 Pie in Sky
 ----------
 
+- Code Optimization.
 - Classes, methods, and other OO stuff.  Difficult with MUF.
 - Array slicing:  `s = foo[2:4];`
 - Upload to MUCK using -u:

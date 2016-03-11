@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+int endswith(const char *s, const char *s2);
 char *savestring(const char *);
 char *savefmt(const char *fmt, ...);
 char *appendstr(char *s, ...);

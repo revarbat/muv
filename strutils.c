@@ -6,6 +6,14 @@
 #include "strutils.h"
 
 
+int
+endswith(const char *s, const char *s2)
+{
+    return !strcmp(s+strlen(s)-strlen(s2), s2);
+}
+
+
+
 char *
 savestring(const char *arg)
 {
@@ -20,6 +28,9 @@ char *
 appendstr(char *s, ...)
 {
     va_list aptr;
+    if (!s) {
+        s = savestring("");
+    }
     const char *p;
     va_start(aptr, s);
     while ((p = va_arg(aptr, const char*))) {

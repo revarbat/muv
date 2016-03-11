@@ -1,5 +1,0 @@
-include "!fb6/prims";
-
-func main(arg) {
-    expected_undeclared_func();
-}

@@ -1,15 +1,14 @@
 Language Syntax
 ===============
 
-
 Comments
 --------
 
-Comments can use either of the following syntaxes:
+Comments can take one of two styles.  For single-line comments, you can use:
 
     // Single line comment.
 
-or
+For multi-line comments, you can use:
 
     /*
     multiple
@@ -114,7 +113,7 @@ the integer `0`.
 
 
 Function Variables
-----------------
+------------------
 
 You can declare extra variables in function scope like this:
 
@@ -570,7 +569,7 @@ or
 
 
 Comprehensions
--------------
+--------------
 
 Using a variation on loops and conditionals, you can quickly create lists and
 dictionaries that are mutations of already existing arrays.  The original
@@ -601,7 +600,7 @@ You can also filter a list or dictionary by adding an `if` or `unless` clause:
 
 
 Tuple Assignment
----------------
+----------------
 
 If an expression or function call returns an array of known size, you can
 assign each array item to an individual variable using tuple assignment:
@@ -788,6 +787,7 @@ will insert `bar` into the output code where a call to `foo()` is made.
 
 Debugging MUV
 -------------
+
 When you are debugging a program compiled into MUF from MUV, there are
 a few things you should be aware of:
 
@@ -851,4 +851,5 @@ There are several things to note here:
 - Since that value was NOT needed after all, it it `pop`ed away.
 - As the function `foo()` reaches its end without `return`ing a value, a
   `0` is pushed onto the stack, so `foo()` always returns at least `0`.
+
 

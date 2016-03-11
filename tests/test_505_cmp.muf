@@ -10,7 +10,8 @@ lvar _fee
     0
 ;
 : __start
-    "me" match me ! me @ location loc ! trig trigger ! 23 _foo !
+    "me" match me ! me @ location loc ! trig trigger !
+    23 _foo !
     43 _bar !
     _main
 ;
