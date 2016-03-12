@@ -5,6 +5,7 @@ namespace array {
 
 extern single   make(args*) = "";
 extern single   make_dict(args*) = "{ swap array_vals pop }dict";
+extern single   concat(args*) = "{ swap foreach swap pop array_explode pop repeat }list";
 
 extern multiple first(x) = "array_first";
 extern multiple last(x) = "array_last";

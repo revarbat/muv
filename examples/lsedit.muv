@@ -1,0 +1,270 @@
+include "!fb6/stdlib";
+include "!fb6/array";
+include "!fb6/str";
+include "!fb6/regex";
+include "!fb6/obj";
+include "!fb6/prop";
+include "!fb6/io";
+include "!fb6/argparse";
+
+namespace lsedit {
+
+    var help_lines;
+    var insert_pos;
+
+
+    public func init_help() {
+        help_lines = [];
+    }
+
+
+    public func show_help() {
+        const header = [
+            "-- Commands: ---------------------------------------------------",
+            "..LINE              Insert .LINE at current insertion position.",
+            ".h                  Show this help message.",
+            ".q                  Quit editor, saving changes.",
+            ".x                  Quit editor, aborting changes.",
+            ".l                  List all lines.",
+            ".l LINE             List given LINE.",
+            ".l LINE,LINE        List given LINE range, inclusive.",
+            ".i LINE             Move insertion to before LINE.",
+            ".d LINE             Delete LINE.",
+            ".d LINE,LINE        Delete given LINE range, inclusive.",
+            ".s /FIND/REPL       Substitute regexp FIND with REPL in all lines.",
+            ".s LINE/FIND/REPL   Substitute regexp FIND with REPL in LINE.",
+            ".s L1,L2/FIND/REPL  Substitute FIND with REPL between L1 and L2.",
+            ".w                  Write/Save changes without exiting editor.",
+            ".w OBJ=PROP         Write/Save list to OBJ in proplist PROP."
+        ];
+        const footer = [
+            "----------------------------------------------------------------"
+        ];
+        for (var line in array::concat(header, help_lines, footer)) {
+            tell(line);
+        }
+    }
+
+
+    public func add_helptext(line) {
+        help_lines[] = line;
+    }
+
+
+    func show_list(lines, start, end, pos) {
+        var lnum = 1;
+        for (var line in lines) {
+            if (lnum >= start && lnum <= end) {
+                tell(fmtstring("%s%3i: %s", (lnum==pos ?">":" "), lnum++, line));
+            }
+        }
+    }
+
+
+    public func editor(lines, obj, prop) {
+        var line1 = 0;
+        var line2 = 0;
+        while(1) {
+            if (insert_pos > count(lines)+1) {
+                insert_pos = count(lines)+1;
+                tell(fmtstring("Inserting at line %i", insert_pos));
+            }
+            var inln = io::read();
+            if (str::strncmp(inln, ".", 1)) {
+                // Line does NOT start with '.', so we just insert it.
+                lines = array::insertitem(inln, lines, insert_pos-1);
+                continue;
+            }
+            if (!str::strncmp(inln, "..", 2)) {
+                // Starts with "..", so strip one "." and insert it.
+                inln = str::strcut(inln, 1)[1];
+                lines = array::insertitem(inln, lines, insert_pos-1);
+                continue;
+            }
+            <var cmd, var cmdargs> = str::split(inln, " ");
+            switch (cmd using str::strcmp) {
+                case(".h") { show_help(); continue; }
+                case(".q") {
+                    prop::list_put(obj, prop, lines);
+                    tell("Saved.");
+                    return [cmd, cmdargs, lines];
+                }
+                case(".x") {
+                    tell("Aborting.");
+                    return [cmd, cmdargs, lines];
+                }
+                case(".l") {
+                    line1 = 0;
+                    line2 = 999999;
+                    cmdargs = str::explode(cmdargs, ",");
+                    if (count(cmdargs) == 1) {
+                        line1 = line2 = str::atoi(cmdargs[0]);
+                    } else if (count(cmdargs) >= 2) {
+                        line1 = str::atoi(cmdargs[0]);
+                        line2 = str::atoi(cmdargs[1]);
+                    }
+                    show_list(lines, line1, line2, insert_pos);
+                }
+                case(".i") {
+                    cmdargs = str::explode(cmdargs, ",");
+                    if (count(cmdargs) == 1) {
+                        var newpos = str::atoi(cmdargs[0]);
+                        if (newpos < 1) {
+                            tell("Usage: .i LINENUM");
+                            break;
+                        }
+                        insert_pos = newpos;
+                        if (insert_pos > count(lines)+1) {
+                            insert_pos = count(lines)+1;
+                        }
+                        tell(fmtstring("Inserting at line %i", insert_pos));
+                    } else {
+                        tell("Usage: .i LINENUM");
+                    }
+                }
+                case(".s") {
+                    cmdargs = str::explode(cmdargs, "/");
+                    if (count(cmdargs) == 3) {
+                        <line1, var fnd, var repl> = cmdargs;
+                        cmdargs = str::explode(line1, ",");
+                        if (count(cmdargs) > 2) {
+                            tell("Usage: .s [LINE[,LINE]]/FIND/REPLACE");
+                            break;
+                        } else if (count(cmdargs) == 2) {
+                            <line1, line2> = cmdargs;
+                        } else {
+                            line1 = line2 = cmdargs;
+                        }
+                        line1 = str::strip(line1);
+                        line2 = str::strip(line1);
+                        if (!line2) {
+                            if (!line1) {
+                                line1 = 1;
+                                line2 = count(lines);
+                            } else {
+                                line2 = line1;
+                            }
+                        }
+                        line1 = str::atoi(line1);
+                        line2 = str::atoi(line2);
+                        if (!line1 || !line2) {
+                            tell("Usage: .s [LINE[,LINE]]/FIND/REPLACE");
+                            break;
+                        }
+                        var lnum = 1;
+                        var outlines = [];
+                        for (var idx => var line in lines) {
+                            var newln;
+                            if (idx+1>=line1 && idx+1<=line2) {
+                                newln = regex::sub(line, fnd, repl, regex::ALL|regex::ICASE);
+                                if (str::strcmp(newln, line)) {
+                                    lnum++;
+                                }
+                            } else {
+                                newln = line;
+                            }
+                            outlines[] = newln;
+                        }
+                        lines = outlines;
+                        tell(fmtstring("Changed %i lines.", lnum));
+                    } else {
+                        tell("Usage: .s [LINE[,LINE]]/FIND/REPLACE");
+                    }
+                }
+                case(".d") {
+                    line1 = line2 = 0;
+                    var oldcount = count(lines);
+                    cmdargs = str::explode(cmdargs, ",");
+                    if (count(cmdargs) == 1) {
+                        line1 = line2 = str::atoi(cmdargs[0]);
+                    } else if (count(cmdargs) == 2) {
+                        line1 = str::atoi(cmdargs[0]);
+                        line2 = str::atoi(cmdargs[1]);
+                    } else {
+                        tell("Usage: .d LINE [LINE]");
+                    }
+                    if (!line1 || !line2) {
+                        tell("Usage: .d LINENUL [LINENUL]");
+                    }
+                    lines = array::delrange(lines, line1-1, line2-1);
+                    tell(fmtstring("Deleted %i lines.", count(lines)-oldcount));
+                    if (insert_pos >= line1) {
+                        if (insert_pos > line2) {
+                            insert_pos -= line2-line1+1;
+                        } else {
+                            insert_pos = line1;
+                        }
+                    }
+                    tell(fmtstring("Inserting at line %i", insert_pos));
+                }
+                case(".w") {
+                    cmdargs = str::explode(cmdargs, "=");
+                    if (!cmdargs) {
+                        if (obj && prop) {
+                            prop::list_put(obj, prop, lines);
+                            tell("Saved.");
+                        } else {
+                            tell("Usage: .w OBJECT=LISTPROP");
+                        }
+                    } else if (count(cmdargs) == 2) {
+                        <var saveobj, var savelist> = cmdargs;
+                        saveobj = match_controlled(saveobj);
+                        if (saveobj < 0) break;
+                        if (!savelist) {
+                            tell("Usage: .w [OBJECT=LISTPROP]");
+                            break;
+                        }
+                        prop::list_put(saveobj, savelist, lines);
+                        tell("Saved.");
+                    } else {
+                        tell("Usage: .w [OBJECT=LISTPROP]");
+                    }
+                }
+                default {
+                    return [cmd, cmdargs, lines];
+                }
+            }
+        }
+    }
+
+
+    public func basic(arg) {
+        argparse::init();
+        argparse::set_mode("");
+        argparse::add_mode("", [], "obj=list");
+        var opts = argparse::parse(arg);
+        if (!opts) return;
+        if (!opts.obj || !opts.list) {
+            argparse::show_usage();
+            return;
+        }
+
+        var obj = match_controlled(opts.obj);
+        if (obj < 0) return;
+
+        insert_pos = 1;
+
+        var cmd;
+        var args;
+        var lines = prop::list_get(obj, opts.list);
+        show_list(lines, 1, 999999, insert_pos);
+
+        while(1) {
+            <cmd, args, lines> = editor(lines, obj, opts.list);
+            if (!str::strcmp(cmd, ".x")) {
+                break;
+            }
+            if (!str::strcmp(cmd, ".q")) {
+                break;
+            }
+        }
+
+        return [cmd, args, lines];
+    }
+}
+
+
+func main(arg) {
+    return lsedit::basic(arg);
+}
+

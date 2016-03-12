@@ -91,12 +91,11 @@ You can declare a function like this:
         return "Hello World!";
     }
 
-or
+With arguments, you can declare it like this:
 
     func concatenate(var1, var2) {
         return strcat(var1, var2);
     }
-
 
 If you need a variable number of arguments for a function, you can put a `*`
 after the last argument, to indicate that all extra arguments will by passed
@@ -106,10 +105,31 @@ as a list in the last argument variable.
         return array_interpret(args);
     }
 
+If you need to declare a `PUBLIC` function, that can be called by name from
+other MUF programs, you can declare it like this:
+
+    public func concat(args*) {
+        return array_interpret(args);
+    }
+
 Functions return the value given to the `return` command.  ie: `return 42;`
 will return the integer value `42` from the function.  If the end of the
 function is reached with no `return` executing, then the function will return
 the integer `0`.
+
+
+Calls
+-----
+
+You can call functions you have declared, and many builtin MUF primitives in
+this way:
+
+    myvar = myfunction(5, "John Doe");
+
+    notify(me, "Hello World!");
+
+If a primitive returns more than one argument on the stack normally, then all
+items it would return are returned in a list array.
 
 
 Function Variables
@@ -132,20 +152,6 @@ You can declare constants using the syntax:
     const PI = 3.14159;
     
 By convention, the constant name should be all uppercase.
-
-
-Calls
------
-
-You can call functions you have declared, and many builtin MUF primitives in
-this way:
-
-    myvar = myfunction(5, "John Doe");
-
-    notify(me, "Hello World!");
-
-If a primitive returns more than one argument on the stack normally, then all
-items it would return are returned in a list array.
 
 
 Includes
@@ -182,7 +188,6 @@ Function            | Description
 `tell(msg)`         | The same as `notify(me, msg)`
 `fmttell(fmt, ...)` | The same as `tell(fmtstring(fmt, ...))`
 `cat(...)`          | Converts all args to strings and concatenates them.
-
 
 Since MUF has kind of a messy namespace, you can *instead* include files with
 just the primitives you need, renamed a bit more sensibly.  For example, if
@@ -297,13 +302,11 @@ To declare an empty list, just use:
 
     var foo = [];
 
-
 You can fetch an element from a list using a subscript:
 
     var a = listvar[2];
 
 Which will set the newly declared variable `a` to `"Third"`:
-
 
 Setting a list element uses a similar syntax:
 
@@ -314,7 +317,6 @@ listvar to `"foo"`, resulting in listvar containing the list:
 
     ["First", "Second", "Third", "foo"]
 
-
 You can append items to an existing list with the `[]` construct:
 
     listvar[] = "bar";
@@ -322,7 +324,6 @@ You can append items to an existing list with the `[]` construct:
 Resulting in listvar containing the list:
 
     ["First", "Second", "Third", "foo", "bar"]
-
 
 Deletion of list elements uses `del()` like this:
 
@@ -332,7 +333,6 @@ Which deletes the 3rd element of the list stored in `listvar`, resulting in
 `listvar` containing:
 
     ["First", "Second", "foo", "bar"]
-
 
 If you need to work with nested lists, ie: lists stored in elements of lists,
 you can just add subscripts to the expression.  For example:
@@ -423,28 +423,20 @@ If you need an else clause, you can write it like this:
 For a single statement, you can conditionally execute it using a trailing
 conditional `if` or `unless` clause like:
 
-    tell("Even!") unless(x%2);
+    tell("Odd!") if (x%2);
 
 or:
 
-    tell("Odd!") if (x%2);
+    tell("Even!") unless(x%2);
 
 If you need to compare a value against a lot of options, you can use the
 `switch` - `case` statement:
 
     switch (val) {
-        case(1) {
-            tell("One!");
-        }
-        case(2) {
-            tell("Two!");
-        }
-        case(3) {
-            tell("Three!");
-        }
-        default {
-            tell("Something else!");
-        }
+        case(1) tell("One!");
+        case(2) tell("Two!");
+        case(3) tell("Three!");
+        default tell("Something else!");
     }
 
 The default clause is optional:
@@ -486,11 +478,11 @@ constants.
     switch(name(obj) using strcmp) {
         case(strcat(name(me), "'s Brush")) {
             tell("It's one of your brushes!");
-            brushcount += 1;
+            brushcount++;
         }
         case(strcat(name(me), "'s Fiddle")) {
             tell("It's one of your fiddles!");
-            fiddlecount += 1;
+            fiddlecount++;
         }
     }
 
@@ -562,7 +554,7 @@ You can also iterate arrays/lists/dictionaries like this:
     for (var letter in letters)
         tell(letter);
 
-or
+or, to get both index/key and value:
 
     for (var idx => var letter in ["a", "b", "c", "d", "e"])
         tell(cat(idx, letter));
@@ -712,9 +704,15 @@ You can "push" a value onto the top of the stack with the `push(...)` command:
 
     push("Hi!");
 
-You can push multiple values at once:
+You can also push multiple values at once:
 
     push("One", 2, #3, "Fore!");
+
+The `push(...)` command will return the value of the last item pushed.
+
+    var v = push(13, 42);
+
+Will leave `13` and `42` on the stack, and the value of `v` will be set to `42`.
 
 You can specify raw inline MUF code like this:
 
@@ -723,6 +721,10 @@ You can specify raw inline MUF code like this:
 which will compile directly into MUF as:
 
     { "Hello, " args @ }list array_interpret out !
+
+IMPORTANT: If you use the `muf(...)` command inside a function or in a const
+definition, make sure that the MUF code it gives will leave exactly one item
+on the stack!
 
 
 Externs
@@ -792,8 +794,8 @@ When you are debugging a program compiled into MUF from MUV, there are
 a few things you should be aware of:
 
 - To prevent namespace collision with the built-in primitives of MUF, the
-  functions and variables that MUV generates are renamed slightly from what
-  was given in the MUV sources.
+  non-public functions and variables that MUV generates are renamed slightly
+  from what was given in the MUV sources.
 - To keep consistent with expressions returning values, some extra `dup`s
   and `pop`s will appear throughout the code.  Some of this will get optimized
   out by the MUF compiler, and some won't, but they are very fast primitives

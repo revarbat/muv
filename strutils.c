@@ -268,7 +268,7 @@ wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const c
 }
 
 
-void getset_free(struct gettersetter *x)
+void getset_free(accessor *x)
 {
     if (x->get) {
         free((char*)x->get);

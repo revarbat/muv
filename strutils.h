@@ -17,16 +17,16 @@ size_t linecount(const char *);
 char *wrapit(const char *pfx, const char *s, const char *sfx);
 char *wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const char *sfx);
 
-struct gettersetter {
+typedef struct accessor_t {
     const char *get;
     const char *set;
     const char *del;
     const char *call;
     const char *oper_pre;
     const char *oper_post;
-};
+} accessor;
 
-void getset_free(struct gettersetter *x);
+void getset_free(accessor *x);
 
 
 #endif

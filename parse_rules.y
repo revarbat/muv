@@ -44,6 +44,8 @@ int yylex(void);
 int yyparse(void);
 void yyerror(char *s);
 
+char *decl_new_variable(const char *name);
+
 int debugging_level = 0;
 int has_tuple_check = 0;
 const char *tuple_check =
@@ -56,7 +58,6 @@ const char *tuple_check =
     "    then\n"
     ";\n";
 
-
 struct bookmark_t {
     const char *dname;
     const char *fname;
@@ -68,30 +69,26 @@ int bookmark_count = 0;
 int bookmark_push(const char *fname);
 int bookmark_pop();
 
-char *decl_new_variable(const char *name);
 
 /* compiler state exception flag */
 %}
-
 
 %union {
     int token;
     char *str;
     int num_int;
-    double num_float;
     strlist list;
     keyval keyval;
     funcinfo prim;
-    struct gettersetter getset;
+    accessor getset;
 }
-
 
 %token <num_int> INTEGER
 %token <prim> DECLARED_FUNC
 %token <str> FLOAT STR IDENT VAR CONST
 %token <keyval> DECLARED_CONST DECLARED_VAR
 %token <token> INCLUDE UNARY NAMESPACE
-%token <token> IF ELSE UNLESS
+%token <token> IF ELSE UNLESS PUBLIC
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
 %token <token> DO WHILE UNTIL FOR IN
@@ -127,7 +124,7 @@ char *decl_new_variable(const char *name);
 %type <list> arglist arglist_or_null dictlist argvarlist
 %type <list> index_parts tuple_parts
 %type <getset> lvalue
-%type <num_int> ret_count_type opt_varargs
+%type <num_int> ret_count_type opt_varargs opt_public
 
 %start program
 
@@ -184,7 +181,7 @@ globalstatement:
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
                 vname = savefmt("%s::%s", ns, $2);
-                code = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+                code = savefmt("%s::%s", ns, $2);
             } else {
                 vname = savestring($2);
                 code = savefmt("%s%s", VAR_PREFIX, $2);
@@ -200,7 +197,7 @@ globalstatement:
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
                 vname = savefmt("%s::%s", ns, $2);
-                code = savefmt("%s%s::%s", VAR_PREFIX, ns, $2);
+                code = savefmt("%s::%s", ns, $2);
             } else {
                 vname = savestring($2);
                 code = savefmt("%s%s", VAR_PREFIX, $2);
@@ -247,20 +244,24 @@ globalstatement:
             strlist_clear(&vardecl_list);
             kvmap_clear(&scoping_vars_used);
         }
-    | FUNC su proposed_funcname '(' argvarlist opt_varargs ')' {
+    | opt_public FUNC su proposed_funcname '(' argvarlist opt_varargs ')' {
             /* Mid-rule action to make sure function is declared
              * before statements, to allow possible recursion. */
             char *fname;
             char *code;
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
-                fname = savefmt("%s::%s", ns, $3);
-                code = savefmt("%s%s::%s", FUNC_PREFIX, ns, $3);
+                fname = savefmt("%s::%s", ns, $4);
+                code = savefmt("%s::%s", ns, $4);
             } else {
-                fname = savestring($3);
-                code = savefmt("%s%s", FUNC_PREFIX, $3);
+                fname = savestring($4);
+                if ($1) {
+                    code = savestring($4);
+                } else {
+                    code = savefmt("%s%s", FUNC_PREFIX, $4);
+                }
             }
-            funclist_add(&funcs_list, fname, code, $5.count - ($6?1:0), 1, $6);
+            funclist_add(&funcs_list, fname, code, $6.count - ($7?1:0), 1, $7);
             free(fname);
             free(code);
             strlist_clear(&vardecl_list);
@@ -268,12 +269,16 @@ globalstatement:
             char *fname;
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
-                fname = savefmt("%s%s::%s", FUNC_PREFIX, ns, $3);
+                fname = savefmt("%s::%s", ns, $4);
             } else {
-                fname = savefmt("%s%s", FUNC_PREFIX, $3);
+                if ($1) {
+                    fname = savestring($4);
+                } else {
+                    fname = savefmt("%s%s", FUNC_PREFIX, $4);
+                }
             }
-            char *body = indent($10);
-            char *vars = strlist_join(&$5, " ", 0, -1);
+            char *body = indent($11);
+            char *vars = strlist_join(&$6, " ", 0, -1);
             char *decls = strlist_wrap(&vardecl_list, 0, -1);
             char *idecls = indent(decls);
             if (*idecls) {
@@ -281,16 +286,24 @@ globalstatement:
             }
             free(decls);
             $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n    0\n;\n", fname, vars, idecls, body);
+            if ($1) {
+                $$ = appendfmt($$, "public %s\n", fname);
+                $$ = appendfmt($$, "$libdef %s\n", fname);
+            }
             strlist_clear(&vardecl_list);
             kvmap_clear(&scoping_vars_used);
             free(idecls);
             free(vars);
             free(body);
             free(fname);
-            free($3);
-            strlist_free(&$5);
-            free($10);
+            free($4);
+            strlist_free(&$6);
+            free($11);
         }
+    ;
+
+opt_public: /* nothing */ { $$ = 0; }
+    | PUBLIC { $$ = 1; }
     ;
 
 ns_ident: IDENT { $$ = savestring($1); }
@@ -773,8 +786,8 @@ expr: paren_expr { $$ = $1; }
         }
     | function_call { $$ = $1; }
     | TOP { $$ = savestring(""); }
-    | PUSH '(' arglist ')' { strlist_add(&$3, "0"), $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
-    | MUF '(' STR ')' { $$ = savefmt("%s 0", $3); free($3); }
+    | PUSH '(' arglist ')' { strlist_add(&$3, "dup"), $$ = strlist_wrap(&$3, 0, -1); strlist_free(&$3); }
+    | MUF '(' STR ')' { $$ = $3; }
     | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
     | FMTSTRING '(' arglist ')' {
             const char *ptr = $3.list[0];
@@ -1088,6 +1101,7 @@ lookup(char *s, int *bval)
         {"muf",       MUF,       -1},
         {"multiple",  MULTIPLE,  -1},
         {"namespace", NAMESPACE, -1},
+        {"public",    PUBLIC,    -1},
         {"push",      PUSH,      -1},
         {"return",    RETURN,    -1},
         {"single",    SINGLE,    -1},

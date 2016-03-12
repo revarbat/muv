@@ -11,6 +11,7 @@ extern single version() = "version";
 
 extern void tell(x) = "me @ swap notify";
 extern single cat(args*) = "array_interpret";
+extern single count(arr) = "array_count";
 
 const true = 1;
 const false = 0;

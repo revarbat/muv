@@ -4,12 +4,13 @@ TODO
 Short List
 ----------
 
-- Strong typing.
+- value IN array
 
 
 Pie in Sky
 ----------
 
+- Strong typing.
 - Code Optimization.
 - Classes, methods, and other OO stuff.  Difficult with MUF.
 - Array slicing:  `s = foo[2:4];`
