@@ -26,6 +26,12 @@ func loopy(count)
         i++;
     } until (i>count);
 
+    for (var i in 1 => count)
+        tell(intostr(i));
+
+    for (var i in count => 1)
+        tell(intostr(i));
+
     for (var val in online()) {
         tell(fmtstring("%D", val));
     }

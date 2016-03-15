@@ -4,7 +4,7 @@ func main(arg) {
     var valid_numbers = [
         0x63,
         0o142,
-        0b1100001,
+        0b0110_0001,
         96,
         95.,
         94.0,
@@ -16,7 +16,11 @@ func main(arg) {
         8.8e+1,
         0.0,
         0.,
-        0
+        0,
+        0xBAD_BEEF,
+        12_345_678,
+        0d12_345_678,
+        0o1_234
     ];
     var num;
     for (num in valid_numbers) {

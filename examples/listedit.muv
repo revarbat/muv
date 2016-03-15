@@ -1,10 +1,10 @@
-include "!fb6/stdlib";
 include "!fb6/array";
 include "!fb6/str";
 include "!fb6/obj";
 include "!fb6/prop";
 include "!fb6/io";
 include "!fb6/argparse";
+include "!fb6/match";
 
 
 func verify(override, msg) {
@@ -12,7 +12,8 @@ func verify(override, msg) {
         return 1;
     }
     tell(cat("Are you sure you want to ", msg, "?"));
-    if (!str::strcmpi(str::strcut(io::read(), 1)[0], "y")) {
+    var lcin = str::tolower(io::read());
+    if (str::strcut(lcin,1)[0] eq "y") {
         return 1;
     }
     tell("Cancelled.");
@@ -118,7 +119,7 @@ func main(arg) {
     if (opts.verbose) {
         tell(cat("Mode = ", opts.mode));
     }
-    switch (opts.mode using str::strcmpi) {
+    switch (opts.mode using eq) {
         case("list")    { handle_mode_list(obj, opts.prop); }
         case("append")  { handle_mode_append(obj, opts.prop, opts.val, opts.force); }
         case("delete")  { handle_mode_delete(obj, opts.prop, opts.pos, opts.force); }

@@ -317,22 +317,22 @@ lvar argparse::remainder_map
     then
     0 begin pop (switch)
         _opts @ "mode" []
-        dup "list" stringcmp not if
+        dup "list" strcmp not if
             _obj @ _opts @ "prop" [] _handle_mode_list pop break
         then
-        dup "append" stringcmp not if
+        dup "append" strcmp not if
             _obj @ _opts @ "prop" [] _opts @ "val" [] _opts @ "force" []
             _handle_mode_append pop break
         then
-        dup "delete" stringcmp not if
+        dup "delete" strcmp not if
             _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "force" []
             _handle_mode_delete pop break
         then
-        dup "insert" stringcmp not if
+        dup "insert" strcmp not if
             _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "val" []
             _opts @ "force" [] _handle_mode_insert pop break
         then
-        dup "replace" stringcmp not if
+        dup "replace" strcmp not if
             _obj @ _opts @ "prop" [] _opts @ "pos" [] _opts @ "val" []
             _opts @ "force" [] _handle_mode_replace pop break
         then

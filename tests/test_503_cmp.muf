@@ -15,7 +15,7 @@
     0
 ;
 : _main[ _arg -- ret ]
-    var _i
+    var _i var _a
     2 dup _i ! pop
     0 begin pop (switch)
         _i @
@@ -50,6 +50,15 @@
         dup "" _complex_match if
             "None selected!" me @ swap notify 0 pop break
         then
+        break
+    repeat pop
+    "foo" dup _a ! pop
+    0 begin pop (switch)
+        42
+        dup 99 > if "A" me @ swap notify 0 pop break then
+        dup 50 > if "B" me @ swap notify 0 pop break then
+        dup 25 > if "C" me @ swap notify 0 pop break then
+        dup 10 > if "D" me @ swap notify 0 pop break then
         break
     repeat pop
     0

@@ -9,6 +9,7 @@ func main(arg) {
     var squares = [for (v in mylist) v*v];
     var odds = [for (v in mylist) if (v % 2) v];
     var evens = [for (v in mylist) unless (v % 2) v];
+    var cubes = [for (v in 1=>100) v*v*v];
 
     var mydict = [
         "a" => 1,

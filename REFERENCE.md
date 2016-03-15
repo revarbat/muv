@@ -36,6 +36,10 @@ Binary integers are prefixed with `0b`:
 
     0b11010100
 
+You can also prefix decimal numbers with `0d`, if you want to be pedantic:
+
+    0d123456789
+
 Floating point numbers are given like:
 
     3.14
@@ -49,6 +53,16 @@ DataBase References (dbrefs) are given like:
 
     #12345
     #-1
+
+All numbers, of any base, can have `_` placeholder characters, to make the
+numbers more human readable, like thousands separators:
+
+    123_456_789
+    0xBAD_BEEF
+    0b1101_0100
+    0o12_345_678
+    16_237.21
+    #12_345
 
 String literals are given like:
 
@@ -154,6 +168,28 @@ You can declare constants using the syntax:
 By convention, the constant name should be all uppercase.
 
 
+Built-Ins
+---------
+
+MUV has several built-in commands available to all programs:
+
+Function            | Description
+--------------------|--------------------------------------------------------
+`abort(msg)`        | Throws a user exception with the given `msg`.
+`throw(msg)`        | The same as `abort(msg)`
+`tell(msg)`         | The same as `notify(me, msg)`
+`count(arr)`        | Returns the count of how many items are in an array.
+`cat(...)`          | Converts all args to strings and concatenates them.
+`haskey(key,arr)`   | Evaluates true if `key` is in the array `arr`.
+
+MUV also has several built-in constants:
+
+Constants           | Description
+--------------------|--------------------------------------------------------
+`true`              | `1` (Evaluates as true.)
+`false`             | `0` (Evaluates as false.)
+
+
 Includes
 --------
 
@@ -181,14 +217,6 @@ MUF Name       |  MUV Name        | Change
 `ext-name-ok?` | `ext_name_ok?()` | Dashes in name replaced with underscore.
 `fmtstring`    | `fmtstring()`    | Argument ordering completely reversed.
 
-The `!fb6/prims` include file also adds some useful functions:
-
-Function            | Description
---------------------|--------------------------------------------------------
-`tell(msg)`         | The same as `notify(me, msg)`
-`fmttell(fmt, ...)` | The same as `tell(fmtstring(fmt, ...))`
-`cat(...)`          | Converts all args to strings and concatenates them.
-
 Since MUF has kind of a messy namespace, you can *instead* include files with
 just the primitives you need, renamed a bit more sensibly.  For example, if
 you include the file `!fb6/obj` You can get access to the standard fb6 object
@@ -199,7 +227,8 @@ follows, in order of likely importance:
 
 File           | Prefix       | What it declares
 ---------------|--------------|-------------------------------------------------
-`fb6/stdlib`   |              | `true`, `false`, `cat()`, `tell()`, `fmttell()`, etc.
+`fb6/stdlib`   |              | `trig`, `caller`, `prog`, `version`.
+`fb6/match`    |              | `match_noisy`, `match_controlled`
 `fb6/io`       | `io::`       | `notify` and `read` type primitives.
 `fb6/type`     | `type::`     | Type checking and conversion primitives.
 `fb6/str`      | `str::`      | String manipulation primitives.
@@ -223,8 +252,8 @@ File           | Prefix       | What it declares
 `fb6/argparse` | `argparse::` | Cmd-line argument parsing.
 
 WARNING: You should either use `include "!fb6/prims";` *or* include one or
-more of the namespaced files, but *not both*.  You will get compilation errors
-if you mix them.
+more of the namespaced files.  If you include from both, it should still work,
+but it misses the point of using namespaces.
 
 
 Expressions
@@ -244,6 +273,9 @@ Numeric Comparisons:
 - Less Than: `x < 2`
 - Greater Than or Equals: `x >= 2`
 - Less Than or Equals: `x <= 2`
+
+String Comparisons:
+- Case sensitive equals: `x eq "foo"`
 
 Bitwise Math:
 - Bitwise AND: `6 & 4`
@@ -277,12 +309,15 @@ Assignment:
 - BitShift Left and assign: `x <<= 2` is the same as `x = x << 2`
 - BitShift Right and assign: `x >>= 2` is the same as `x = x >> 2`
 
-Miscellaneous:
-- Grouping: `2 * (3 + 4)`
-- Ternary operator: `x>0 ? 1 : 2` Returns 1 if x > 0, otherwise returns 2.
+Array Operations:
+- Test if value in array: `x in [1, 1, 2, 3, 5, 8, 13, 21, 34]`.
 - Array subscript: `x[2]` returns the third item of the given array in `x`.
 - Array subscript assignment: `x[2] = 42` sets the third element of the array
   in `x` to `42`.
+
+Miscellaneous:
+- Grouping: `2 * (3 + 4)`
+- Ternary operator: `x>0 ? 1 : 2` Returns 1 if x > 0, otherwise returns 2.
 
 These expressions can be combined in surprising ways:
 
@@ -471,11 +506,20 @@ cases the comparison to actually be `strcmp not`.  The same applies for
         }
     }
 
+You can also specify built-in comparisons like `eq`, `in`, or `=`.  Only the
+first `case` with a successful match will be executed.
+
+    switch (val using eq) {
+        case("one") tell("First!");
+        case("two") tell("Second!");
+        case("three") tell("Third!");
+    }
+
 Unlike in C, `switch` statements do not fall-through from one case clause to
 the next. Also, you can actually use expressions in the case, not just
 constants.
 
-    switch(name(obj) using strcmp) {
+    switch(name(obj) using eq) {
         case(strcat(name(me), "'s Brush")) {
             tell("It's one of your brushes!");
             brushcount++;
@@ -547,6 +591,17 @@ There are several types of loops available:
     do {
         tell(intostr(i--));
     } until(i == 0);
+
+    // Count from 1 up to 10
+    for (i in 1 => 10) {
+        tell(intostr(i));
+    }
+
+    // Count from 10 down to 1
+    for (i in 10 => 1) {
+        tell(intostr(i));
+    }
+
 
 You can also iterate arrays/lists/dictionaries like this:
 

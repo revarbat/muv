@@ -91,7 +91,7 @@ int bookmark_pop();
 %token <token> IF ELSE UNLESS PUBLIC
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
-%token <token> DO WHILE UNTIL FOR IN
+%token <token> DO WHILE UNTIL FOR
 %token <token> CONTINUE BREAK
 %token <token> TOP PUSH MUF DEL FMTSTRING
 %token <token> EXTERN VOID SINGLE MULTIPLE
@@ -106,8 +106,8 @@ int bookmark_pop();
 %left BITOR
 %left BITXOR
 %left BITAND
-%left EQ NEQ
-%left GT GTE LT LTE
+%left EQEQ NEQ STREQ
+%left GT GTE LT LTE IN
 %left BITLEFT BITRIGHT
 %left PLUS MINUS
 %left MULT DIV MOD
@@ -499,6 +499,14 @@ statement: ';' { $$ = savestring(""); }
             }
             free($3); free($5);
         }
+    | FOR '(' su settable IN expr KEYVAL expr ')' statement sd {
+            char *pfx = appendstr(NULL, $6, $8, "over over <=", "if 1 else -1 then", "for", NULL);
+            char *ind = appendstr(NULL, $4, "\n", $10, NULL);
+            $$ = wrapit(pfx, ind, "repeat");
+            free(ind);
+            free(pfx);
+            free($4); free($6); free($8); free($10);
+        }
     | FOR '(' su settable IN expr ')' statement sd {
             char *pfx = appendstr(NULL, $6, "foreach", NULL);
             char *ind = appendstr(NULL, $4, "pop\n", $8, NULL);
@@ -534,10 +542,16 @@ statement: ';' { $$ = savestring(""); }
     | '{' su statements sd '}' { $$ = $3; }
     ;
 
-using_clause: /* nothing */ {
-            $$ = savestring("=");
-            strlist_add(&using_list, $$);
-        }
+using_clause: /* nothing */ { $$ = savestring("="); strlist_add(&using_list, $$); }
+    | USING EQEQ { $$ = savestring("="); strlist_add(&using_list, $$); }
+    | USING NEQ { $$ = savestring("= not"); strlist_add(&using_list, $$); }
+    | USING LT { $$ = savestring("<"); strlist_add(&using_list, $$); }
+    | USING LTE { $$ = savestring("<="); strlist_add(&using_list, $$); }
+    | USING GT { $$ = savestring(">"); strlist_add(&using_list, $$); }
+    | USING GTE { $$ = savestring(">="); strlist_add(&using_list, $$); }
+    | USING STREQ { $$ = savestring("strcmp not"); strlist_add(&using_list, $$); }
+    | USING IN { $$ = savestring("swap array_findval"); strlist_add(&using_list, $$); }
+    | USING STR { $$ = savestring($2); strlist_add(&using_list, $$); free($2); }
     | USING DECLARED_FUNC {
             if ($2.expects != 2) {
                 yyerror("Using clause expects instruction or function that takes 2 args.");
@@ -740,7 +754,13 @@ compr_cond: /* nothing */ { $$ = savestring(""); }
     ;
 
 compr_loop:
-      '(' settable IN expr ')' {
+      '(' settable IN expr KEYVAL expr ')' {
+            char *ind = indent($2);
+            $$ = appendstr(NULL, $4, $6, "over over <=", "if 1 else -1 then", "for\n", ind, NULL);
+            free(ind);
+            free($2); free($4); free($6);
+        }
+    | '(' settable IN expr ')' {
             if (linecount($2) > 1) {
                 char *ind = indent($2);
                 $$ = savefmt("%s\nforeach\n%s pop", $4, ind);
@@ -878,8 +898,10 @@ expr: paren_expr { $$ = $1; }
     | expr MULT expr     { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
     | expr DIV expr      { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
     | expr MOD expr      { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
-    | expr EQ expr       { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
+    | expr IN expr       { $$ = savefmt("%s %s array_findval", $3, $1); free($1); free($3); }
+    | expr EQEQ expr     { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
     | expr NEQ expr      { $$ = savefmt("%s %s = not", $1, $3); free($1); free($3); }
+    | expr STREQ expr    { $$ = savefmt("%s %s strcmp not", $1, $3); free($1); free($3); }
     | expr LT expr       { $$ = savefmt("%s %s <", $1, $3); free($1); free($3); }
     | expr GT expr       { $$ = savefmt("%s %s >", $1, $3); free($1); free($3); }
     | expr LTE expr      { $$ = savefmt("%s %s <=", $1, $3); free($1); free($3); }
@@ -1091,6 +1113,7 @@ lookup(char *s, int *bval)
         {"del",       DEL,       -1},
         {"do",        DO,        -1},
         {"else",      ELSE,      -1},
+        {"eq",        STREQ,     -1},
         {"extern",    EXTERN,    -1},
         {"fmtstring", FMTSTRING, -1},
         {"for",       FOR,       -1},
@@ -1299,6 +1322,7 @@ yylex()
             if (!isdigit(c)) {
                 switch (c) {
                     case 'x': base=16; break;
+                    case 'd': base=10; break;
                     case 'o': base=8; break;
                     case 'b': base=2; break;
                     case '.': base=10; p--; (void)ungetc(c,yyin); break;
@@ -1315,6 +1339,10 @@ yylex()
 
         num = 0;
         while(1) {
+            if (c == '_') {
+                c = fgetc(yyin);
+                continue;
+            }
             char uc = toupper(c);
             if (base == 10 && (uc == '.' || uc == 'E')) {
                 break;
@@ -1341,6 +1369,9 @@ yylex()
         if (c == '.') {
             do {
                 c = fgetc(yyin);
+                if (c == '_') {
+                    continue;
+                }
                 *p++ = c;
             } while (isdigit(c));
         }
@@ -1355,6 +1386,9 @@ yylex()
             }
             do {
                 c = fgetc(yyin);
+                if (c == '_') {
+                    continue;
+                }
                 *p++ = c;
             } while (isdigit(c));
         }
@@ -1598,7 +1632,7 @@ yylex()
         case '=':
             c = fgetc(yyin);
             if (c == '=') {
-                return EQ;
+                return EQEQ;
             } else if (c == '>') {
                 return KEYVAL;
             } else {
@@ -1700,6 +1734,18 @@ parser_data_init()
 
     /* Global initializations */
     strlist_add(&inits_list, "\"me\" match me ! me @ location loc ! trig trigger !");
+
+    /* Standard Primitives and Functions. */
+    funclist_add(&externs_list, "abort",  "abort",            1, 0, 0);
+    funclist_add(&externs_list, "throw",  "abort",            1, 0, 0);
+    funclist_add(&externs_list, "tell",   "me @ swap notify", 1, 0, 0);
+    funclist_add(&externs_list, "count",  "array_count",      1, 1, 0);
+    funclist_add(&externs_list, "cat",    "array_interpret",  0, 1, 1);
+    funclist_add(&externs_list, "haskey", "swap 1 array_make array_extract",  2, 1, 0);
+
+    /* Global Consts. */
+    kvmap_add(&global_consts, "true",    "1");
+    kvmap_add(&global_consts, "false",   "0");
 }
 
 

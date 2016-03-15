@@ -1,4 +1,3 @@
-include "!fb6/stdlib";
 include "!fb6/array";
 include "!fb6/str";
 include "!fb6/regex";
@@ -6,6 +5,7 @@ include "!fb6/obj";
 include "!fb6/prop";
 include "!fb6/io";
 include "!fb6/argparse";
+include "!fb6/match";
 
 namespace lsedit {
 

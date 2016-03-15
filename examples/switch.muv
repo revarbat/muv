@@ -27,7 +27,8 @@ func main(arg) {
     }
 
     // You can give a using clause to compare using built-in primitives.
-    // 'strcmp' is a special case that really compares using 'strcmp not'
+    // 'strcmp' is a special case that really compares using 'strcmp not'.
+    // Note that `using eq` is effectively identical.
     switch(arg using strcmp) {
         case("greet") {
             tell("Hello.");
@@ -54,6 +55,17 @@ func main(arg) {
         case("") {
             tell("None selected!");
         }
+    }
+
+    // You can specify built-in comparators in the using clause.  The first case 
+    // that matches is the only one evaluated.  For example, the code below will
+    // print out `C`.
+    var a="foo";
+    switch (42 using >) {
+        case(99) tell("A");
+        case(50) tell("B");
+        case(25) tell("C");
+        case(10) tell("D");
     }
 }
 
