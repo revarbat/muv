@@ -52,10 +52,10 @@ namespace lsedit {
 
 
     func show_list(lines, start, end, pos) {
-        var lnum = 1;
-        for (var line in lines) {
+        for (var lnum => var line in lines) {
+	    lnum++;
             if (lnum >= start && lnum <= end) {
-                tell(fmtstring("%s%3i: %s", (lnum==pos ?">":" "), lnum++, line));
+                tell(fmtstring("%s%3i: %s", (lnum==pos ?">":" "), lnum, line));
             }
         }
     }
@@ -94,15 +94,20 @@ namespace lsedit {
                     return [cmd, cmdargs, lines];
                 }
                 case(".l") {
-                    line1 = 0;
-                    line2 = 999999;
-                    cmdargs = str::explode(cmdargs, ",");
-                    if (count(cmdargs) == 1) {
-                        line1 = line2 = str::atoi(cmdargs[0]);
-                    } else if (count(cmdargs) >= 2) {
+		    if (str::instr(cmdargs, ",")) {
+			cmdargs = str::split(cmdargs, ",");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-                    }
+		    } else if (str::instr(cmdargs, " ")) {
+			cmdargs = str::split(cmdargs, " ");
+                        line1 = str::atoi(cmdargs[0]);
+                        line2 = str::atoi(cmdargs[1]);
+		    } else if (!str::strip(cmdargs)) {
+			line1 = 0;
+			line2 = 999999;
+		    } else {
+                        line1 = line2 = str::atoi(cmdargs);
+		    }
                     show_list(lines, line1, line2, insert_pos);
                 }
                 case(".i") {
@@ -174,20 +179,22 @@ namespace lsedit {
                 case(".d") {
                     line1 = line2 = 0;
                     var oldcount = count(lines);
-                    cmdargs = str::explode(cmdargs, ",");
-                    if (count(cmdargs) == 1) {
-                        line1 = line2 = str::atoi(cmdargs[0]);
-                    } else if (count(cmdargs) == 2) {
+		    if (str::instr(cmdargs, ",")) {
+			cmdargs = str::split(cmdargs, ",");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-                    } else {
-                        tell("Usage: .d LINE [LINE]");
-                    }
+		    } else if (str::instr(cmdargs, " ")) {
+			cmdargs = str::split(cmdargs, " ");
+                        line1 = str::atoi(cmdargs[0]);
+                        line2 = str::atoi(cmdargs[1]);
+		    } else {
+                        line1 = line2 = str::atoi(cmdargs);
+		    }
                     if (!line1 || !line2) {
                         tell("Usage: .d LINENUL [LINENUL]");
                     }
                     lines = array::delrange(lines, line1-1, line2-1);
-                    tell(fmtstring("Deleted %i lines.", count(lines)-oldcount));
+                    tell(fmtstring("Deleted %i lines.", oldcount - count(lines)));
                     if (insert_pos >= line1) {
                         if (insert_pos > line2) {
                             insert_pos -= line2-line1+1;

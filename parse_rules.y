@@ -252,7 +252,12 @@ globalstatement:
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
                 fname = savefmt("%s::%s", ns, $4);
-                code = savefmt("%s::%s", ns, $4);
+                if ($1) {
+                    for (char *p = fname; *p; p++) {
+                        if (*p == ':') *p = '_';
+                    }
+                }
+                code = savestring(fname);
             } else {
                 fname = savestring($4);
                 if ($1) {
@@ -270,6 +275,11 @@ globalstatement:
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
                 fname = savefmt("%s::%s", ns, $4);
+                if ($1) {
+                    for (char *p = fname; *p; p++) {
+                        if (*p == ':') *p = '_';
+                    }
+                }
             } else {
                 if ($1) {
                     fname = savestring($4);
@@ -1167,10 +1177,18 @@ lookup_namespaced_keyval(kvmap *m, const char *name)
     char full[MAX_IDENT_LEN];
     const char *ns;
     const char *cp;
+    char *p;
     int i;
     for (i = namespaces_active.count; i-->0; ) {
         ns = namespaces_active.list[i];
         snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = kvmap_get(m, full);
+        if (cp) {
+            return cp;
+        }
+        for (p = full; *p; p++) {
+            if (*p == ':') *p = '_';
+        }
         cp = kvmap_get(m, full);
         if (cp) {
             return cp;
@@ -1183,8 +1201,22 @@ lookup_namespaced_keyval(kvmap *m, const char *name)
         if (cp) {
             return cp;
         }
+        for (p = full; *p; p++) {
+            if (*p == ':') *p = '_';
+        }
+        cp = kvmap_get(m, full);
+        if (cp) {
+            return cp;
+        }
     }
     snprintf(full, sizeof(full), "%s", name);
+    cp = kvmap_get(m, full);
+    if (cp) {
+        return cp;
+    }
+    for (p = full; *p; p++) {
+        if (*p == ':') *p = '_';
+    }
     cp = kvmap_get(m, full);
     return cp;
 }
@@ -1196,10 +1228,18 @@ lookup_namespaced_func(funclist *l, const char *name)
     char full[MAX_IDENT_LEN];
     funcinfo *cp;
     const char *ns;
+    char *p;
     int i;
     for (i = namespaces_active.count; i-->0; ) {
         ns = namespaces_active.list[i];
         snprintf(full, sizeof(full), "%s::%s", ns, name);
+        cp = funclist_find(l, full);
+        if (cp) {
+            return cp;
+        }
+        for (p = full; *p; p++) {
+            if (*p == ':') *p = '_';
+        }
         cp = funclist_find(l, full);
         if (cp) {
             return cp;
@@ -1212,8 +1252,22 @@ lookup_namespaced_func(funclist *l, const char *name)
         if (cp) {
             return cp;
         }
+        for (p = full; *p; p++) {
+            if (*p == ':') *p = '_';
+        }
+        cp = funclist_find(l, full);
+        if (cp) {
+            return cp;
+        }
     }
     snprintf(full, sizeof(full), "%s", name);
+    cp = funclist_find(l, full);
+    if (cp) {
+        return cp;
+    }
+    for (p = full; *p; p++) {
+        if (*p == ':') *p = '_';
+    }
     cp = funclist_find(l, full);
     return cp;
 }
