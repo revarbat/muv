@@ -553,6 +553,7 @@ statement: ';' { $$ = savestring(""); }
     ;
 
 using_clause: /* nothing */ { $$ = savestring("="); strlist_add(&using_list, $$); }
+    | USING MUF '(' STR ')' { $$ = savestring($4); strlist_add(&using_list, $$); free($4); }
     | USING EQEQ { $$ = savestring("="); strlist_add(&using_list, $$); }
     | USING NEQ { $$ = savestring("= not"); strlist_add(&using_list, $$); }
     | USING LT { $$ = savestring("<"); strlist_add(&using_list, $$); }
@@ -561,7 +562,6 @@ using_clause: /* nothing */ { $$ = savestring("="); strlist_add(&using_list, $$)
     | USING GTE { $$ = savestring(">="); strlist_add(&using_list, $$); }
     | USING STREQ { $$ = savestring("strcmp not"); strlist_add(&using_list, $$); }
     | USING IN { $$ = savestring("swap array_findval"); strlist_add(&using_list, $$); }
-    | USING STR { $$ = savestring($2); strlist_add(&using_list, $$); free($2); }
     | USING DECLARED_FUNC {
             if ($2.expects != 2) {
                 yyerror("Using clause expects instruction or function that takes 2 args.");

@@ -515,6 +515,14 @@ first `case` with a successful match will be executed.
         case("three") tell("Third!");
     }
 
+If you absolutely need it, you can also use raw MUF code in the using clause:
+
+    switch (val using muf("\"*\" strcat smatch")) {
+        case("1") tell("Starts with 1");
+        case("2") tell("Starts with 2");
+        case("3") tell("Starts with 3");
+    }
+
 Unlike in C, `switch` statements do not fall-through from one case clause to
 the next. Also, you can actually use expressions in the case, not just
 constants.
