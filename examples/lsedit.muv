@@ -258,12 +258,10 @@ namespace lsedit {
 
         while(1) {
             <cmd, args, lines> = editor(lines, obj, opts.list);
-            if (!str::strcmp(cmd, ".x")) {
+            if (cmd in [".x", ".q"]) {
                 break;
             }
-            if (!str::strcmp(cmd, ".q")) {
-                break;
-            }
+            tell(fmtstring("Unrecognized editor command '%s'.", cmd));
         }
 
         return [cmd, args, lines];

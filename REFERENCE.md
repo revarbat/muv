@@ -68,6 +68,19 @@ String literals are given like:
 
     "Hello!"
 
+or
+
+    'Hiya!'
+
+If you use triples of quotes for string delimiters, you can more easily
+include single or double character quotes in the string:
+
+    """It's a "test"."""
+
+or
+
+    '''It's a "test".'''
+
 List arrays can be declared like this:
 
     ["first", "second", "third"]
@@ -769,9 +782,9 @@ The `push(...)` command will return the value of the last item pushed.
 
 Will leave `13` and `42` on the stack, and the value of `v` will be set to `42`.
 
-You can specify raw inline MUF code like this:
+You can specify raw MUF code by passing it as a string to the `muf(...)` command:
 
-    muf("{ \"Hello, \" args @ }list array_interpret out !");
+    muf('{ "Hello, " args @ }list array_interpret out !');
 
 which will compile directly into MUF as:
 
@@ -783,7 +796,7 @@ on the stack!
 
 If you need it, you can also use raw MUF code in the using clause of a `switch`:
 
-    switch (val using muf("\"*\" strcat smatch")) {
+    switch (val using muf('"*" strcat smatch')) {
         case("1") tell("Starts with 1");
         case("2") tell("Starts with 2");
         case("3") tell("Starts with 3");
@@ -821,7 +834,7 @@ of the extern to coerce it to a normal form:
 
     extern single concat(args*) = "array_interpret";
 
-    extern single fmtstring(fmt, args*) = "
+    extern single fmtstr(fmt, args*) = "
         2 try
             array_explode 1 + rotate fmtstring
             depth 0 swap - rotate depth 1 - popn
@@ -875,11 +888,11 @@ a few things you should be aware of:
 
 For example, the following MUV source:
 
-    extern void tell(msg) = "me @ swap notify";
+    extern void tellme(msg) = "me @ swap notify";
     extern single toupper(s);
     extern multiple stats(who);
     func foo(bar) {
-        tell(toupper(bar));
+        tellme(toupper(bar));
         var baz = stats(me);
     }
 
@@ -901,11 +914,11 @@ There are several things to note here:
 - The system variable `me`, however, remains unchanged.  
 - Since `toupper()` is declared to return a `single` value, that value is
   returned unmolested after the call to `toupper`.
-- The call to the `extern` declared function `tell`, is replaced by the
+- The call to the `extern` declared function `tellme`, is replaced by the
   code `me @ swap notify`.
-- Since `tell` is declared `void`, a `0` is pushed onto the stack, so that
-  `tell()` always appears to return `0`.
-- Since the expression `tell(toupper(bar))` does not store its returned
+- Since `tellme` is declared `void`, a `0` is pushed onto the stack, so
+  that `tellme()` always appears to return `0`.
+- Since the expression `tellme(toupper(bar))` does not store its returned
   value in any variable, a `pop` is added to get rid of the unused value.
 - Since `stats()` is declared to return `multiple` values, the entire
   expression is wrapped in `{` and `}list` to collapse all those values

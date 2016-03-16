@@ -4,8 +4,6 @@ TODO
 Short List
 ----------
 
-- value IN array
-
 
 Pie in Sky
 ----------

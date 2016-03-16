@@ -1543,15 +1543,49 @@ yylex()
     }
 
     /* handle quoted strings */
-    if (c == '"') {
+    if (c == '"' || c == '\'') {
         int cnt = 0;
         int quot = c;
+        int triplet = 0;
 
         /* strip start quote by resetting ptr */
         p = in;
 
+        c = fgetc(yyin);
+        if (c == quot) {
+            c = fgetc(yyin);
+            if (c == quot) {
+                triplet = 1;
+            } else {
+                (void)ungetc(c,yyin);
+                (void)ungetc(quot,yyin);
+                c = quot;
+            }
+        } else {
+            (void)ungetc(c,yyin);
+        }
+
         /* match quoted strings */
-        while ((c = fgetc(yyin)) != EOF && c != quot) {
+        while ((c = fgetc(yyin)) != EOF) {
+
+            if (c == quot) {
+                if (!triplet) {
+                    break;
+                }
+                c = fgetc(yyin);
+                if (c == quot) {
+                    c = fgetc(yyin);
+                    if (c == quot) {
+                        break;
+                    }
+                    (void)ungetc(c,yyin);
+                    (void)ungetc(quot,yyin);
+                } else {
+                    (void)ungetc(c,yyin);
+                }
+                c = quot;
+            }
+
             if (!isascii(c)) {
                 continue;
             }
