@@ -3,20 +3,16 @@
 
 namespace prog {
 
-extern multiple call(x, args*) = "array_vals ++ rotate call";
+extern multiple call(d, args*) = "array_vals ++ rotate call";
+extern multiple call_public(d, pub, args*) = "[]<- []<- array_vals pop swap call";
+extern multiple execute(d, args*) = "[]<- array_vals pop execute";
 
-func call_public(x, pub, args*) {
-    return muf("{ args @ array_vals pop x @ pub @ call }list");
-}
-
-extern multiple execute(x, args*) = "array_vals ++ rotate execute";
-
-extern single cancall?(x,y) = "cancall?";
-extern single compile(x,y) = "compile";
-extern void   uncompile(x) = "uncompile";
-extern single compiled?(x) = "compiled?";
-extern single getlines(x,y,z) = "program_getlines";
-extern void   setlines(x,y) = "program_setlines";
+extern single cancall?(d,pub);
+extern single compile(d,showerrs);
+extern void   uncompile(d);
+extern single compiled?(d);
+extern single getlines(d,l1,l2) = "program_getlines";
+extern void   setlines(d,lnlst) = "program_setlines";
 
 }
 

@@ -3,14 +3,15 @@
 
 namespace time {
 
-extern multiple time();
-extern multiple date();
+extern multiple time();  // sec min hrs
+extern multiple date();  // day mon yrs
+extern multiple datetime() = "time date";  // sec min hrs day mon yrs
 extern single   systime();
 extern single   systime_precise();
 extern single   gmtoffset();
-extern multiple timesplit(x);
-extern single   timefmt(x,y);
-extern void     sleep(x);
+extern multiple timesplit(x);  // sec min hr day mon yr wkday yrday
+extern single   timefmt(fmt,systim);
+extern void     sleep(secs);
 
 }
 

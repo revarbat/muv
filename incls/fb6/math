@@ -49,7 +49,7 @@ extern single   error_is_set?(x) = "is_set?";
 extern single   error_set(x) = "set_error";
 
 const pi = 3.141592653589793236;
-const e  = 2.7182818285;
+const e  = 2.718281828459045235;
 
 }
 

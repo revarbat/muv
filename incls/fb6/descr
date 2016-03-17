@@ -1,24 +1,32 @@
+/////////////////////////////////////////
+// Descriptor primitives.
+
 namespace descr {
 
-extern single descrboot(x);
-extern single descrbufsize(x);
-extern single descrcon(x);
-extern single descrdbref(x);
+extern single awake?(d);
+extern single online() = "online_array";
+
 extern single descr();
-extern single firstdescr(x);
-extern void   descrflush(x);
-extern single descrhost(x);
-extern single descridle(x);
-extern single lastdescr(x);
-extern single descrleastidle(x);
-extern single descr_array(x);
-extern single descrmostidle(x);
-extern single nextdescr(x);
-extern void   descrnotify(x,y);
-extern single descrsecure?(x);
-extern single descr_setuser(x,y,z);
-extern single descrtime(x);
-extern single descruser(x);
+extern single descr_array(d);
+extern single descr_setuser(i,plyr,pass);
+extern single descrboot(i);
+extern single descrbufsize(i);
+extern single descrcon(i);
+extern single descrdbref(i);
+extern void   descrflush(i);
+extern single descrhost(i);
+extern single descridle(i);
+extern single descriptors(d) = "descr_array";
+extern single descrleastidle(d);
+extern single descrmostidle(d);
+extern void   descrnotify(i,msg);
+extern single descrsecure?(i);
+extern single descrtime(i);
+extern single descruser(i);
+
+extern single firstdescr(d);
+extern single lastdescr(d);
+extern single nextdescr(i);
 
 }
 

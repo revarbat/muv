@@ -3,20 +3,20 @@
 
 namespace proc {
 
-extern single mode() = "mode";
-extern void   setmode(x) = "setmode";
-extern void   preempt() = "preempt";
-extern void   foreground() = "foreground";
-extern void   background() = "background";
-extern single interp(x,y,z) = "interp";
-extern single queue(x,y,z) = "queue";
-extern single fork() = "fork";
-extern single kill(x) = "kill";
-extern single pid() = "pid";
-extern single ispid?(x) = "ispid?";
-extern single getpids(x) = "getpids";
-extern single getpidinfo(x) = "getpidinfo";
-extern single instances(x) = "instances";
+extern single mode();
+extern void   setmode(x);
+extern void   preempt();
+extern void   foreground();
+extern void   background();
+extern single interp(x,y,z);
+extern single queue(x,y,z);
+extern single fork();
+extern single kill(x);
+extern single pid();
+extern single ispid?(x);
+extern single getpids(x);
+extern single getpidinfo(x);
+extern single instances(x);
 
 const PREEMPT = muf("pr_mode");
 const FOREGROUND = muf("fg_mode");

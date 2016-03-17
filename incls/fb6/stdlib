@@ -1,8 +1,8 @@
 /////////////////////////////////////////
 // Standard absolute basics MUV library
 
-extern single prog() = "prog";
-extern single trig() = "trig";
-extern single caller() = "caller";
-extern single version() = "version";
+extern single prog();
+extern single trig();
+extern single caller();
+extern single version();
 

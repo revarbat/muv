@@ -3,89 +3,90 @@
 
 namespace obj {
 
-extern single   dbref(x) = "dbref";
+extern single   awake?(d);
+extern single   dbref(x);
 
-extern single   dbtop() = "dbtop";
-extern single   dbcmp(x,y) = "dbcmp";
-extern single   nextowned(x) = "nextowned";
+extern single   dbtop();
+extern single   dbcmp(x,y);
+extern single   nextowned(x);
 
-extern single   match(x) = "match";
-extern single   rmatch(x,y) = "rmatch";
-extern single   pmatch(x) = "pmatch";
-extern single   part_pmatch(x) = "part_pmatch";
+extern single   match(x);
+extern single   rmatch(x,y);
+extern single   pmatch(x);
+extern single   part_pmatch(x);
 
 extern single   name_ok?(x) = "name-ok?";
 extern single   pname_ok?(x) = "pname-ok?";
 extern single   ext_name_ok?(x,y) = "ext-name-ok?";
 
-extern single   unparse(x) = "unparseobj";
-extern multiple timestamps(x) = "timestamps";
-extern single   objmem(x) = "objmem";
-extern multiple stats(x) = "stats";
+extern single   unparseobj(x);
+extern multiple timestamps(x);
+extern single   objmem(x);
+extern multiple stats(x);
 
-extern single   controls(x,y) = "controls";
-extern single   owner(x) = "owner";
-extern void     setown(x,y) = "setown";
-extern void     moveto(x,y) = "moveto";
-extern single   location(x) = "location";
-extern single   first_contents(x) = "contents";
-extern single   contents_array(x) = "contents_array";
+extern single   controls(x,y);
+extern single   owner(x);
+extern void     setown(x,y);
+extern void     moveto(x,y);
+extern single   location(x);
+extern single   contents(x);
+extern single   contents_array(x);
 
-extern single   next(x) = "next";
-extern single   first_exit(x) = "exits";
-extern single   exits_array(x) = "exits_array";
+extern single   next(x);
+extern single   exits(x);
+extern single   exits_array(x);
 extern single   getlinks(x) = "getlinks_array";
 extern void     setlinks(x,y) = "setlinks_array";
 extern single   entrances(x) = "entrances_array";
-extern single   nextentrance(x,y) = "nextentrance";
-extern single   findnext(w,x,y,z) = "findnext";
+extern single   nextentrance(x,y);
+extern single   findnext(w,x,y,z);
 
-extern single   copyobj(x) = "copyobj";
-extern single   copyplayer(x,y,z) = "copyplayer";
-extern void     toadplayer(x,y) = "toadplayer";
-extern single   newplayer(x,y) = "newplayer";
-extern single   newroom(x,y) = "newroom";
-extern single   newobject(x,y) = "newobject";
-extern single   newexit(x,y) = "newexit";
-extern single   newprogram(x,y) = "newprogram";
-extern void     recycle(x) = "recycle";
+extern single   copyobj(x);
+extern single   copyplayer(x,y,z);
+extern void     toadplayer(x,y);
+extern single   newplayer(x,y);
+extern single   newroom(x,y);
+extern single   newobject(x,y);
+extern single   newexit(x,y);
+extern single   newprogram(x,y);
+extern void     recycle(x);
 
-extern single   pennies(x) = "pennies";
-extern void     addpennies(x,y) = "addpennies";
-extern void     movepennies(x,y,z) = "movepennies";
+extern single   pennies(x);
+extern void     addpennies(x,y);
+extern void     movepennies(x,y,z);
 
-extern single   checkpassword(x,y) = "checkpassword";
-extern void     newpassword(x,y) = "newpassword";
+extern single   checkpassword(x,y);
+extern void     newpassword(x,y);
 extern void     setflag(x,y) = "set";
-extern single   flag?(x,y) = "flag?";
-extern single   mlevel(x) = "mlevel";
+extern single   flag?(x,y);
+extern single   mlevel(x);
 
-extern single   ok?(x) = "ok?";
-extern single   player?(x) = "player?";
-extern single   room?(x) = "room?";
-extern single   thing?(x) = "thing?";
-extern single   exit?(x) = "exit?";
-extern single   program?(x) = "program?";
+extern single   ok?(x);
+extern single   player?(x);
+extern single   room?(x);
+extern single   thing?(x);
+extern single   exit?(x);
+extern single   program?(x);
 
-extern single   name(x) = "name";
-extern single   truename(x) = "truename";
-extern void     setname(x,y) = "setname";
+extern single   name(x);
+extern single   truename(x);
+extern void     setname(x,y);
 
-extern single   desc(x) = "desc";
-extern single   succ(x) = "succ";
-extern single   fail(x) = "fail";
-extern single   drop(x) = "drop";
-extern single   osucc(x) = "osucc";
-extern single   ofail(x) = "ofail";
-extern single   odrop(x) = "odrop";
+extern single   desc(x);
+extern single   succ(x);
+extern single   fail(x);
+extern single   drop(x);
+extern single   osucc(x);
+extern single   ofail(x);
+extern single   odrop(x);
 
-extern void     setdesc(x,y) = "setdesc";
-extern void     setsucc(x,y) = "setsucc";
-extern void     setfail(x,y) = "setfail";
-extern void     setdrop(x,y) = "setdrop";
-extern void     setosucc(x,y) = "setosucc";
-extern void     setofail(x,y) = "setofail";
-extern void     setodrop(x,y) = "setodrop";
+extern void     setdesc(x,y);
+extern void     setsucc(x,y);
+extern void     setfail(x,y);
+extern void     setdrop(x,y);
+extern void     setosucc(x,y);
+extern void     setofail(x,y);
+extern void     setodrop(x,y);
 
 }
 

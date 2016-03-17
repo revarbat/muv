@@ -3,13 +3,13 @@
 
 namespace lock {
 
-extern single locked?(x,y);
-extern single parselock(x);
-extern single unparselock(x);
-extern single prettylock(x);
-extern single testlock(x,y);
-extern single setlockstr(x,y);
-extern single getlockstr(x);
+extern single locked?(plyr,obj);
+extern single parselock(lck);
+extern single unparselock(lck);
+extern single prettylock(lck);
+extern single testlock(d,lck);
+extern single setlockstr(d,lckstr);
+extern single getlockstr(d);
 
 }
 
