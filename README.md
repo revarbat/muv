@@ -82,6 +82,11 @@ of STDOUT.
 
     muv -o whospecies.muf whospecies.muv
 
+Adding a `-d` to the command-line will add debugging code to the MUF output.
+Each line of MUV will add code like: `"foo.muv:23" pop` to the MUF output.
+
+    muv -d -o whospecies.muf whospecies.muv
+
 
 Links
 -----

@@ -1,3 +1,12 @@
+$language "muv"
+
+$author "Revar Desmera <revar@gmail.com>"
+$note   "An example replacement for the lsedit program, written in MUV."
+
+$version    1.0
+$libversion 1.0
+
+
 include "!fb6/array";
 include "!fb6/str";
 include "!fb6/regex";
@@ -53,7 +62,7 @@ namespace lsedit {
 
     func show_list(lines, start, end, pos) {
         for (var lnum => var line in lines) {
-	    lnum++;
+            lnum++;
             if (lnum >= start && lnum <= end) {
                 tell(fmtstring("%s%3i: %s", (lnum==pos ?">":" "), lnum, line));
             }
@@ -94,20 +103,20 @@ namespace lsedit {
                     return [cmd, cmdargs, lines];
                 }
                 case(".l") {
-		    if (str::instr(cmdargs, ",")) {
-			cmdargs = str::split(cmdargs, ",");
+                    if (str::instr(cmdargs, ",")) {
+                        cmdargs = str::split(cmdargs, ",");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-		    } else if (str::instr(cmdargs, " ")) {
-			cmdargs = str::split(cmdargs, " ");
+                    } else if (str::instr(cmdargs, " ")) {
+                        cmdargs = str::split(cmdargs, " ");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-		    } else if (!str::strip(cmdargs)) {
-			line1 = 0;
-			line2 = 999999;
-		    } else {
+                    } else if (!str::strip(cmdargs)) {
+                        line1 = 0;
+                        line2 = 999999;
+                    } else {
                         line1 = line2 = str::atoi(cmdargs);
-		    }
+                    }
                     show_list(lines, line1, line2, insert_pos);
                 }
                 case(".i") {
@@ -179,17 +188,17 @@ namespace lsedit {
                 case(".d") {
                     line1 = line2 = 0;
                     var oldcount = count(lines);
-		    if (str::instr(cmdargs, ",")) {
-			cmdargs = str::split(cmdargs, ",");
+                    if (str::instr(cmdargs, ",")) {
+                        cmdargs = str::split(cmdargs, ",");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-		    } else if (str::instr(cmdargs, " ")) {
-			cmdargs = str::split(cmdargs, " ");
+                    } else if (str::instr(cmdargs, " ")) {
+                        cmdargs = str::split(cmdargs, " ");
                         line1 = str::atoi(cmdargs[0]);
                         line2 = str::atoi(cmdargs[1]);
-		    } else {
+                    } else {
                         line1 = line2 = str::atoi(cmdargs);
-		    }
+                    }
                     if (!line1 || !line2) {
                         tell("Usage: .d LINENUL [LINENUL]");
                     }
