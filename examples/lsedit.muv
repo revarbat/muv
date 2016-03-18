@@ -19,7 +19,7 @@ using namespace str;
 
 namespace lsedit {
 
-    var help_lines;
+    var help_lines = [];
     var insert_pos;
 
 
@@ -71,6 +71,10 @@ namespace lsedit {
                 tell(fmtstring("%s%3i: %s", (lnum==pos ?">":" "), lnum, line));
             }
         }
+	if (pos > count(lines)) {
+	    tell(">");
+	}
+	tell("Done.");
     }
 
 
@@ -159,17 +163,19 @@ namespace lsedit {
             if (strncmp(inln, ".", 1)) {
                 // Line does NOT start with '.', so we just insert it.
                 lines = array::insertitem(inln, lines, insert_pos-1);
+		insert_pos++;
                 continue;
             }
             if (!strncmp(inln, "..", 2)) {
                 // Starts with "..", so strip one "." and insert it.
                 inln = strcut(inln, 1)[1];
                 lines = array::insertitem(inln, lines, insert_pos-1);
+		insert_pos++;
                 continue;
             }
             <var cmd, var cmdargs> = split(inln, " ");
             switch (cmd using strcmp) {
-                case(".h") { show_help(); continue; }
+                case(".h") { show_help(); }
                 case(".q") {
                     prop::list_put(obj, prop, lines);
                     tell("Saved.");
@@ -208,6 +214,7 @@ namespace lsedit {
                         <var changed, subbed> = regexp_list_sub(subbed, fnd, repl);
                         lines = array::concat(pfx, subbed, sfx);
                         tell(fmtstring("Changed %i lines.", changed));
+			show_list(lines, line1, line2, insert_pos);
                     } else {
                         tell("Usage: .s [LINE[,LINE]]/FIND/REPLACE");
                     }
@@ -261,9 +268,11 @@ namespace lsedit {
                         break;
                     }
                     <var pfx, var mid, var sfx> = list_split_range(lines, line1, line2);
+		    var origcnt = count(mid);
                     mid = format_list(mid, cols);
                     lines = array::concat(pfx, mid, sfx);
-                    tell(fmtstring("Formatted %i lines.", line2-line1+1));
+                    tell(fmtstring("Formatted %i lines.", origcnt));
+                    show_list(lines, line1, line2, insert_pos);
                 }
                 default {
                     return [cmd, cmdargs, lines];
@@ -308,6 +317,7 @@ namespace lsedit {
 
 
 func main(arg) {
+    lsedit::init_help();
     return lsedit::basic(arg);
 }
 
