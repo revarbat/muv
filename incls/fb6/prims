@@ -212,11 +212,11 @@ extern single array_setrange(x,y,z);
 extern single array_sort(x,y);
 extern single array_sort_indexed(x,y,z);
 
-extern single array_union(x,y);
+extern single array_union(args*) = "array_vals array_nunion";
 extern single array_nunion(args*) = "array_vals array_nunion";
-extern single array_diff(x,y);
+extern single array_diff(args*) = "array_vals array_ndiff";
 extern single array_ndiff(args*) = "array_vals array_ndiff";
-extern single array_intersect(x,y);
+extern single array_intersect(args*) = "array_vals array_nintersect";
 extern single array_nintersect(args*) = "array_vals array_nintersect";
 
 extern single dbtop();
@@ -396,6 +396,8 @@ extern single force_level();
 
 extern single array_make(args*) = "";
 extern single array_make_dict(args*) = "{ swap array_vals pop }dict";
+extern single concat(args*) = "{ }list swap array_reverse foreach swap pop 0 swap array_insertrange repeat";
+extern single merge(args*) = "{ }dict swap foreach swap pop foreach rot rot ->[] repeat repeat";
 
 // Server defined constants.
 const true = 1;
