@@ -88,6 +88,9 @@ int bookmark_pop();
 %token <str> FLOAT STR IDENT VAR CONST
 %token <keyval> DECLARED_CONST DECLARED_VAR
 %token <token> INCLUDE UNARY NAMESPACE
+%token <token> D_LANGUAGE D_INCLUDE D_AUTHOR
+%token <token> D_VERSION D_LIBVERSION D_PRAGMA
+%token <token> D_WARN D_ERROR D_NOTE D_ECHO
 %token <token> IF ELSE UNLESS PUBLIC
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
@@ -114,7 +117,7 @@ int bookmark_pop();
 %right UNARY NOT BITNOT
 %left '[' ']' '(' ')' APPEND DOT
 
-%type <str> globalstatement ns_ident
+%type <str> globalstatement ns_ident directive
 %type <str> proposed_funcname maybe_bad_funcname
 %type <str> proposed_varname maybe_bad_varname
 %type <str> simple_statement statement statements paren_expr
@@ -151,6 +154,7 @@ nsdecl: NAMESPACE ns_ident {
 
 globalstatement:
       MUF '(' STR ')' ';' { $$ = savefmt("%s\n", $3); free($3); }
+    | directive { $$ = $1; }
     | USING NAMESPACE ns_ident ';' {
             strlist_add(&namespaces_active, $3);
             $$ = savestring("");
@@ -309,6 +313,30 @@ globalstatement:
             free($4);
             strlist_free(&$6);
             free($11);
+        }
+    ;
+
+directive:
+      D_LANGUAGE STR {
+            if (strcmp($2, "muv")) {
+                yyerror("Only $language \"muv\" allowed.");
+                YYERROR;
+            }
+            $$ = savestring("");
+            free($2);
+        }
+    | D_VERSION FLOAT { $$ = savefmt("$version %s\n", $2); free($2); }
+    | D_LIBVERSION FLOAT { $$ = savefmt("$lib-version %s\n", $2); free($2); }
+    | D_AUTHOR STR  { $$ = savefmt("$author %s\n", $2); free($2); }
+    | D_NOTE STR  { $$ = savefmt("$note %s\n", $2); free($2); }
+    | D_ECHO STR  { $$ = savefmt("$echo %s\n", $2); free($2); }
+    | D_PRAGMA STR { $$ = savefmt("$pragma %s\n", $2); free($2); }
+    | D_INCLUDE STR { $$ = savefmt("$include %s\n", $2); free($2); }
+    | D_ERROR STR { yyerror($2); free($2); $$ = savestring(""); YYERROR; }
+    | D_WARN STR {
+            fprintf(stderr, "Warning in %s/%s:%d: %s\n", yydirname, yyfilename, yylineno, $2);
+            $$ = savestring("");
+            free($2);
         }
     ;
 
@@ -1121,39 +1149,49 @@ lookup(char *s, int *bval)
         int bltin;  /* # of builtin if builtin */
     } keyz[] = {
         /* MUST BE IN LEXICAL SORT ORDER !!!!!! */
-        {"break",     BREAK,     -1},
-        {"case",      CASE,      -1},
-        {"catch",     CATCH,     -1},
-        {"const",     CONST,     -1},
-        {"continue",  CONTINUE,  -1},
-        {"default",   DEFAULT,   -1},
-        {"del",       DEL,       -1},
-        {"do",        DO,        -1},
-        {"else",      ELSE,      -1},
-        {"eq",        STREQ,     -1},
-        {"extern",    EXTERN,    -1},
-        {"fmtstring", FMTSTRING, -1},
-        {"for",       FOR,       -1},
-        {"func",      FUNC,      -1},
-        {"if",        IF,        -1},
-        {"in",        IN,        -1},
-        {"include",   INCLUDE,   -1},
-        {"muf",       MUF,       -1},
-        {"multiple",  MULTIPLE,  -1},
-        {"namespace", NAMESPACE, -1},
-        {"public",    PUBLIC,    -1},
-        {"push",      PUSH,      -1},
-        {"return",    RETURN,    -1},
-        {"single",    SINGLE,    -1},
-        {"switch",    SWITCH,    -1},
-        {"top",       TOP,       -1},
-        {"try",       TRY,       -1},
-        {"unless",    UNLESS,    -1},
-        {"until",     UNTIL,     -1},
-        {"using",     USING,     -1},
-        {"var",       VAR,       -1},
-        {"void",      VOID,      -1},
-        {"while",     WHILE,     -1},
+        {"$author",      D_AUTHOR,      -1},
+        {"$echo",        D_ECHO,        -1},
+        {"$error",       D_ERROR,       -1},
+        {"$include",     D_INCLUDE,     -1},
+        {"$language",    D_LANGUAGE,    -1},
+        {"$libversion",  D_LIBVERSION,  -1},
+        {"$note",        D_NOTE,        -1},
+        {"$pragma",      D_PRAGMA,      -1},
+        {"$version",     D_VERSION,     -1},
+        {"$warn",        D_WARN,        -1},
+        {"break",        BREAK,         -1},
+        {"case",         CASE,          -1},
+        {"catch",        CATCH,         -1},
+        {"const",        CONST,         -1},
+        {"continue",     CONTINUE,      -1},
+        {"default",      DEFAULT,       -1},
+        {"del",          DEL,           -1},
+        {"do",           DO,            -1},
+        {"else",         ELSE,          -1},
+        {"eq",           STREQ,         -1},
+        {"extern",       EXTERN,        -1},
+        {"fmtstring",    FMTSTRING,     -1},
+        {"for",          FOR,           -1},
+        {"func",         FUNC,          -1},
+        {"if",           IF,            -1},
+        {"in",           IN,            -1},
+        {"include",      INCLUDE,       -1},
+        {"muf",          MUF,           -1},
+        {"multiple",     MULTIPLE,      -1},
+        {"namespace",    NAMESPACE,     -1},
+        {"public",       PUBLIC,        -1},
+        {"push",         PUSH,          -1},
+        {"return",       RETURN,        -1},
+        {"single",       SINGLE,        -1},
+        {"switch",       SWITCH,        -1},
+        {"top",          TOP,           -1},
+        {"try",          TRY,           -1},
+        {"unless",       UNLESS,        -1},
+        {"until",        UNTIL,         -1},
+        {"using",        USING,         -1},
+        {"var",          VAR,           -1},
+        {"void",         VOID,          -1},
+        {"while",        WHILE,         -1},
         {NULL, 0, 0}
     };
 
@@ -1314,6 +1352,7 @@ yylex()
     char in[MAX_STR_LEN];
     char *p = in;
     int c, digit;
+    int str_is_raw = 0;
     funcinfo* pinfo;
     short base = 10;
 
@@ -1459,8 +1498,18 @@ yylex()
         return FLOAT;
     }
 
+    if (c == 'r') {
+        c = fgetc(yyin);
+        if (c == '"' || c == '\'') {
+            str_is_raw = 1;
+        } else {
+            (void)ungetc(c,yyin);
+            c = 'r';
+        }
+    }
+
     /* handle keywords or idents/builtins */
-    if (isalpha(c) || c == '_') {
+    if (!str_is_raw && (isalpha(c) || c == '_' || c == '$')) {
         int cnt = 0;
         int rv;
         int bltin;
@@ -1606,7 +1655,7 @@ yylex()
                 yylineno++;
             }
 
-            if (c == '\\') {
+            if (!str_is_raw && c == '\\') {
                 c = fgetc(yyin);
                 switch (c) {
                     case 'n':

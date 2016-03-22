@@ -8,6 +8,7 @@ Short List
 Pie in Sky
 ----------
 
+- "There are #{hands*5} fingers!"
 - Strong typing.
 - Code Optimization.
 - Classes, methods, and other OO stuff.  Difficult with MUF.

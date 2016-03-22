@@ -11,5 +11,9 @@ func quotes(arg) {
     var j = """abc
                def""";
     var k = '''abc'def''';
+    var l = r'abc\rdef';
+    var m = r"abc\rdef";
+    var n = r'''abc"\r'def''';
+    var o = r"""abc"\r'def""";
 }
 

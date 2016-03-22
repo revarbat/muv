@@ -5,52 +5,54 @@ namespace array {
 
 extern single   make(args*) = "";
 extern single   make_dict(args*) = "{ swap array_vals pop }dict";
-extern single   concat(args*) = "{ swap foreach swap pop array_explode pop repeat }list";
+extern single   concat(args*) = "{ }list swap array_reverse foreach swap pop 0 swap array_insertrange repeat";
+extern single   merge(args*) = "{ }dict swap foreach swap pop foreach rot rot ->[] repeat repeat";
 
-extern multiple first(x) = "array_first";
-extern multiple last(x) = "array_last";
-extern multiple next(x,y) = "array_next";
-extern multiple prev(x,y) = "array_prev";
+extern multiple first(arr) = "array_first";
+extern multiple last(arr) = "array_last";
+extern multiple next(arr,idx) = "array_next";
+extern multiple prev(arr,idx) = "array_prev";
 
-extern single   getitem(x,y) = "array_getitem";
-extern single   setitem(x,y,z) = "array_setitem";
-extern single   insertitem(x,y,z) = "array_insertitem";
-extern single   appenditem(x,y) = "array_appenditem";
-extern single   delitem(x,y) = "array_delitem";
+extern single   getitem(arr,idx) = "array_getitem";
+extern single   setitem(x,arr,idx) = "array_setitem";
+extern single   insertitem(x,arr,idx) = "array_insertitem";
+extern single   appenditem(x,arr) = "array_appenditem";
+extern single   delitem(arr,idx) = "array_delitem";
 
-extern single   getrange(x,y) = "array_getrange";
-extern single   setrange(x,y,z) = "array_setrange";
-extern single   insertrange(x,y,z) = "array_insertrange";
-extern single   delrange(x,y,z) = "array_delrange";
+extern single   getrange(arr,sidx,eidx) = "array_getrange";
+extern single   setrange(arr,idx,vals) = "array_setrange";
+extern single   insertrange(arr,idx,vals) = "array_insertrange";
+extern single   delrange(arr,sidx,eidx) = "array_delrange";
 
-extern single   union(x,y) = "array_union";
-extern single   diff(x,y) = "array_diff";
-extern single   intersect(x,y) = "array_intersect";
-extern single   nunion(x) = "array_nunion";
-extern single   ndiff(x) = "array_ndiff";
-extern single   nintersect(x) = "array_nintersect";
+extern single   union(args*) = "array_vals array_nunion";
+extern single   diff(args*) = "array_vals array_ndiff";
+extern single   intersect(args*) = "array_vals array_nintersect";
 
-extern single   compare(x,y) = "array_compare";
-extern single   extract(x,y) = "array_extract";
-extern single   excludeval(x,y) = "array_excludeval";
-extern single   findval(x,y) = "array_findval";
+extern single   nunion(args*) = "array_vals array_nunion";
+extern single   ndiff(args*) = "array_vals array_ndiff";
+extern single   nintersect(args*) = "array_vals array_nintersect";
 
-extern single   interpret(x) = "array_interpret";
-extern single   join(x,y) = "array_join";
+extern single   compare(arr1,arr2) = "array_compare";
+extern single   extract(arr,idxs) = "array_extract";
+extern single   excludeval(arr,val) = "array_excludeval";
+extern single   findval(arr,val) = "array_findval";
 
-extern single   keys(x,y) = "array_keys array_make";
-extern single   vals(x,y) = "array_vals array_make";
-extern single   matchkey(x,y) = "array_matchkey";
-extern single   matchval(x,y) = "array_matchval";
+extern single   interpret(arr) = "array_interpret";
+extern single   join(arr,s) = "array_join";
 
-extern single   nested_get(x,y) = "array_nested_get";
-extern single   nested_set(x,y,z) = "array_nested_set";
-extern single   nested_del(x,y) = "array_nested_del";
+extern single   keys(arr) = "array_keys array_make";
+extern single   vals(arr) = "array_vals array_make";
+extern single   matchkey(arr,pat) = "array_matchkey";
+extern single   matchval(arr,pat) = "array_matchval";
 
-extern single   sort(x,y) = "array_sort";
-extern single   sort_indexed(x,y,z) = "array_sort_indexed";
-extern single   reverse(x) = "array_reverse";
-extern multiple cut(x,y) = "array_cut";
+extern single   nested_get(arr,idxlst) = "array_nested_get";
+extern single   nested_set(x,arr,idxlst) = "array_nested_set";
+extern single   nested_del(arr,idxlst) = "array_nested_del";
+
+extern single   sort(lst,flg) = "array_sort";
+extern single   sort_indexed(lst,flg,idx) = "array_sort_indexed";
+extern single   reverse(arr) = "array_reverse";
+extern multiple cut(arr,idx) = "array_cut";
 
 }
 

@@ -81,6 +81,15 @@ or
 
     '''It's a "test".'''
 
+To make it easier to give regexp patterns with backslashes, you can give
+raw strings by preceeding a regular string of any type with a single `r`.
+Raw strings are not processed for backslash escaped characters.
+
+    r"http://\([a-z0-9._-]+\)"
+    r'http://\([a-z0-9._-]+\)'
+    r"""http://\([a-z0-9._-]+\)"""
+    r'''http://\([a-z0-9._-]+\)'''
+
 List arrays can be declared like this:
 
     ["first", "second", "third"]
@@ -863,12 +872,36 @@ An extern with raw MUF like:
 will insert `bar` into the output code where a call to `foo()` is made.
 
 
+Directives
+----------
+There are a number of compiler directives that are (mostly) passed through to
+the MUF output code.  These include:
+
+Directive        | What it Does
+-----------------|-----------------------------------------------------------
+$language "muv"  | Allow future MUCK servers to determine this is MUV.
+$warn "msg"      | Prints msg as a MUV compiler warning.
+$error "msg"     | Prints msg as a MUV error and stops compilation.
+$echo "msg"      | Outputs as the corresponding MUF directive.
+$author "who"    | Outputs as the corresponding MUF directive.
+$note "msg"      | Outputs as the corresponding MUF directive.
+$version 1.2     | Outputs as the corresponding MUF directive.
+$libversion 1.2  | Outputs as the corresponding MUF directive.
+$include "$foo"  | Outputs as the corresponding MUF directive.
+$pragma "foo"    | Outputs as the corresponding MUF directive.
+
+
 Debugging MUV
 -------------
 
 When you are debugging a program compiled into MUF from MUV, there are
 a few things you should be aware of:
 
+- If you add a `-d` to the muv command-line, debugging code will be inserted
+  throughout the MUF output. This takes the form of strings that show the MUV
+  source file and line that generated the current MUF code.  This then gets
+  immediately popped. ie: `"foo.muv:23" pop` This is very useful with MUF
+  stack traces.
 - To prevent namespace collision with the built-in primitives of MUF, the
   non-public functions and variables that MUV generates are renamed slightly
   from what was given in the MUV sources.
@@ -877,9 +910,9 @@ a few things you should be aware of:
   out by the MUF compiler, and some won't, but they are very fast primitives
   that shouldn't affect performance *too* horribly.  This is all because you
   can chain expressions in MUV.
-- Calls to an `extern void` defined primitives or function will be followed
+- Calls to an `extern void` defined primitive or function will be followed
   by a `0` to fake that the call returned `0`.
-- Calls to an `extern multiple` defined primitives or function will be
+- Calls to an `extern multiple` defined primitive or function will be
   wrapped in `{` and `}list` to collapse the multiple return values into
   a single list array.
 - Because in MUV *all* calls have a return value, for those functions that
@@ -891,6 +924,7 @@ For example, the following MUV source:
     extern void tellme(msg) = "me @ swap notify";
     extern single toupper(s);
     extern multiple stats(who);
+    var gvar = 42;
     func foo(bar) {
         tellme(toupper(bar));
         var baz = stats(me);
@@ -898,19 +932,29 @@ For example, the following MUV source:
 
 Will compile to MUF as:
 
+    ( Generated from foo.muv by the MUV compiler. )
+    (   https://github.com/revarbat/muv )
+    lvar _gvar
     : _foo[ _bar -- ret ]
         var _baz
+        "foo.muv:6" pop
         _bar @ toupper me @ swap notify 0 pop
-        { me @ stats }list
-        dup _baz ! pop
+        "foo.muv:7" pop
+        { me @ stats }list dup _baz ! pop
         0
+    ;
+    : __start
+        "me" match me ! me @ location loc ! trig trigger !
+        42 _gvar !
+        _foo
     ;
 
 There are several things to note here:
 
+- The user declared global variable `gvar` has been renamed to `_gvar`
 - The user declared function `foo` has been renamed to `_foo`.
-- The user declared variables `bar` and `baz` have been renamed to `_bar`
-  and `_baz`.
+- The user declared scoped variables `bar` and `baz` have been renamed
+  to `_bar` and `_baz`.
 - The system variable `me`, however, remains unchanged.  
 - Since `toupper()` is declared to return a `single` value, that value is
   returned unmolested after the call to `toupper`.
@@ -929,5 +973,10 @@ There are several things to note here:
 - Since that value was NOT needed after all, it it `pop`ed away.
 - As the function `foo()` reaches its end without `return`ing a value, a
   `0` is pushed onto the stack, so `foo()` always returns at least `0`.
+- The `__start` function is added to the end of the progam, to perform
+  initialization of global variables.  It then calls the user's last
+  function.  Note: this means global variables in libraries may not
+  get initialized unless you make a public function to specifically
+  initialize them.
 
 

@@ -1,9 +1,6 @@
 ////////////////////////////////////////
 // Declarations for all FB6 primitives.
 
-extern void abort(x);
-extern void throw(x) = "abort";
-
 extern single awake?(x);
 extern single online() = "online_array";
 extern single online_array();
@@ -19,39 +16,29 @@ extern single contime(x);
 extern single conuser(x);
 
 extern single descr();
-extern single descr_array(x);
-extern single descr_setuser(x,y,z);
-extern single descrboot(x);
-extern single descrbufsize(x);
-extern single descrcon(x);
-extern single descrdbref(x);
-extern void descrflush(x);
-extern single descrhost(x);
-extern single descridle(x);
-extern single descriptors(x) = "descriptors array_make";
-extern single descrleastidle(x);
-extern single descrmostidle(x);
-extern void descrnotify(x,y);
-extern single descrsecure?(x);
-extern single descrtime(x);
-extern single descruser(x);
-extern single firstdescr(x);
-extern single lastdescr(x);
-extern single nextdescr(x);
+extern single descr_array(d);
+extern single descr_setuser(i,plyr,pass);
+extern single descrboot(i);
+extern single descrbufsize(i);
+extern single descrcon(i);
+extern single descrdbref(i);
+extern void   descrflush(i);
+extern single descrhost(i);
+extern single descridle(i);
+extern single descriptors(d) = "descr_array";
+extern single descrleastidle(d);
+extern single descrmostidle(d);
+extern void   descrnotify(i,msg);
+extern single descrsecure?(i);
+extern single descrtime(i);
+extern single descruser(i);
+extern single firstdescr(d);
+extern single lastdescr(d);
+extern single nextdescr(i);
 
-extern multiple call(x, args*) = "
-2 try
-    array_vals ++
-    rotate call
-catch abort
-endcatch";
-
-extern multiple call_public(x, pub, args*) = "
-3 try
-    rot []<- rot []<-
-    array_vals pop call
-catch abort
-endcatch";
+extern multiple call(d, args*) = "array_vals ++ rotate call";
+extern multiple call_public(d, pub, args*) = "[]<- []<- array_vals pop swap call";
+extern multiple execute(d, args*) = "[]<- array_vals pop execute";
 
 extern single cancall?(x,y);
 extern single interp(x,y,z);
@@ -65,7 +52,6 @@ extern void timer_start(x,y);
 extern void timer_stop(x);
 extern void watchpid(x);
 
-extern void tell(x) = "me @ swap notify";
 extern void notify(x,y);
 extern void notify_except(x,y,z);
 extern void array_notify(x,y);
@@ -194,16 +180,14 @@ extern single error_str(x);
 extern single is_set?(x);
 extern single set_error(x);
 
-extern single array_keys(x,y) = "array_keys array_make";
-extern single array_vals(x,y) = "array_vals array_make";
+extern single array_keys(x) = "array_keys array_make";
+extern single array_vals(x) = "array_vals array_make";
 
 extern single array_appenditem(x,y);
 extern single array_compare(x,y);
 extern multiple array_cut(x,y);
 extern single array_delitem(x,y);
 extern single array_delrange(x,y,z);
-extern single array_diff(x,y);
-extern single array_ndiff(x);
 extern single array_excludeval(x,y);
 extern single array_extract(x,y);
 extern single array_findval(x,y);
@@ -213,8 +197,6 @@ extern single array_getrange(x,y);
 extern single array_insertitem(x,y,z);
 extern single array_insertrange(x,y,z);
 extern single array_interpret(x);
-extern single array_intersect(x,y);
-extern single array_nintersect(x);
 extern single array_join(x,y);
 extern multiple array_last(x);
 extern single array_matchkey(x,y);
@@ -229,8 +211,13 @@ extern single array_setitem(x,y,z);
 extern single array_setrange(x,y,z);
 extern single array_sort(x,y);
 extern single array_sort_indexed(x,y,z);
-extern single array_union(x,y);
-extern single array_nunion(x);
+
+extern single array_union(args*) = "array_vals array_nunion";
+extern single array_nunion(args*) = "array_vals array_nunion";
+extern single array_diff(args*) = "array_vals array_ndiff";
+extern single array_ndiff(args*) = "array_vals array_ndiff";
+extern single array_intersect(args*) = "array_vals array_nintersect";
+extern single array_nintersect(args*) = "array_vals array_nintersect";
 
 extern single dbtop();
 extern single dbcmp(x,y);
@@ -314,7 +301,7 @@ extern single truename(x);
 
 extern single getlink(x);
 extern void setlink(x,y);
-extern single getlinks(x) = "getlinks_make";
+extern single getlinks(x) = "getlinks_array";
 extern single getlinks_array(x);
 extern void setlinks_array(x,y);
 extern single entrances_array(x);
@@ -407,15 +394,10 @@ extern void debugger_break();
 extern void force(x,y);
 extern single force_level();
 
-extern single cat(args*) = "array_interpret";
 extern single array_make(args*) = "";
 extern single array_make_dict(args*) = "{ swap array_vals pop }dict";
-
-extern multiple execute(addr, args*) = "
-2 try
-    array_vals ++ rotate execute
-catch abort
-endcatch";
+extern single concat(args*) = "{ }list swap array_reverse foreach swap pop 0 swap array_insertrange repeat";
+extern single merge(args*) = "{ }dict swap foreach swap pop foreach rot rot ->[] repeat repeat";
 
 // Server defined constants.
 const true = 1;

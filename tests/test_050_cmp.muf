@@ -2,7 +2,7 @@
 (   https://github.com/revarbat/muv )
 : _quotes[ _arg -- ret ]
     var _a var _b var _c var _d var _e var _f var _g var _h
-    var _i var _j var _k
+    var _i var _j var _k var _l var _m var _n var _o
     "Test('')" dup _a ! pop
     "Test(\"\")" dup _b ! pop
     "Test(\"\")" dup _c ! pop
@@ -14,6 +14,10 @@
     "abc\"def" dup _i ! pop
     "abc\r               def" dup _j ! pop
     "abc'def" dup _k ! pop
+    "abc\\rdef" dup _l ! pop
+    "abc\\rdef" dup _m ! pop
+    "abc\"\\r'def" dup _n ! pop
+    "abc\"\\r'def" dup _o ! pop
     0
 ;
 : __start

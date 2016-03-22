@@ -16,7 +16,7 @@ extern single   atoi(x);
 extern single   stod(x);
 
 extern single   strlen(x);
-extern single   strcat(args*) = "array_interpret";
+extern single   strcat(s1,s2);
 
 extern single   instr(x,y);
 extern single   rinstr(x,y);
@@ -28,12 +28,14 @@ extern single   midstr(x,y,z);
 extern multiple split(x,y);
 extern multiple rsplit(x,y);
 extern single   explode(x,y) = "explode_array";
+extern single   explode_array(x,y);
 
 extern multiple tokensplit(x,y,z);
 extern single   smatch(x,y);
 
 extern single   strcmp(x,y);
 extern single   strcmpi(x,y) = "stringcmp";
+extern single   stringcmp(x,y);
 extern single   strncmp(x,y,z);
 extern single   startswith(x,y) = "stringpfx";
 extern single   stringpfx(x,y);
@@ -50,6 +52,7 @@ extern single   pronoun_sub(x,y);
 extern single   strencrypt(x,y);
 extern single   strdecrypt(x,y);
 
+extern single   array_fmtstrings(x,y);
 extern single   fmtstrings(x,y) = "array_fmtstrings";
 
 }

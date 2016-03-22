@@ -12,14 +12,14 @@ extern void     add(w,x,y,z) = "addprop";
 extern void     set(x,y,z) = "setprop";
 extern void     remove(x,y) = "remove_prop";
 
-extern multiple envprop(x,y) = "envprop";
+extern multiple envprop(x,y);
 extern multiple envprop_str(x,y) = "envpropstr";
 
-extern single   blessed?(x,y) = "blessed?";
+extern single   blessed?(x,y);
 extern void     bless(x,y) = "blessprop";
 extern void     unbless(x,y) = "unblessprop";
 
-extern single   dir?(x,y) = "propdir?";
+extern single   propdir?(x,y);
 extern single   next(x,y) = "nextprop";
 
 extern single   filter_flags(x,y) = "array_filter_flags";
@@ -33,9 +33,9 @@ extern void     list_put(x,y,z) = "array_put_proplist";
 extern single   vals_get(x,y) = "array_get_propvals";
 extern void     vals_put(x,y,z) = "array_put_propvals";
 
-extern void     reflist_add(x,y,z) = "reflist_add";
-extern void     reflist_del(x,y,z) = "reflist_del";
-extern single   reflist_find(x,y,z) = "reflist_find";
+extern void     reflist_add(x,y,z);
+extern void     reflist_del(x,y,z);
+extern single   reflist_find(x,y,z);
 extern single   reflist_get(x,y) = "array_get_reflist";
 extern void     reflist_put(x,y,z) = "array_put_reflist";
 

@@ -1,16 +1,16 @@
 namespace gui {
 
-extern single gui_available(x);
-extern single gui_dlog_create(w,x,y,z);
-extern single gui_dlog_simple(x,y);
-extern single gui_dlog_helper(x,y,z);
-extern void   gui_dlog_show(x);
-extern void   gui_dlog_close(x);
-extern void   gui_ctrl_create(w,x,y,z);
-extern void   gui_ctrl_command(w,x,y,z);
-extern single gui_values_get(x);
-extern single gui_value_get(x,y);
-extern void   gui_value_set(x,y,z);
+extern single gui_available(dsc);
+extern single gui_dlog_create(dsc,typ,title,argsdict);
+extern single gui_dlog_simple(dsc,title);
+extern single gui_dlog_helper(dsc,title,pagedict);
+extern void   gui_dlog_show(dlogid);
+extern void   gui_dlog_close(dlogid);
+extern void   gui_ctrl_create(dlogid,typ,ctlid,argsdict);
+extern void   gui_ctrl_command(dlogid,ctlid,cmd,argsdict);
+extern single gui_values_get(dlogid);
+extern single gui_value_get(dlogid,ctlid);
+extern void   gui_value_set(dlogid,ctlid,val);
 
 const C_DATUM     = muf("c_datum");
 const C_MENU      = muf("c_menu");
