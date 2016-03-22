@@ -53,10 +53,10 @@
     23 dup _nested @ { 0 3 }list array_nested_set _nested ! pop
     _nested @ { 0 3 }list over over array_nested_get 2 + dup
     4 rotate 4 rotate array_nested_set _nested ! pop
-    _nested @ 0 over over [] "foo" dup rot []<-
+    "foo" dup _nested @ 0 over over [] []<-
     4 rotate 4 rotate ->[] _nested ! pop
-    _nested @ { 3 1 }list over over array_nested_get "foo"
-    dup rot []<- 4 rotate 4 rotate array_nested_set _nested ! pop
+    "foo" dup _nested @ { 3 1 }list over over array_nested_get
+    []<- 4 rotate 4 rotate array_nested_set _nested ! pop
     _nested @ 2 array_delitem _nested ! 0 pop
     _nested @ "" _dump pop
     0

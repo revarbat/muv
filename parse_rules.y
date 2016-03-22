@@ -112,7 +112,7 @@ int bookmark_pop();
 %left PLUS MINUS
 %left MULT DIV MOD
 %right UNARY NOT BITNOT
-%left '[' ']' '(' ')' INSERT DOT
+%left '[' ']' '(' ')' APPEND DOT
 
 %type <str> globalstatement ns_ident
 %type <str> proposed_funcname maybe_bad_funcname
@@ -433,7 +433,7 @@ simple_statement:
     | BREAK { $$ = savestring("break"); }
     | CONTINUE { $$ = savestring("continue"); }
     | expr {
-            if (endswith($1, " @")) {
+            if (!*$1 || endswith($1, " @")) {
                 $$ = savestring("");
             } else {
                 $$ = savefmt("%s pop", $1);
@@ -668,12 +668,12 @@ lvalue: IDENT {
                 free(err);
                 YYERROR;
             }
-            $$.get = savefmt("%s @", vname);
+            $$.get = savestring("");
             $$.set = savefmt("%s !", vname);
             $$.del = savefmt("0 %s !", vname);
-            $$.oper_pre = savefmt("%s @", vname);
+            $$.oper_pre = savestring("0");
             $$.oper_post = savefmt("%s !", vname);
-            $$.call = savefmt("%s\ndup address? if\n    execute\nelse\n    } popn \"Tried to execute a non-address in %s:%d\" abort\nthen", $$.get, yyfilename, yylineno);
+            $$.call = savestring("");
             free(vname);
         }
     | DECLARED_VAR  %prec BARE {
@@ -754,11 +754,11 @@ attribute: DOT IDENT     { $$ = format_muv_str($2);     free($2); }
 
 compr_cond: /* nothing */ { $$ = savestring(""); }
     | IF paren_expr {
-            $$ = savefmt("%s\nif", $2);
+            $$ = appendstr(NULL, $2, "if", NULL);
             free($2);
         }
     | UNLESS paren_expr {
-            $$ = savefmt("%s\nnot if", $2);
+            $$ = appendstr(NULL, $2, "not", "if", NULL);
             free($2);
         }
     ;
@@ -771,25 +771,17 @@ compr_loop:
             free($2); free($4); free($6);
         }
     | '(' settable IN expr ')' {
-            if (linecount($2) > 1) {
-                char *ind = indent($2);
-                $$ = savefmt("%s\nforeach\n%s pop", $4, ind);
-                free(ind);
-            } else {
-                $$ = savefmt("%s\nforeach %s pop", $4, $2);
-            }
+            char *ind = indent($2);
+            $$ = appendstr(NULL, $4, "foreach\n", ind, "pop", NULL);
+            free(ind);
             free($2); free($4);
         }
     | '(' settable KEYVAL settable IN expr ')' {
-            if (linecount($2)+linecount($4) > 2) {
-                char *set = appendstr(savestring($4), $2, NULL);
-                char *iset = indent(set);
-                $$ = savefmt("%s\nforeach\n%s", $6, iset);
-                free(iset);
-                free(set);
-            } else {
-                $$ = savefmt("%s\nforeach %s %s", $6, $4, $2);
-            }
+            char *set = appendstr(NULL, $4, $2, NULL);
+            char *iset = indent(set);
+            $$ = appendstr(NULL, $6, "foreach\n", iset, NULL);
+            free(iset);
+            free(set);
             free($2); free($4); free($6);
         }
     ;
@@ -803,14 +795,9 @@ expr: paren_expr { $$ = $1; }
     | DECLARED_CONST { $$ = savestring($1.val); keyval_free(&$1); }
     | lvalue  %prec BARE { $$ = savestring($1.get); getset_free(&$1); }
     | lvalue '(' arglist_or_null ')'  %prec SUFFIX {
-            char* fargs = strlist_wrap(&$3, 0, -1);
-            char *body, *ibody;
-            body = savefmt("%s%s%s", fargs, (*fargs?"\n":""), $1.call);
-            ibody = wrapit("{", body, "}list");
-            $$ = savefmt("%s\ndup array_count 2 < if 0 [] then", ibody);
-            free(ibody);
+            char *body = appendstr(strlist_wrap(&$3, 0, -1), $1.call, NULL);
+            $$ = appendstr(wrapit("{", body, "}list"), "dup array_count 2 < if 0 [] then", NULL);
             free(body);
-            free(fargs);
             getset_free(&$1);
             strlist_free(&$3);
         }
@@ -821,7 +808,6 @@ expr: paren_expr { $$ = $1; }
     | DEL '(' lvalue ')' { $$ = savefmt("%s 0", $3.del); getset_free(&$3); }
     | FMTSTRING '(' arglist ')' {
             const char *ptr = $3.list[0];
-            char *fargs;
             int expect = 0;
             while (*ptr) {
                 if (*ptr == '%') {
@@ -842,31 +828,24 @@ expr: paren_expr { $$ = $1; }
                 YYERROR;
             }
             strlist_reverse(&$3);
-            fargs = strlist_wrap(&$3, 0, -1);
-            $$ = savefmt("%s%sfmtstring", fargs, (lastlen(fargs) < 60? " " : "\n"));
-            free(fargs);
+            $$ = appendstr(strlist_wrap(&$3, 0, -1), "fmtstring", NULL);
             strlist_free(&$3);
         }
     | expr '?' expr ':' expr { $$ = savefmt("%s if %s else %s then", $1, $3, $5); free($1); free($3); free($5); }
     | expr '[' expr ']' { $$ = savefmt("%s %s []", $1, $3); free($1); free($3); }
-    | INSERT { $$ = savestring("{ }list"); }
-    | '[' arglist_or_null ']' {
-            /* list initializer */
-            $$ = strlist_wrapit("{", &$2, "}list");
-            strlist_free(&$2);
-        }
+    | APPEND { $$ = savestring("{ }list"); }
+    | '[' arglist_or_null ']' { $$ = strlist_wrapit("{", &$2, "}list"); strlist_free(&$2); }
     | '[' FOR compr_loop compr_cond expr ']' {
             /* list comprehension */
-            char *body = indent($5);
+            char *body = appendstr(NULL, $5, "swap []<-", NULL);
             if (*$4) {
-                char *cond = indent($4);
-                char *ibody = indent(body);
-                $$ = savefmt("{ }list %s\n%s\n%s swap []<-\n    then\nrepeat", $3, cond, ibody);
-                free(ibody);
-                free(cond);
-            } else {
-                $$ = savefmt("{ }list %s\n%s swap []<-\nrepeat", $3, body);
+                char *cond = wrapit($4, body, "then");
+                free(body);
+                body = cond;
             }
+            char *pfx = appendstr(NULL, "{ }list", $3, NULL);
+            $$ = wrapit(pfx, body, "repeat");
+            free(pfx);
             free(body);
             free($3); free($4); free($5);
         }
@@ -903,8 +882,22 @@ expr: paren_expr { $$ = $1; }
     | NOT    expr  %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
     | BITNOT expr  %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
     | BITAND DECLARED_FUNC  %prec UNARY { $$ = savefmt("'%s%s", FUNC_PREFIX, $2.name); }
-    | expr PLUS expr     { $$ = savefmt("%s %s +", $1, $3); free($1); free($3); }
-    | expr MINUS expr    { $$ = savefmt("%s %s -", $1, $3); free($1); free($3); }
+    | expr PLUS expr     {
+            if (!strcmp($3, "1")) {
+                $$ = savefmt("%s ++", $1);
+            } else {
+                $$ = savefmt("%s %s +", $1, $3);
+            }
+            free($1); free($3);
+        }
+    | expr MINUS expr    {
+            if (!strcmp($3, "1")) {
+                $$ = savefmt("%s --", $1);
+            } else {
+                $$ = savefmt("%s %s -", $1, $3);
+            }
+            free($1); free($3);
+        }
     | expr MULT expr     { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
     | expr DIV expr      { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
     | expr MOD expr      { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
@@ -925,21 +918,35 @@ expr: paren_expr { $$ = $1; }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
     | settable ASGN expr { $$ = appendfmt(savestring($3), "dup %s", $1); free($1); free($3); }
-    | lvalue INSERT ASGN expr  { $$ = appendstr(savestring($1.oper_pre), $4, "dup rot []<-",  $1.oper_post, NULL); getset_free(&$1); free($4); }
-    | lvalue PLUSASGN expr     { $$ = appendstr(savestring($1.oper_pre), $3, "+ dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue MINUSASGN expr    { $$ = appendstr(savestring($1.oper_pre), $3, "- dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue MULTASGN expr     { $$ = appendstr(savestring($1.oper_pre), $3, "* dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue DIVASGN expr      { $$ = appendstr(savestring($1.oper_pre), $3, "/ dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue MODASGN expr      { $$ = appendstr(savestring($1.oper_pre), $3, "% dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue BITORASGN expr    { $$ = appendstr(savestring($1.oper_pre), $3, "bitor dup",     $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue BITXORASGN expr   { $$ = appendstr(savestring($1.oper_pre), $3, "bitxor dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue BITANDASGN expr   { $$ = appendstr(savestring($1.oper_pre), $3, "bitand dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue BITLEFTASGN expr  { $$ = appendstr(savestring($1.oper_pre), $3, "bitshift dup",  $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue BITRIGHTASGN expr { $$ = appendstr(savestring($1.oper_pre), $3, "0 swap - bitshift dup", $1.oper_post, NULL); getset_free(&$1); free($3); }
-    | lvalue INCR              { $$ = appendstr(savestring($1.oper_pre), "dup ++", $1.oper_post, NULL); getset_free(&$1); }
-    | lvalue DECR              { $$ = appendstr(savestring($1.oper_pre), "dup --", $1.oper_post, NULL); getset_free(&$1); }
-    | INCR lvalue  %prec UNARY { $$ = appendstr(savestring($2.oper_pre), "++ dup", $2.oper_post, NULL); getset_free(&$2); }
-    | DECR lvalue  %prec UNARY { $$ = appendstr(savestring($2.oper_pre), "-- dup", $2.oper_post, NULL); getset_free(&$2); }
+    | lvalue APPEND ASGN expr { $$ = appendstr($4, "dup", $1.oper_pre, "[]<-", $1.oper_post, NULL); getset_free(&$1); }
+    | lvalue PLUSASGN expr {
+            if (!strcmp($3, "1")) {
+                $$ = appendstr(NULL, $1.oper_pre, "++ dup", $1.oper_post, NULL);
+            } else {
+                $$ = appendstr(NULL, $1.oper_pre, $3, "+ dup", $1.oper_post, NULL);
+            }
+            getset_free(&$1); free($3);
+        }
+    | lvalue MINUSASGN expr {
+            if (!strcmp($3, "1")) {
+                $$ = appendstr(NULL, $1.oper_pre, "-- dup", $1.oper_post, NULL);
+            } else {
+                $$ = appendstr(NULL, $1.oper_pre, $3, "- dup", $1.oper_post, NULL);
+            }
+            getset_free(&$1); free($3);
+        }
+    | lvalue MULTASGN expr     { $$ = appendstr(NULL, $1.oper_pre, $3, "* dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue DIVASGN expr      { $$ = appendstr(NULL, $1.oper_pre, $3, "/ dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue MODASGN expr      { $$ = appendstr(NULL, $1.oper_pre, $3, "% dup",         $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITORASGN expr    { $$ = appendstr(NULL, $1.oper_pre, $3, "bitor dup",     $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITXORASGN expr   { $$ = appendstr(NULL, $1.oper_pre, $3, "bitxor dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITANDASGN expr   { $$ = appendstr(NULL, $1.oper_pre, $3, "bitand dup",    $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITLEFTASGN expr  { $$ = appendstr(NULL, $1.oper_pre, $3, "bitshift dup",  $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue BITRIGHTASGN expr { $$ = appendstr(NULL, $1.oper_pre, $3, "0 swap - bitshift dup", $1.oper_post, NULL); getset_free(&$1); free($3); }
+    | lvalue INCR              { $$ = appendstr(NULL, $1.oper_pre, "dup ++", $1.oper_post, NULL); getset_free(&$1); }
+    | lvalue DECR              { $$ = appendstr(NULL, $1.oper_pre, "dup --", $1.oper_post, NULL); getset_free(&$1); }
+    | INCR lvalue  %prec UNARY { $$ = appendstr(NULL, $2.oper_pre, "++ dup", $2.oper_post, NULL); getset_free(&$2); }
+    | DECR lvalue  %prec UNARY { $$ = appendstr(NULL, $2.oper_pre, "-- dup", $2.oper_post, NULL); getset_free(&$2); }
     ;
 
 arglist_or_null: /* nothing */ { strlist_init(&$$); }
@@ -1748,7 +1755,7 @@ yylex()
         case '[':
             c = fgetc(yyin);
             if (c == ']') {
-                return INSERT;
+                return APPEND;
             } else {
                 (void)ungetc(c,yyin);
             }

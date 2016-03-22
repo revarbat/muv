@@ -7,7 +7,7 @@
     begin
         _i @ 4 <
     while
-        _out @ { "Fee" "Fie" "Foe" "Fum" }list _i @ [] dup rot []<-
+        { "Fee" "Fie" "Foe" "Fum" }list _i @ [] dup _out @ []<-
         _out ! pop
         _i @ dup ++ _i ! pop
     repeat
@@ -21,7 +21,7 @@
     begin
         _i @ dup ++ _i ! 10 <
     while
-        _out @ _gen dup rot []<- _out ! pop
+        _gen dup _out @ []<- _out ! pop
     repeat
     _out @ exit
     0
@@ -45,12 +45,10 @@
         dup 1 [] _b ! dup 2 [] _c ! dup 3 [] _d ! pop pop
         { _a @ _b @ }list array_interpret me @ swap notify 0 pop
     repeat
-    { }list _listgen
-    foreach
+    { }list _listgen foreach
         dup 4 "test_515_in.muv:30" tuple_check dup 0 [] _a !
         dup 1 [] _b ! dup 2 [] _c ! dup 3 [] _d ! pop pop
-        _a @ _b @ strcmp
-        if
+        _a @ _b @ strcmp if
             { _c @ _d @ }list array_interpret swap []<-
         then
     repeat exit

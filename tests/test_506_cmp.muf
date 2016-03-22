@@ -39,7 +39,7 @@ lvar _foo
     1 dup _i ! pop
     begin
         _i @ intostr me @ swap notify 0 pop
-        _i @ 1 + dup _i ! pop _i @ _count @ <= not
+        _i @ ++ dup _i ! pop _i @ _count @ <= not
     until
     0
 ;

@@ -23,8 +23,8 @@ lvar argparse::remainder_map
                 { }list
                 dup argparse::posargs_map @ _mode @ ->[] argparse::posargs_map ! pop
             then
-            argparse::posargs_map @ _mode @ over over []
-            { _tok @ 1 [] tolower _tok @ 2 [] }list dup rot []<-
+            { _tok @ 1 [] tolower _tok @ 2 [] }list dup
+            argparse::posargs_map @ _mode @ over over [] []<-
             4 rotate 4 rotate ->[] argparse::posargs_map ! pop
             _tok @ 3 [] dup _posargs ! pop
         else
@@ -43,7 +43,7 @@ lvar argparse::remainder_map
 : argparse::add_mode[ _name _flags _posargs -- ret ]
     var _flag
     _name @ tolower dup _name ! pop
-    argparse::modes_list @ _name @ dup rot []<-
+    _name @ dup argparse::modes_list @ []<-
     argparse::modes_list ! pop
     { }list
     dup argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
@@ -55,8 +55,9 @@ lvar argparse::remainder_map
             { }list
             dup argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
         then
-        argparse::flags_map @ _name @ over over [] _flag @ tolower
-        dup rot []<- 4 rotate 4 rotate ->[] argparse::flags_map ! pop
+        _flag @ tolower dup
+        argparse::flags_map @ _name @ over over [] []<-
+        4 rotate 4 rotate ->[] argparse::flags_map ! pop
     repeat
     _name @ _posargs @ argparse::parse_posargs pop
     0
@@ -76,8 +77,8 @@ lvar argparse::remainder_map
             { }list
             dup argparse::flags_map @ _mode @ ->[] argparse::flags_map ! pop
         then
-        argparse::flags_map @ _mode @ over over [] _name @
-        dup rot []<- 4 rotate 4 rotate ->[] argparse::flags_map ! pop
+        _name @ dup argparse::flags_map @ _mode @ over over [] []<-
+        4 rotate 4 rotate ->[] argparse::flags_map ! pop
     repeat
     0
 ;
@@ -102,13 +103,14 @@ lvar argparse::remainder_map
     "Usage:" me @ swap notify 0 pop
     argparse::modes_list @ foreach
         _mode ! pop
-        { }list argparse::flags_map @ _mode @ []
-        foreach _flag ! pop
+        { }list argparse::flags_map @ _mode @ [] foreach
+            _flag ! pop
             { "[#" _flag @ "]" }list array_interpret swap []<-
         repeat dup _flags ! pop
-        { }list argparse::posargs_map @ _mode @ []
-        foreach _posarg ! pop
-            { _posarg @ 0 [] toupper _posarg @ 1 [] }list array_interpret swap []<-
+        { }list argparse::posargs_map @ _mode @ [] foreach
+            _posarg ! pop
+            { _posarg @ 0 [] toupper _posarg @ 1 [] }list array_interpret
+            swap []<-
         repeat dup _posargs ! pop
         argparse::remainder_map @ _mode @ [] toupper
         _posargs @ "" array_join _flags @ if " " else "" then
@@ -214,7 +216,7 @@ lvar argparse::remainder_map
     _obj @ _prop @ array_get_proplist dup _lines ! pop
     _lines @ foreach
         _line ! _i !
-        _line @ _i @ 1 + "%3i: %s" fmtstring me @ swap notify 0 pop
+        _line @ _i @ ++ "%3i: %s" fmtstring me @ swap notify 0 pop
     repeat
     "Done." me @ swap notify 0 pop
     0
@@ -227,7 +229,7 @@ lvar argparse::remainder_map
     then
     _force @ "append a line to the list" _verify if
         _obj @ _prop @ array_get_proplist dup _lines ! pop
-        _lines @ _val @ dup rot []<- _lines ! pop
+        _val @ dup _lines @ []<- _lines ! pop
         _obj @ _prop @ _lines @ array_put_proplist 0 pop
         "Line appended." me @ swap notify 0 pop
         _obj @ _prop @ _handle_mode_list pop
@@ -243,7 +245,7 @@ lvar argparse::remainder_map
     then
     _force @ "delete a line from the list" _verify if
         _obj @ _prop @ array_get_proplist dup _lines ! pop
-        _lines @ _pos @ 1 - array_delitem dup _lines ! pop
+        _lines @ _pos @ -- array_delitem dup _lines ! pop
         _obj @ _prop @ _lines @ array_put_proplist 0 pop
         "Line deleted." me @ swap notify 0 pop
         _obj @ _prop @ _handle_mode_list pop
@@ -259,7 +261,7 @@ lvar argparse::remainder_map
     then
     _force @ "insert a line into the list" _verify if
         _obj @ _prop @ array_get_proplist dup _lines ! pop
-        _val @ _lines @ _pos @ 1 - array_insertitem dup _lines ! pop
+        _val @ _lines @ _pos @ -- array_insertitem dup _lines ! pop
         _obj @ _prop @ _lines @ array_put_proplist 0 pop
         "Line inserted." me @ swap notify 0 pop
         _obj @ _prop @ _handle_mode_list pop
@@ -275,8 +277,8 @@ lvar argparse::remainder_map
     then
     _force @ "replace a line in the list" _verify if
         _obj @ _prop @ array_get_proplist dup _lines ! pop
-        _lines @ _pos @ 1 - array_delitem dup _lines ! pop
-        _val @ _lines @ _pos @ 1 - array_insertitem dup _lines ! pop
+        _lines @ _pos @ -- array_delitem dup _lines ! pop
+        _val @ _lines @ _pos @ -- array_insertitem dup _lines ! pop
         _obj @ _prop @ _lines @ array_put_proplist 0 pop
         "Line inserted." me @ swap notify 0 pop
         _obj @ _prop @ _handle_mode_list pop
