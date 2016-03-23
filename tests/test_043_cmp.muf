@@ -2,12 +2,10 @@
 (   https://github.com/revarbat/muv )
 lvar foo::fee
 : foo::abc[ _a -- ret ]
-    foo::fee @ _a @ + exit
-    0
+    foo::fee @ _a @ +
 ;
 : bar::abc[ _a -- ret ]
-    13 _a @ + exit
-    0
+    13 _a @ +
 ;
 : _main[ _arg -- ret ]
     3 foo::abc bar::abc pop

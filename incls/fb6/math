@@ -3,6 +3,14 @@
 
 namespace math {
 
+extern single   min(x,y) = "over over > if swap then pop";
+extern single   max(x,y) = "over over < if swap then pop";
+
+extern single   nmin(x,y*) = "foreach swap pop over over > if swap then pop repeat";
+extern single   nmax(x,y*) = "foreach swap pop over over < if swap then pop repeat";
+
+extern single   sum(arr) = "0 swap foreach swap pop + repeat";
+
 extern single   int(x);
 extern single   abs(x);
 extern single   ceil(x);

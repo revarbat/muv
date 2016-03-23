@@ -2,8 +2,25 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "strutils.h"
+
+
+int
+isint(const char *s)
+{
+    if (!*s) {
+        return 0;
+    }
+    while (*s) {
+        if (!isdigit(*s)) {
+            return 0;
+        }
+        s++;
+    }
+    return 1;
+}
 
 
 int
@@ -265,6 +282,94 @@ wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const c
         out = savefmt("%s %s %s", pfx, s, sfx);
     }
     return out;
+}
+
+
+char*
+wordcpy(char *out, const char *s)
+{
+    char *p = out;
+    while (*s && !isspace(*s)) {
+        *p++ = *s++;
+    }
+    *p++ = '\0';
+    return out;
+}
+
+size_t
+wordlen(const char *s)
+{
+    size_t len = 0;
+    while (*s && !isspace(*s)) {
+        len++; s++;
+    }
+    return len;
+}
+
+
+char *
+replace_endwords(char *txt, const char *pat, const char *repl)
+{
+    size_t replen = strlen(repl);
+    size_t patlen = strlen(pat);
+    char *out = (char*)malloc(strlen(txt) + 1 + replen + patlen);
+    char *words[10];
+    int wordcnt = 0;
+    char txtword[1024];
+    char patword[1024];
+    const char *r, *s, *p;
+    char *outp;
+    int i;
+    for (i = 0; i < 10; i++)
+        words[i] = NULL;
+    while (isspace(*pat)) pat++;
+    s = txt + strlen(txt);
+    p = pat + strlen(pat);
+    while(1) {
+        s--; p--;
+        if (s <= txt) {
+            strcpy(out, txt);
+            while(wordcnt-->0) free(words[wordcnt]);
+            return out;
+        }
+        while (s >= txt && isspace(*s)) s--;
+        while (s >= txt && !isspace(*s)) s--;
+        wordcpy(txtword, ++s);
+
+        while (p >= pat && isspace(*p)) p--;
+        while (p >= pat && !isspace(*p)) p--;
+        wordcpy(patword, ++p);
+
+        if (!strcmp(patword, "%%")) {
+            words[wordcnt++] = savestring(txtword);
+        } else if (strcmp(patword, txtword)) {
+            strcpy(out, txt);
+            while(wordcnt-->0) free(words[wordcnt]);
+            return out;
+        }
+        if (p <= pat) {
+            size_t pfxlen = s - txt;
+            strncpy(out, txt, pfxlen);
+            out[pfxlen] = '\0';
+            outp = out+pfxlen;
+            r = repl;
+            while (*r) {
+                if (*r == '%' && *(r+1) >= '1' && *(r+1) <= '9') {
+                    r++;
+                    if (wordcnt >= (*r-'0')) {
+                        strcpy(outp, words[wordcnt-(*r-'0')]);
+                        outp += strlen(outp);
+                    }
+                    r++;
+                } else {
+                    *outp++ = *r++;
+                }
+            }
+            *outp++ = '\0';
+            while(wordcnt-->0) free(words[wordcnt]);
+            return out;
+        }
+    }
 }
 
 

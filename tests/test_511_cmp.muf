@@ -6,7 +6,7 @@
         _obj ! pop
         _obj @ player? if
             _obj @ "species" getpropstr _obj @ "sex" getpropstr _obj @
-            "%-30D %-10s %-30s" fmtstring me @ swap notify 0 pop
+            "%-30D %-10s %-30s" fmtstring me @ swap notify
         then
     repeat
     0

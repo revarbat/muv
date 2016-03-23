@@ -94,7 +94,7 @@ int bookmark_pop();
 %token <token> IF ELSE UNLESS PUBLIC
 %token <token> FUNC RETURN TRY CATCH
 %token <token> SWITCH USING CASE DEFAULT
-%token <token> DO WHILE UNTIL FOR
+%token <token> DO WHILE UNTIL FOR BY
 %token <token> CONTINUE BREAK
 %token <token> TOP PUSH MUF DEL FMTSTRING
 %token <token> EXTERN VOID SINGLE MULTIPLE
@@ -299,7 +299,12 @@ globalstatement:
                 idecls = appendstr(idecls, "\n", NULL);
             }
             free(decls);
-            $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n    0\n;\n", fname, vars, idecls, body);
+            if (endswith(body, " exit")) {
+                body[strlen(body)-5] = '\0';
+                $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n;\n", fname, vars, idecls, body);
+            } else {
+                $$ = savefmt(": %s[ %s -- ret ]\n%s%s\n    0\n;\n", fname, vars, idecls, body);
+            }
             if ($1) {
                 $$ = appendfmt($$, "public %s\n", fname);
                 $$ = appendfmt($$, "$libdef %s\n", fname);
@@ -461,10 +466,20 @@ simple_statement:
     | BREAK { $$ = savestring("break"); }
     | CONTINUE { $$ = savestring("continue"); }
     | expr {
-            if (!*$1 || endswith($1, " @")) {
+            if (!*$1) {
                 $$ = savestring("");
+            } else if (endswith($1, " 0")) {
+                $$ = savestring($1);
+                $$[strlen($$)-2] = '\0';
             } else {
-                $$ = savefmt("%s pop", $1);
+                char *out = savefmt("%s pop", $1);
+                char *out2 = replace_endwords(out, "dup %% ! pop", "%1 !"); free(out);
+                out = replace_endwords(out2, "dup 4 rotate 4 rotate ->[] %% ! pop", "rot rot ->[] %1 !"); free(out2);
+                out2 = replace_endwords(out, "@ ++ dup %% ! pop", "@ ++ %1 !"); free(out);
+                out = replace_endwords(out2, "@ -- dup %% ! pop", "@ -- %1 !"); free(out2);
+                out2 = replace_endwords(out, "@ dup ++ %% ! pop", "@ ++ %1 !"); free(out);
+                out = replace_endwords(out2, "@ dup -- %% ! pop", "@ -- %1 !"); free(out2);
+                $$ = out;
             }
             free($1);
         }
@@ -538,10 +553,18 @@ statement: ';' { $$ = savestring(""); }
             free($3); free($5);
         }
     | FOR '(' su settable IN expr KEYVAL expr ')' statement sd {
-            char *pfx = appendstr(NULL, $6, $8, "over over <=", "if 1 else -1 then", "for", NULL);
-            char *ind = appendstr(NULL, $4, "\n", $10, NULL);
-            $$ = wrapit(pfx, ind, "repeat");
-            free(ind);
+            char *pfx = appendstr(NULL, $6, $8, "1", "for", NULL);
+            char *body = appendstr(NULL, $4, "\n", $10, NULL);
+            $$ = wrapit(pfx, body, "repeat");
+            free(body);
+            free(pfx);
+            free($4); free($6); free($8); free($10);
+        }
+    | FOR '(' su settable IN expr KEYVAL expr BY expr ')' statement sd {
+            char *pfx = appendstr(NULL, $6, $8, $10, "for", NULL);
+            char *body = appendstr(NULL, $4, "\n", $12, NULL);
+            $$ = wrapit(pfx, body, "repeat");
+            free(body);
             free(pfx);
             free($4); free($6); free($8); free($10);
         }
@@ -794,7 +817,13 @@ compr_cond: /* nothing */ { $$ = savestring(""); }
 compr_loop:
       '(' settable IN expr KEYVAL expr ')' {
             char *ind = indent($2);
-            $$ = appendstr(NULL, $4, $6, "over over <=", "if 1 else -1 then", "for\n", ind, NULL);
+            $$ = appendstr(NULL, $4, $6, "1", "for\n", ind, NULL);
+            free(ind);
+            free($2); free($4); free($6);
+        }
+    | '(' settable IN expr KEYVAL expr BY expr ')' {
+            char *ind = indent($2);
+            $$ = appendstr(NULL, $4, $6, $8, "for\n", ind, NULL);
             free(ind);
             free($2); free($4); free($6);
         }
@@ -906,7 +935,7 @@ expr: paren_expr { $$ = $1; }
             free($3); free($4); free($5); free($7);
         }
     | PLUS   expr  %prec UNARY { $$ = $2; }
-    | MINUS  expr  %prec UNARY { $$ = savefmt("0 %s -", $2); free($2); }
+    | MINUS  expr  %prec UNARY { if (isint($2)) $$ = savefmt("-%s", $2); else $$ = savefmt("0 %s -", $2); free($2); }
     | NOT    expr  %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
     | BITNOT expr  %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
     | BITAND DECLARED_FUNC  %prec UNARY { $$ = savefmt("'%s%s", FUNC_PREFIX, $2.name); }
@@ -946,7 +975,7 @@ expr: paren_expr { $$ = $1; }
     | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
     | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
     | settable ASGN expr { $$ = appendfmt(savestring($3), "dup %s", $1); free($1); free($3); }
-    | lvalue APPEND ASGN expr { $$ = appendstr($4, "dup", $1.oper_pre, "[]<-", $1.oper_post, NULL); getset_free(&$1); }
+    | lvalue APPEND ASGN expr { $$ = appendstr(NULL, $1.oper_pre, $4, "swap []<- dup", $1.oper_post, NULL); getset_free(&$1); }
     | lvalue PLUSASGN expr {
             if (!strcmp($3, "1")) {
                 $$ = appendstr(NULL, $1.oper_pre, "++ dup", $1.oper_post, NULL);
@@ -1160,6 +1189,7 @@ lookup(char *s, int *bval)
         {"$version",     D_VERSION,     -1},
         {"$warn",        D_WARN,        -1},
         {"break",        BREAK,         -1},
+        {"by",           BY,            -1},
         {"case",         CASE,          -1},
         {"catch",        CATCH,         -1},
         {"const",        CONST,         -1},

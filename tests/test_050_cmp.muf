@@ -3,21 +3,21 @@
 : _quotes[ _arg -- ret ]
     var _a var _b var _c var _d var _e var _f var _g var _h
     var _i var _j var _k var _l var _m var _n var _o
-    "Test('')" dup _a ! pop
-    "Test(\"\")" dup _b ! pop
-    "Test(\"\")" dup _c ! pop
-    "Test(\"\")" dup _d ! pop
-    "it's" dup _e ! pop
-    "it's" dup _f ! pop
-    "a\"b" dup _g ! pop
-    "a'b" dup _h ! pop
-    "abc\"def" dup _i ! pop
-    "abc\r               def" dup _j ! pop
-    "abc'def" dup _k ! pop
-    "abc\\rdef" dup _l ! pop
-    "abc\\rdef" dup _m ! pop
-    "abc\"\\r'def" dup _n ! pop
-    "abc\"\\r'def" dup _o ! pop
+    "Test('')" _a !
+    "Test(\"\")" _b !
+    "Test(\"\")" _c !
+    "Test(\"\")" _d !
+    "it's" _e !
+    "it's" _f !
+    "a\"b" _g !
+    "a'b" _h !
+    "abc\"def" _i !
+    "abc\r               def" _j !
+    "abc'def" _k !
+    "abc\\rdef" _l !
+    "abc\\rdef" _m !
+    "abc\"\\r'def" _n !
+    "abc\"\\r'def" _o !
     0
 ;
 : __start

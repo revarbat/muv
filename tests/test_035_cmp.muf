@@ -2,9 +2,8 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _a
-    { "foo" "FOO" "bar" "BAR" "baz" "BAZ" }dict dup _a ! pop
-    _a @ "bar" [] exit
-    0
+    { "foo" "FOO" "bar" "BAR" "baz" "BAZ" }dict _a !
+    _a @ "bar" []
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

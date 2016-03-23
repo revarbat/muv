@@ -2,9 +2,8 @@
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _a
-    42 dup _a ! pop
-    _a @ 13 + exit
-    0
+    42 _a !
+    _a @ 13 +
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

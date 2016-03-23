@@ -11,54 +11,53 @@
     _v1 @ string? if
         _v1 @ tolower _v2 @ tolower strcmp not exit
     then
-    0 exit
     0
 ;
 : _main[ _arg -- ret ]
     var _i var _a
-    2 dup _i ! pop
+    2 _i !
     0 begin pop (switch)
         _i @
-        dup 1 = if "One." me @ swap notify 0 pop break then
-        dup 2 = if "Two." me @ swap notify 0 pop break then
-        dup 3 = if "Three." me @ swap notify 0 pop break then
+        dup 1 = if "One." me @ swap notify break then
+        dup 2 = if "Two." me @ swap notify break then
+        dup 3 = if "Three." me @ swap notify break then
         break
     repeat pop
     0 begin pop (switch)
         _arg @
         dup "greet" strcmp not if
-            "Hello." me @ swap notify 0 pop break
+            "Hello." me @ swap notify break
         then
         dup "who" strcmp not if
-            "I'm called MUV." me @ swap notify 0 pop break
+            "I'm called MUV." me @ swap notify break
         then
         dup "what" strcmp not if
-            "I'm a nicer language to use than MUF." me @ swap notify 0 pop
+            "I'm a nicer language to use than MUF." me @ swap notify
             break
         then
         (default)
-        "I don't understand." me @ swap notify 0 pop break
+        "I don't understand." me @ swap notify break
     repeat pop
     0 begin pop (switch)
         _arg @
         dup "fee" _complex_match if
-            "Fee selected!" me @ swap notify 0 pop break
+            "Fee selected!" me @ swap notify break
         then
         dup 1 _complex_match if
-            "One selected!" me @ swap notify 0 pop break
+            "One selected!" me @ swap notify break
         then
         dup "" _complex_match if
-            "None selected!" me @ swap notify 0 pop break
+            "None selected!" me @ swap notify break
         then
         break
     repeat pop
-    "foo" dup _a ! pop
+    "foo" _a !
     0 begin pop (switch)
         42
-        dup 99 > if "A" me @ swap notify 0 pop break then
-        dup 50 > if "B" me @ swap notify 0 pop break then
-        dup 25 > if "C" me @ swap notify 0 pop break then
-        dup 10 > if "D" me @ swap notify 0 pop break then
+        dup 99 > if "A" me @ swap notify break then
+        dup 50 > if "B" me @ swap notify break then
+        dup 25 > if "C" me @ swap notify break then
+        dup 10 > if "D" me @ swap notify break then
         break
     repeat pop
     0

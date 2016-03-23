@@ -1,8 +1,7 @@
 ( Generated from test_005_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    42 13 / exit
-    0
+    42 13 /
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

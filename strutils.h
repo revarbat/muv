@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+int isint(const char *s);
 int endswith(const char *s, const char *s2);
 char *savestring(const char *);
 char *savefmt(const char *fmt, ...);
@@ -16,6 +17,7 @@ size_t lastlen(const char *);
 size_t linecount(const char *);
 char *wrapit(const char *pfx, const char *s, const char *sfx);
 char *wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const char *sfx);
+char *replace_endwords(char *s, const char *pat, const char *repl);
 
 typedef struct accessor_t {
     const char *get;

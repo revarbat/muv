@@ -1,8 +1,7 @@
 ( Generated from test_513_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _sub[ _a _b _c -- ret ]
-    { _a @ _b @ _c @ }list array_interpret exit
-    0
+    { _a @ _b @ _c @ }list array_interpret
 ;
 : _main[ _arg -- ret ]
     var _arr var _b
@@ -10,8 +9,8 @@
         "foo" { "fee" 2 "fie" 8 "foe" 7 "fum" 42 }dict
         "bar" { "blah" 1 "blat" 3 "bloo" 5 "bleh" 7 "boo" '_sub }dict
         "baz" '_sub
-    }dict dup _arr ! pop
-    _arr @ { "foo" "fie" }list array_nested_get dup _b ! pop
+    }dict _arr !
+    _arr @ { "foo" "fie" }list array_nested_get _b !
     43 dup _arr @ { "bar" "bloo" }list array_nested_set _arr ! pop
     _arr @ { "bar" "blat" }list over over array_nested_get 7
     + dup 4 rotate 4 rotate array_nested_set _arr ! pop

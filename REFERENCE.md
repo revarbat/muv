@@ -614,13 +614,13 @@ There are several types of loops available:
         tell(intostr(i--));
     } until(i == 0);
 
-    // Count from 1 up to 10
+    // Count from 1 up to 10, inclusive
     for (i in 1 => 10) {
         tell(intostr(i));
     }
 
-    // Count from 10 down to 1
-    for (i in 10 => 1) {
+    // Count from 10 down to 1, inclusive
+    for (i in 10 => 1 by -1) {
         tell(intostr(i));
     }
 
@@ -659,6 +659,10 @@ Similarly, you can mutate a dictionary:
         "setpropstr" => 3
     ];
     var keywords = [for (var k => var v in prims) cat("KW_", toupper(k)) => v];
+
+You can use any variation of for loop for making comprehensions:
+
+    var thirds = [for (x in 1 => 100 by 3) x];
 
 You can also filter a list or dictionary by adding an `if` or `unless` clause:
 
@@ -938,7 +942,7 @@ Will compile to MUF as:
     : _foo[ _bar -- ret ]
         var _baz
         "foo.muv:6" pop
-        _bar @ toupper me @ swap notify 0 pop
+        _bar @ toupper me @ swap notify
         "foo.muv:7" pop
         { me @ stats }list dup _baz ! pop
         0
@@ -960,10 +964,6 @@ There are several things to note here:
   returned unmolested after the call to `toupper`.
 - The call to the `extern` declared function `tellme`, is replaced by the
   code `me @ swap notify`.
-- Since `tellme` is declared `void`, a `0` is pushed onto the stack, so
-  that `tellme()` always appears to return `0`.
-- Since the expression `tellme(toupper(bar))` does not store its returned
-  value in any variable, a `pop` is added to get rid of the unused value.
 - Since `stats()` is declared to return `multiple` values, the entire
   expression is wrapped in `{` and `}list` to collapse all those values
   into a single list array.
@@ -971,8 +971,8 @@ There are several things to note here:
   value, just in case that value is needed for chained assigns, or in
   another expression.
 - Since that value was NOT needed after all, it it `pop`ed away.
-- As the function `foo()` reaches its end without `return`ing a value, a
-  `0` is pushed onto the stack, so `foo()` always returns at least `0`.
+- As the function `foo()` ends without a `return` statement at the end,
+  a `0` is pushed onto the stack, so `foo()` always returns at least `0`.
 - The `__start` function is added to the end of the progam, to perform
   initialization of global variables.  It then calls the user's last
   function.  Note: this means global variables in libraries may not

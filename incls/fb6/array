@@ -8,6 +8,8 @@ extern single   make_dict(args*) = "{ swap array_vals pop }dict";
 extern single   concat(args*) = "{ }list swap array_reverse foreach swap pop 0 swap array_insertrange repeat";
 extern single   merge(args*) = "{ }dict swap foreach swap pop foreach rot rot ->[] repeat repeat";
 
+extern single   sum(arr) = "0 swap foreach swap pop + repeat";
+
 extern multiple first(arr) = "array_first";
 extern multiple last(arr) = "array_last";
 extern multiple next(arr,idx) = "array_next";
