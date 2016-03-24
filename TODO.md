@@ -4,7 +4,6 @@ TODO
 Short List
 ----------
 
-- Code Optimization.
 
 
 Pie in Sky
