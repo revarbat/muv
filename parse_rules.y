@@ -784,17 +784,24 @@ lvalue: IDENT {
 
 settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
     | LT tuple_parts GT {
-            if (!has_tuple_check) {
-                if (outf) {
-                    fprintf(outf, "%s", tuple_check);
+            if (debugging_level) {
+                if (!has_tuple_check) {
+                    if (outf) {
+                        fprintf(outf, "%s", tuple_check);
+                    }
+                    has_tuple_check = 1;
                 }
-                has_tuple_check = 1;
+                $$ = savefmt("dup %d \"%s:%d\" tuple_check", $2.count, yyfilename, yylineno);
+            } else {
+                $$ = savestring("");
             }
-            $$ = savefmt("dup %d \"%s:%d\" tuple_check", $2.count, yyfilename, yylineno);
             for (int i = 0; i < $2.count; i++) {
-                $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
+                if (!i) {
+                    $$ = appendfmt($$, "%d [] %s", i, $2.list[i]);
+                } else {
+                    $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
+                }
             }
-            $$ = appendstr($$, "pop", NULL);
             strlist_free(&$2);
         };
 
