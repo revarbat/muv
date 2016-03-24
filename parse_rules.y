@@ -46,6 +46,7 @@ void yyerror(char *s);
 
 char *decl_new_variable(const char *name);
 
+const char *includes_dir = MUV_INCLUDES_DIR;
 int debugging_level = 0;
 int do_optimize = 1;
 int has_tuple_check = 0;
@@ -678,7 +679,7 @@ statements: /* nothing */ { $$ = savestring(""); }
             if (debugging_level > 0) {
                 $$ = appendfmt($$, "\"%s:%d\" pop\n", yyfilename, yylineno);
             }
-            $$ = appendstr($$, $2, NULL);
+            $$ = appendfmt($$, "%s", $2);
         }
     ;
 
@@ -796,12 +797,9 @@ settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
                 $$ = savestring("");
             }
             for (int i = 0; i < $2.count; i++) {
-                if (!i) {
-                    $$ = appendfmt($$, "%d [] %s", i, $2.list[i]);
-                } else {
-                    $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
-                }
+                $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
             }
+            $$ = appendstr($$, "pop", NULL);
             strlist_free(&$2);
         };
 
@@ -1077,7 +1075,7 @@ bookmark_push(const char *fname)
     // If file to include starts with '!', it's a global include file.
     if (*fname == '!') {
         fname++;
-        snprintf(buf, sizeof(buf), "%s/", MUV_INCLUDES_DIR);
+        snprintf(buf, sizeof(buf), "%s/", includes_dir);
     } else if (*fname != '/') {
         snprintf(buf, sizeof(buf), "%s/", yydirname);
     }
@@ -2077,6 +2075,9 @@ usage(const char* execname)
     fprintf(stderr, "     --wrapper PROGNAME  Wrap code for upload into PROGNAME.\n");
     fprintf(stderr, "     -o FILE\n");
     fprintf(stderr, "     --outfile FILE      Save code to given file, not stdout.\n");
+    fprintf(stderr, "     -I DIR\n");
+    fprintf(stderr, "     --includes-dir DIR  Specify dir to pull system includes from.\n");
+    fprintf(stderr, "     --no-optimization   Turns off code optimizations.\n");
 }
 
 
@@ -2108,6 +2109,13 @@ main(int argc, char **argv)
             debugging_level++;
         } else if (!strcmp(argv[0], "--no-optimization")) {
             do_optimize = 0;
+        } else if (!strcmp(argv[0], "-I") || !strcmp(argv[0], "--includes-dir")) {
+            if (argc < 2) {
+                usage(execname);
+                exit(-3);
+            }
+            argc--; argv++;
+            includes_dir = argv[0];
         } else if (!strcmp(argv[0], "-o") || !strcmp(argv[0], "--outfile")) {
             if (argc < 2) {
                 usage(execname);
