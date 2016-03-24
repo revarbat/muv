@@ -347,6 +347,23 @@ These expressions can be combined in surprising ways:
     var z = 1;
     var x = y[0][1] = 43 * (z += 1 << 3);
 
+The intrinsic short-cutting in logical `&&` (AND) and `||` (OR) operators can
+also have other uses.  The `&&` (AND) operator can be used to chain successful
+calls, such as:
+
+    var success = function1(x) && function2(x) && function3(x);
+
+Each function in the chain is only called if every previous function in the
+chain returned a true value.  The value assigned to `success` will either be
+the first false value returned, or the true value returned by the last call.
+
+The `||` (OR) operator is useful in assigning default values:
+
+    var foo = function1(x) || 42;
+
+This will set `foo` to the value returned from function1(), unless it is a
+value that evaluates as false, in which case `foo` is set to `42` instead.
+
 
 Arrays
 ------

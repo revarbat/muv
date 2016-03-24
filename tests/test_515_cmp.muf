@@ -8,7 +8,7 @@
         _i @ 4 <
     while
         _out @ { "Fee" "Fie" "Foe" "Fum" }list _i @ [] swap []<- _out !
-        _i @ ++ _i !
+        _i ++
     repeat
     _out @
 ;

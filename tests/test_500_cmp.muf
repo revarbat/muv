@@ -7,7 +7,7 @@
     { 3 4 5 6 7 8 9 }list _mylist !
     { }list _mylist @ foreach
         _v ! pop
-        _v @ _v @ * swap []<-
+        _v @ dup * swap []<-
     repeat _squares !
     { }list _mylist @ foreach
         _v ! pop
@@ -20,26 +20,19 @@
     { "a" 1 "b" 2 "c" 3 "d" 4 }dict _mydict !
     { }dict _mydict @ foreach
         _v ! _k !
-        _v @ _v @ * swap
-        _k @ ->[]
+        _v @ dup * swap _k @ ->[]
     repeat _squarevals !
     { }dict _mydict @ foreach
         _v ! _k !
-        _k @ "b" strcmp 0 > if
-            _v @ _v @ * swap
-            _k @ ->[]
-        then
+        _k @ "b" strcmp 0 > if _v @ dup * swap _k @ ->[] then
     repeat _foo !
     { }dict _mydict @ foreach
         _v ! _k !
-        _v @ 2 > not if
-            _v @ _v @ * swap
-            _k @ ->[]
-        then
+        _v @ 2 > not if _v @ dup * swap _k @ ->[] then
     repeat _bar !
     { }list loc @ contents_array foreach
         _obj ! pop
-        _obj @ player? dup if _obj @ awake? and then if
+        _obj @ player? dup if pop _obj @ awake? then if
             _obj @ name swap []<-
         then
     repeat _listeners !

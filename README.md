@@ -15,8 +15,8 @@ Instead of writing cryptic code like:
         loc @ contents_array
         foreach obj ! pop
             obj @ player? if
-                obj @ "species" getpropstr
-                obj @ "sex" getpropstr
+                obj @ "species" getpropstr dup not if pop "Unknown" then
+                obj @ "sex" getpropstr dup not if pop "Unknown" then
                 obj @
                 "%-30D %-10s %-30s"
                 fmtstring
@@ -32,8 +32,8 @@ You can write:
             if (player?(obj)) {
                 fmttell(
                     "%-30D %-10s %-30s", obj,
-                    getpropstr(obj, "sex"),
-                    getpropstr(obj, "species")
+                    getpropstr(obj, "sex") || "Unknown",
+                    getpropstr(obj, "species") || "Unknown"
                 );
             }
         }

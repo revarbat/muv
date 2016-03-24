@@ -13,11 +13,11 @@
     _arr @ { "foo" "fie" }list array_nested_get _b !
     43 dup _arr @ { "bar" "bloo" }list array_nested_set _arr ! pop
     _arr @ { "bar" "blat" }list over over array_nested_get 7
-    + dup 4 rotate 4 rotate array_nested_set _arr ! pop
+    + rot rot array_nested_set _arr !
     _arr @ { "bar" "blat" }list over over array_nested_get 8
-    + dup 4 rotate 4 rotate array_nested_set _arr ! pop
+    + rot rot array_nested_set _arr !
     _arr @ { "bar" "blat" }list over over array_nested_get 9
-    + dup 4 rotate 4 rotate array_nested_set _arr ! pop
+    + rot rot array_nested_set _arr !
     5 4 3 _sub pop
     {
         4 6 2 _arr @ "baz" []

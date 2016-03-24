@@ -279,7 +279,7 @@ wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const c
         free(ind);
         free(ind2);
     } else {
-        out = savefmt("%s %s %s", pfx, s, sfx);
+        out = savefmt("%s %s %s %s %s", pfx, s, mid, s2, sfx);
     }
     return out;
 }
@@ -308,67 +308,86 @@ wordlen(const char *s)
 
 
 char *
-replace_endwords(char *txt, const char *pat, const char *repl)
+replace_words(char *txt, const char *pat, const char *repl)
 {
     size_t replen = strlen(repl);
     size_t patlen = strlen(pat);
     char *out = (char*)malloc(strlen(txt) + 1 + replen + patlen);
     char *words[10];
-    int wordcnt = 0;
     char txtword[1024];
     char patword[1024];
-    const char *r, *s, *p;
+    const char *startpos, *r, *s, *p;
     char *outp;
-    int i;
+    int i, wordnum;
+    int lastword = 1;
     for (i = 0; i < 10; i++)
         words[i] = NULL;
     while (isspace(*pat)) pat++;
-    s = txt + strlen(txt);
-    p = pat + strlen(pat);
-    while(1) {
-        s--; p--;
-        if (s <= txt) {
-            strcpy(out, txt);
-            while(wordcnt-->0) free(words[wordcnt]);
-            return out;
-        }
-        while (s >= txt && isspace(*s)) s--;
-        while (s >= txt && !isspace(*s)) s--;
-        wordcpy(txtword, ++s);
-
-        while (p >= pat && isspace(*p)) p--;
-        while (p >= pat && !isspace(*p)) p--;
-        wordcpy(patword, ++p);
-
-        if (!strcmp(patword, "%%")) {
-            words[wordcnt++] = savestring(txtword);
-        } else if (strcmp(patword, txtword)) {
-            strcpy(out, txt);
-            while(wordcnt-->0) free(words[wordcnt]);
-            return out;
-        }
-        if (p <= pat) {
-            size_t pfxlen = s - txt;
-            strncpy(out, txt, pfxlen);
-            out[pfxlen] = '\0';
-            outp = out+pfxlen;
-            r = repl;
-            while (*r) {
-                if (*r == '%' && *(r+1) >= '1' && *(r+1) <= '9') {
-                    r++;
-                    if (wordcnt >= (*r-'0')) {
-                        strcpy(outp, words[wordcnt-(*r-'0')]);
-                        outp += strlen(outp);
-                    }
-                    r++;
-                } else {
-                    *outp++ = *r++;
-                }
+    startpos = txt + strlen(txt);
+    while (1) {
+        while (startpos >= txt && isspace(*startpos)) startpos--;
+        s = startpos;
+        p = pat + strlen(pat);
+        while(1) {
+            s--; p--;
+            if (s <= txt) {
+                strcpy(out, txt);
+                for (i = 0; i < 10; i++)
+                    if (words[i])
+                        free(words[i]);
+                return out;
             }
-            *outp++ = '\0';
-            while(wordcnt-->0) free(words[wordcnt]);
-            return out;
+            while (s >= txt && isspace(*s)) s--;
+            while (s >= txt && !isspace(*s)) s--;
+            wordcpy(txtword, ++s);
+
+            while (p >= pat && isspace(*p)) p--;
+            while (p >= pat && !isspace(*p)) p--;
+            wordcpy(patword, ++p);
+
+            if (patword[0] == '%' && isdigit(patword[1]) && !patword[2]) {
+                wordnum = patword[1] - '0';
+                if (words[wordnum]) {
+                    if (strcmp(txtword, words[wordnum])) {
+                        break;
+                    }
+                } else {
+                    words[wordnum] = savestring(txtword);
+                }
+            } else if (strcmp(patword, txtword)) {
+                break;
+            }
+            if (p <= pat) {
+                size_t pfxlen = s - txt;
+                strncpy(out, txt, pfxlen);
+                out[pfxlen] = '\0';
+                outp = out+pfxlen;
+                r = repl;
+                while (*r) {
+                    if (*r == '%' && isdigit(r[1])) {
+                        r++;
+                        wordnum = *r - '0';
+                        if (words[wordnum]) {
+                            strcpy(outp, words[wordnum]);
+                            outp += strlen(outp);
+                        }
+                        r++;
+                    } else {
+                        *outp++ = *r++;
+                    }
+                }
+                *outp = '\0';
+                if (!lastword) {
+                    strcpy(outp, startpos-1);
+                }
+                for (i = 0; i < 10; i++)
+                    if (words[i])
+                        free(words[i]);
+                return out;
+            }
         }
+        while (startpos >= txt && !isspace(*startpos)) startpos--;
+        lastword = 0;
     }
 }
 

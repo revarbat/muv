@@ -7,24 +7,24 @@
         _i @ _count @ > not
     while
         _i @ intostr me @ swap notify
-        _i @ ++ _i !
+        _i ++
     repeat
     1 _i !
     begin
         _i @ _count @ <=
     while
         _i @ intostr me @ swap notify
-        _i @ ++ _i !
+        _i ++
     repeat
     1 _i !
     begin
         _i @ intostr me @ swap notify
-        _i @ ++ _i ! _i @ _count @ <= not
+        _i ++ _i @ _count @ <= not
     until
     1 _i !
     begin
         _i @ intostr me @ swap notify
-        _i @ ++ _i ! _i @ _count @ >
+        _i ++ _i @ _count @ >
     until
     1 _count @ 1 for
         _i2 !

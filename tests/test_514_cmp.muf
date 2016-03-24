@@ -20,15 +20,15 @@ lvar argparse::remainder_map
         _tok !
         _tok @ if
             argparse::posargs_map @ _mode @ [] not if
-                { }list
-                dup argparse::posargs_map @ _mode @ ->[] argparse::posargs_map ! pop
+                { }list dup
+                argparse::posargs_map @ _mode @ ->[] argparse::posargs_map ! pop
             then
             argparse::posargs_map @ _mode @ over over []
             { _tok @ 1 [] tolower _tok @ 2 [] }list swap []<- rot rot ->[] argparse::posargs_map !
             _tok @ 3 [] _posargs !
         else
-            _posargs @ tolower
-            dup argparse::remainder_map @ _mode @ ->[] argparse::remainder_map ! pop
+            _posargs @ tolower dup
+            argparse::remainder_map @ _mode @ ->[] argparse::remainder_map ! pop
             break
         then
     repeat
@@ -43,15 +43,15 @@ lvar argparse::remainder_map
     var _flag
     _name @ tolower _name !
     argparse::modes_list @ _name @ swap []<- argparse::modes_list !
-    { }list
-    dup argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
-    { }list
-    dup argparse::posargs_map @ _name @ ->[] argparse::posargs_map ! pop
+    { }list dup
+    argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
+    { }list dup
+    argparse::posargs_map @ _name @ ->[] argparse::posargs_map ! pop
     _flags @ foreach
         _flag ! pop
         argparse::flags_map @ _name @ [] not if
-            { }list
-            dup argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
+            { }list dup
+            argparse::flags_map @ _name @ ->[] argparse::flags_map ! pop
         then
         argparse::flags_map @ _name @ over over [] _flag @ tolower
         swap []<- rot rot ->[] argparse::flags_map !
@@ -68,14 +68,14 @@ lvar argparse::remainder_map
         argparse::modes_list @ _mode @ array_findval not if
             _mode @ _name @
             "ArgParse: Option '%s' declared as part of non-existent mode '%s'!"
-            fmtstring abort
+            fmtstring abort 
         then
         argparse::flags_map @ _mode @ [] not if
-            { }list
-            dup argparse::flags_map @ _mode @ ->[] argparse::flags_map ! pop
+            { }list dup
+            argparse::flags_map @ _mode @ ->[] argparse::flags_map ! pop
         then
-        argparse::flags_map @ _mode @ over over [] _name @
-        swap []<- rot rot ->[] argparse::flags_map !
+        argparse::flags_map @ _mode @ over over [] _name @ swap []<-
+        rot rot ->[] argparse::flags_map !
     repeat
     0
 ;
@@ -87,7 +87,7 @@ lvar argparse::remainder_map
         argparse::modes_list @ _mode @ array_findval not if
             _mode @ _mode @
             "ArgParse: Option '%s' declared as part of non-existent mode '%s'!"
-            fmtstring abort
+            fmtstring abort 
         then
         _mode @ _posargs @ argparse::parse_posargs pop
     repeat
@@ -97,7 +97,7 @@ lvar argparse::remainder_map
     var _cmd var _mode var _flags var _flag var _posargs
     var _posarg var _line
     trig name ";" split pop strip _cmd !
-    "Usage:" me @ swap notify
+    "Usage:" me @ swap notify 
     argparse::modes_list @ foreach
         _mode ! pop
         { }list argparse::flags_map @ _mode @ [] foreach
@@ -113,7 +113,7 @@ lvar argparse::remainder_map
         _posargs @ "" array_join _flags @ if " " else "" then
         _flags @ " " array_join _mode @ _mode @ if "#" else "" then
         _cmd @ "%s %s%s %s%s%s%s" fmtstring _line !
-        _line @ me @ swap notify
+        _line @ me @ swap notify 
     repeat
     0
 ;
@@ -133,12 +133,12 @@ lvar argparse::remainder_map
             _mode ! pop
             _mode @ _lc_opt @ stringcmp not if
                 _mode @ argparse::current_mode !
-                _found @ ++ _found !
+                _found ++
                 break
             then
         repeat
         _found @ if
-            _mode_given @ ++ _mode_given !
+            _mode_given ++
             _parts @ 1 [] _line !
             continue
         then
@@ -146,7 +146,7 @@ lvar argparse::remainder_map
             _flag ! pop
             _flag @ _lc_opt @ stringcmp not if
                 _opt @ dup _opts @ _flag @ ->[] _opts ! pop
-                _found @ ++ _found !
+                _found ++
                 break
             then
         repeat
@@ -158,14 +158,14 @@ lvar argparse::remainder_map
             _mode ! pop
             _mode @ _lc_opt @ stringpfx if
                 _mode @ argparse::current_mode !
-                _found @ ++ _found !
+                _found ++
             then
         repeat
         argparse::flags_map @ argparse::current_mode @ [] foreach
             _flag ! pop
             _flag @ _lc_opt @ stringpfx if
                 _opt @ dup _opts @ _flag @ ->[] _opts ! pop
-                _found @ ++ _found !
+                _found ++
             then
         repeat
         _found @ 1 = if
@@ -173,17 +173,17 @@ lvar argparse::remainder_map
             continue
         else
             _found @ 1 > if
-                _opt @ "Option #%s is ambiguous." fmtstring me @ swap notify
+                _opt @ "Option #%s is ambiguous." fmtstring me @ swap notify 
             else
                 _opt @ "Option #%s not recognized." fmtstring
-                me @ swap notify
+                me @ swap notify 
             then
         then
         argparse::show_usage pop
         { }list exit
     repeat
     _mode_given @ 1 > if
-        "Cannot mix modes." me @ swap notify
+        "Cannot mix modes." me @ swap notify 
         argparse::show_usage pop
         { }list exit
     then
@@ -193,17 +193,17 @@ lvar argparse::remainder_map
         _parts @ 0 [] dup _opts @ _posarg @ 0 [] ->[] _opts ! pop
         _parts @ 1 [] _line !
     repeat
-    _line @
-    dup _opts @ argparse::remainder_map @ argparse::current_mode @ [] ->[] _opts ! pop
+    _line @ dup
+    _opts @ argparse::remainder_map @ argparse::current_mode @ [] ->[] _opts ! pop
     argparse::current_mode @ dup _opts @ "mode" ->[] _opts ! pop
     _opts @
 ;
 : _verify[ _override _msg -- ret ]
     _override @ if 1 exit then
     { "Are you sure you want to " _msg @ "?" }list
-    array_interpret me @ swap notify
+    array_interpret me @ swap notify 
     { read 1 strcut }list 0 [] "y" stringcmp not if 1 exit then
-    "Cancelled." me @ swap notify
+    "Cancelled." me @ swap notify 
     0
 ;
 : _handle_mode_list[ _obj _prop -- ret ]
@@ -211,9 +211,9 @@ lvar argparse::remainder_map
     _obj @ _prop @ array_get_proplist _lines !
     _lines @ foreach
         _line ! _i !
-        _line @ _i @ ++ "%3i: %s" fmtstring me @ swap notify
+        _line @ _i @ ++ "%3i: %s" fmtstring me @ swap notify 
     repeat
-    "Done." me @ swap notify
+    "Done." me @ swap notify 
     0
 ;
 : _handle_mode_append[ _obj _prop _val _force -- ret ]
@@ -225,8 +225,8 @@ lvar argparse::remainder_map
     _force @ "append a line to the list" _verify if
         _obj @ _prop @ array_get_proplist _lines !
         _lines @ _val @ swap []<- _lines !
-        _obj @ _prop @ _lines @ array_put_proplist
-        "Line appended." me @ swap notify
+        _obj @ _prop @ _lines @ array_put_proplist 
+        "Line appended." me @ swap notify 
         _obj @ _prop @ _handle_mode_list pop
     then
     0
@@ -241,8 +241,8 @@ lvar argparse::remainder_map
     _force @ "delete a line from the list" _verify if
         _obj @ _prop @ array_get_proplist _lines !
         _lines @ _pos @ -- array_delitem _lines !
-        _obj @ _prop @ _lines @ array_put_proplist
-        "Line deleted." me @ swap notify
+        _obj @ _prop @ _lines @ array_put_proplist 
+        "Line deleted." me @ swap notify 
         _obj @ _prop @ _handle_mode_list pop
     then
     0
@@ -250,15 +250,15 @@ lvar argparse::remainder_map
 : _handle_mode_insert[ _obj _prop _pos _val _force -- ret ]
     var _lines
     _pos @ atoi _pos !
-    _pos @ not dup not if _val @ not or then if
+    _pos @ not dup not if pop _val @ not then if
         argparse::show_usage pop
         0 exit
     then
     _force @ "insert a line into the list" _verify if
         _obj @ _prop @ array_get_proplist _lines !
         _val @ _lines @ _pos @ -- array_insertitem _lines !
-        _obj @ _prop @ _lines @ array_put_proplist
-        "Line inserted." me @ swap notify
+        _obj @ _prop @ _lines @ array_put_proplist 
+        "Line inserted." me @ swap notify 
         _obj @ _prop @ _handle_mode_list pop
     then
     0
@@ -266,7 +266,7 @@ lvar argparse::remainder_map
 : _handle_mode_replace[ _obj _prop _pos _val _force -- ret ]
     var _lines
     _pos @ atoi _pos !
-    _pos @ not dup not if _val @ not or then if
+    _pos @ not dup not if pop _val @ not then if
         argparse::show_usage pop
         0 exit
     then
@@ -274,8 +274,8 @@ lvar argparse::remainder_map
         _obj @ _prop @ array_get_proplist _lines !
         _lines @ _pos @ -- array_delitem _lines !
         _val @ _lines @ _pos @ -- array_insertitem _lines !
-        _obj @ _prop @ _lines @ array_put_proplist
-        "Line inserted." me @ swap notify
+        _obj @ _prop @ _lines @ array_put_proplist 
+        "Line inserted." me @ swap notify 
         _obj @ _prop @ _handle_mode_list pop
     then
     0
@@ -294,7 +294,8 @@ lvar argparse::remainder_map
     "verbose" argparse::add_flag pop
     _arg @ argparse::parse _opts !
     _opts @ not if 0 exit then
-    _opts @ "obj" [] not dup not if _opts @ "prop" [] not or then if
+    _opts @ "obj" [] not
+    dup not if pop _opts @ "prop" [] not then if
         argparse::show_usage pop
         0 exit
     then
@@ -310,7 +311,7 @@ lvar argparse::remainder_map
     _obj @ 0 < if 0 exit then
     _opts @ "verbose" [] if
         { "Mode = " _opts @ "mode" [] }list array_interpret
-        me @ swap notify
+        me @ swap notify 
     then
     0 begin pop (switch)
         _opts @ "mode" []

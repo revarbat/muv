@@ -47,6 +47,7 @@ void yyerror(char *s);
 char *decl_new_variable(const char *name);
 
 int debugging_level = 0;
+int do_optimize = 1;
 int has_tuple_check = 0;
 const char *tuple_check =
     ": tuple_check[ arr expect pos -- ]\n"
@@ -468,17 +469,38 @@ simple_statement:
     | expr {
             if (!*$1) {
                 $$ = savestring("");
-            } else if (endswith($1, " 0")) {
-                $$ = savestring($1);
-                $$[strlen($$)-2] = '\0';
             } else {
+                struct optims_t {
+                    const char *pat;
+                    const char *repl;
+                } optims[] = {
+                    {"0 pop",           ""},
+                    {"1 pop",           ""},
+                    {"dup %1 ! pop",    "%1 !"},
+                    {"%1 ! %1 @",       "dup %1 !"},
+                    {"%1 @ %1 @ %1 @",  "%1 @ dup dup"},
+                    {"%1 @ %1 @",       "%1 @ dup"},
+
+                    {"%1 @ ++ dup %1 ! pop",  "%1 ++"},
+                    {"%1 @ -- dup %1 ! pop",  "%1 --"},
+                    {"%1 @ dup ++ %1 ! pop",  "%1 ++"},
+                    {"%1 @ dup -- %1 ! pop",  "%1 --"},
+                    {"%1 @ ++ dup %1 !",      "%1 ++ %1 @"},
+                    {"%1 @ -- dup %1 !",      "%1 -- %1 @"},
+
+                    {"dup 4 rotate 4 rotate ->[] %1 ! pop",              "rot rot ->[] %1 !"},
+                    {"dup 4 rotate 4 rotate array_nested_set %1 ! pop",  "rot rot array_nested_set %1 !"},
+
+                    {NULL, NULL}
+                };
                 char *out = savefmt("%s pop", $1);
-                char *out2 = replace_endwords(out, "dup %% ! pop", "%1 !"); free(out);
-                out = replace_endwords(out2, "dup 4 rotate 4 rotate ->[] %% ! pop", "rot rot ->[] %1 !"); free(out2);
-                out2 = replace_endwords(out, "@ ++ dup %% ! pop", "@ ++ %1 !"); free(out);
-                out = replace_endwords(out2, "@ -- dup %% ! pop", "@ -- %1 !"); free(out2);
-                out2 = replace_endwords(out, "@ dup ++ %% ! pop", "@ ++ %1 !"); free(out);
-                out = replace_endwords(out2, "@ dup -- %% ! pop", "@ -- %1 !"); free(out2);
+                if (do_optimize) {
+                    for (int i = 0; optims[i].pat; i++) {
+                        char *tmp = replace_words(out, optims[i].pat, optims[i].repl);
+                        free(out);
+                        out = tmp;
+                    }
+                }
                 $$ = out;
             }
             free($1);
@@ -837,8 +859,7 @@ compr_loop:
             char *set = appendstr(NULL, $4, $2, NULL);
             char *iset = indent(set);
             $$ = appendstr(NULL, $6, "foreach\n", iset, NULL);
-            free(iset);
-            free(set);
+            free(iset); free(set);
             free($2); free($4); free($6);
         }
     ;
@@ -853,7 +874,7 @@ expr: paren_expr { $$ = $1; }
     | lvalue  %prec BARE { $$ = savestring($1.get); getset_free(&$1); }
     | lvalue '(' arglist_or_null ')'  %prec SUFFIX {
             char *body = appendstr(strlist_wrap(&$3, 0, -1), $1.call, NULL);
-            $$ = appendstr(wrapit("{", body, "}list"), "dup array_count 2 < if 0 [] then", NULL);
+            $$ = appendstr(wrapit("{", body, "}list"), "dup array_count", "2 < if 0 [] then", NULL);
             free(body);
             getset_free(&$1);
             strlist_free(&$3);
@@ -917,65 +938,67 @@ expr: paren_expr { $$ = $1; }
         }
     | '[' FOR compr_loop compr_cond expr KEYVAL expr ']' {
             /* dictionary comprehension */
-            char *kexpr = indent($5);
-            char *vexpr = indent($7);
+            char *body = appendstr(NULL, $7, "swap", $5, "->[]", NULL);
             if (*$4) {
-                char *cond = indent($4);
-                char *ikexpr = indent(kexpr);
-                char *ivexpr = indent(vexpr);
-                $$ = savefmt("{ }dict %s\n%s\n%s swap\n%s ->[]\n    then\nrepeat", $3, cond, ivexpr, ikexpr);
-                free(cond);
-                free(ikexpr);
-                free(ivexpr);
-            } else {
-                $$ = savefmt("{ }dict %s\n%s swap\n%s ->[]\nrepeat", $3, vexpr, kexpr);
+                char *cond = wrapit($4, body, "then");
+                free(body);
+                body = cond;
             }
-            free(kexpr);
-            free(vexpr);
+            char *pfx = appendstr(NULL, "{ }dict", $3, NULL);
+            $$ = wrapit(pfx, body, "repeat");
+            free(pfx); free(body);
             free($3); free($4); free($5); free($7);
         }
     | PLUS   expr  %prec UNARY { $$ = $2; }
     | MINUS  expr  %prec UNARY { if (isint($2)) $$ = savefmt("-%s", $2); else $$ = savefmt("0 %s -", $2); free($2); }
-    | NOT    expr  %prec UNARY { $$ = savefmt("%s not", $2); free($2); }
-    | BITNOT expr  %prec UNARY { $$ = savefmt("%s -1 bitxor", $2); free($2); }
+    | NOT    expr  %prec UNARY { $$ = appendstr(NULL, $2, "not", NULL); free($2); }
+    | BITNOT expr  %prec UNARY { $$ = appendstr(NULL, $2, "-1", "bitxor", NULL); free($2); }
     | BITAND DECLARED_FUNC  %prec UNARY { $$ = savefmt("'%s%s", FUNC_PREFIX, $2.name); }
-    | expr PLUS expr     {
+    | expr PLUS expr {
             if (!strcmp($3, "1")) {
-                $$ = savefmt("%s ++", $1);
+                $$ = appendstr(NULL, $1, "++", NULL);
             } else {
-                $$ = savefmt("%s %s +", $1, $3);
+                $$ = appendstr(NULL, $1, $3, "+", NULL);
             }
             free($1); free($3);
         }
-    | expr MINUS expr    {
+    | expr MINUS expr {
             if (!strcmp($3, "1")) {
-                $$ = savefmt("%s --", $1);
+                $$ = appendstr(NULL, $1, "--", NULL);
             } else {
-                $$ = savefmt("%s %s -", $1, $3);
+                $$ = appendstr(NULL, $1, $3, "-", NULL);
             }
             free($1); free($3);
         }
-    | expr MULT expr     { $$ = savefmt("%s %s *", $1, $3); free($1); free($3); }
-    | expr DIV expr      { $$ = savefmt("%s %s /", $1, $3); free($1); free($3); }
-    | expr MOD expr      { $$ = savefmt("%s %s %%", $1, $3); free($1); free($3); }
-    | expr IN expr       { $$ = savefmt("%s %s array_findval", $3, $1); free($1); free($3); }
-    | expr EQEQ expr     { $$ = savefmt("%s %s =", $1, $3); free($1); free($3); }
-    | expr NEQ expr      { $$ = savefmt("%s %s = not", $1, $3); free($1); free($3); }
-    | expr STREQ expr    { $$ = savefmt("%s %s strcmp not", $1, $3); free($1); free($3); }
-    | expr LT expr       { $$ = savefmt("%s %s <", $1, $3); free($1); free($3); }
-    | expr GT expr       { $$ = savefmt("%s %s >", $1, $3); free($1); free($3); }
-    | expr LTE expr      { $$ = savefmt("%s %s <=", $1, $3); free($1); free($3); }
-    | expr GTE expr      { $$ = savefmt("%s %s >=", $1, $3); free($1); free($3); }
-    | expr AND expr      { $$ = appendstr(savestring($1), wrapit("dup if", $3 = appendstr($3, "and", 0), "then"), 0); free($1); free($3); }
-    | expr OR expr       { $$ = appendstr(savestring($1), wrapit("dup not if", $3 = appendstr($3, "or", 0), "then"), 0); free($1); free($3); }
-    | expr XOR expr      { $$ = savefmt("%s %s xor", $1, $3); free($1); free($3); }
-    | expr BITOR expr    { $$ = savefmt("%s %s bitor", $1, $3); free($1); free($3); }
-    | expr BITXOR expr   { $$ = savefmt("%s %s bitxor", $1, $3); free($1); free($3); }
-    | expr BITAND expr   { $$ = savefmt("%s %s bitand", $1, $3); free($1); free($3); }
-    | expr BITLEFT expr  { $$ = savefmt("%s %s bitshift", $1, $3); free($1); free($3); }
-    | expr BITRIGHT expr { $$ = savefmt("%s 0 %s - bitshift", $1, $3); free($1); free($3); }
-    | settable ASGN expr { $$ = appendfmt(savestring($3), "dup %s", $1); free($1); free($3); }
-    | lvalue APPEND ASGN expr { $$ = appendstr(NULL, $1.oper_pre, $4, "swap []<- dup", $1.oper_post, NULL); getset_free(&$1); }
+    | expr MULT expr  { $$ = appendstr(NULL, $1, $3, "*", NULL); free($1); free($3); }
+    | expr DIV expr   { $$ = appendstr(NULL, $1, $3, "/", NULL); free($1); free($3); }
+    | expr MOD expr   { $$ = appendstr(NULL, $1, $3, "%", NULL); free($1); free($3); }
+    | expr IN expr    { $$ = appendstr(NULL, $3, $1, "array_findval", NULL); free($1); free($3); }
+    | expr EQEQ expr  { $$ = appendstr(NULL, $1, $3, "=", NULL); free($1); free($3); }
+    | expr NEQ expr   { $$ = appendstr(NULL, $1, $3, "= not", NULL); free($1); free($3); }
+    | expr STREQ expr { $$ = appendstr(NULL, $1, $3, "strcmp", "not", NULL); free($1); free($3); }
+    | expr LT expr    { $$ = appendstr(NULL, $1, $3, "<", NULL); free($1); free($3); }
+    | expr GT expr    { $$ = appendstr(NULL, $1, $3, ">", NULL); free($1); free($3); }
+    | expr LTE expr   { $$ = appendstr(NULL, $1, $3, "<=", NULL); free($1); free($3); }
+    | expr GTE expr   { $$ = appendstr(NULL, $1, $3, ">=", NULL); free($1); free($3); }
+    | expr AND expr {
+            char *body = wrapit("dup if pop", $3, "then");
+            $$ = appendstr(NULL, $1, body, 0);
+            free(body); free($1); free($3);
+        }
+    | expr OR expr {
+            char *body = wrapit("dup not if pop", $3, "then");
+            $$ = appendstr(NULL, $1, body, 0);
+            free(body); free($1); free($3);
+        }
+    | expr XOR expr      { $$ = appendstr(NULL, $1, $3, "xor", NULL); free($1); free($3); }
+    | expr BITOR expr    { $$ = appendstr(NULL, $1, $3, "bitor", NULL); free($1); free($3); }
+    | expr BITXOR expr   { $$ = appendstr(NULL, $1, $3, "bitxor", NULL); free($1); free($3); }
+    | expr BITAND expr   { $$ = appendstr(NULL, $1, $3, "bitand", NULL); free($1); free($3); }
+    | expr BITLEFT expr  { $$ = appendstr(NULL, $1, $3, "bitshift", NULL); free($1); free($3); }
+    | expr BITRIGHT expr { $$ = appendstr(NULL, $1, "0", $3, "-", "bitshift", NULL); free($1); free($3); }
+    | settable ASGN expr { $$ = appendstr(NULL, $3, "dup", $1, NULL); free($1); free($3); }
+    | lvalue APPEND ASGN expr { $$ = appendstr(NULL, $1.oper_pre, $4, "swap", "[]<-", "dup", $1.oper_post, NULL); getset_free(&$1); }
     | lvalue PLUSASGN expr {
             if (!strcmp($3, "1")) {
                 $$ = appendstr(NULL, $1.oper_pre, "++ dup", $1.oper_post, NULL);
@@ -2076,6 +2099,8 @@ main(int argc, char **argv)
             outf = NULL;
         } else if (!strcmp(argv[0], "-d") || !strcmp(argv[0], "--debug")) {
             debugging_level++;
+        } else if (!strcmp(argv[0], "--no-optimization")) {
+            do_optimize = 0;
         } else if (!strcmp(argv[0], "-o") || !strcmp(argv[0], "--outfile")) {
             if (argc < 2) {
                 usage(execname);

@@ -17,7 +17,7 @@ size_t lastlen(const char *);
 size_t linecount(const char *);
 char *wrapit(const char *pfx, const char *s, const char *sfx);
 char *wrapit2(const char *pfx, const char *s, const char *mid, const char *s2, const char *sfx);
-char *replace_endwords(char *s, const char *pat, const char *repl);
+char *replace_words(char *s, const char *pat, const char *repl);
 
 typedef struct accessor_t {
     const char *get;
