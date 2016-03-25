@@ -45,10 +45,10 @@ char *
 appendstr(char *s, ...)
 {
     va_list aptr;
+    const char *p;
     if (!s) {
         s = savestring("");
     }
-    const char *p;
     va_start(aptr, s);
     while ((p = va_arg(aptr, const char*))) {
         size_t len1 = strlen(s);
