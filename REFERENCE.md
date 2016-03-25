@@ -98,7 +98,8 @@ or
 
     [1, 2, 4, 8]
 
-Dictionaries are declared like:
+Dictionaries (sometimes called hash tables, or associative arrays in other
+languages) are declared like:
 
     [ "key1" => "val1", "key2" => "val2", "key3" => "val3" ]
 
@@ -164,8 +165,8 @@ this way:
 
     notify(me, "Hello World!");
 
-If a primitive returns more than one argument on the stack normally, then all
-items it would return are returned in a list array.
+If a MUF primitive would return more than one argument on the stack, the MUV
+counterpart will return all those values in a list.
 
 
 Function Variables
@@ -178,6 +179,28 @@ You can declare extra variables in function scope like this:
         var fifth = "5th";
         ...
     }
+
+Variables can be declared in block scopes within functions, and will be in
+effect only within those blocks.  You can even declare variables of the same
+name within different scopes.
+
+    func myfunction() {
+        var x = "C";
+	for (var x in ["F", "A", "D"]) {
+	    if (x eq "A") {
+		tell(x);
+	        var x = "B";
+		tell(x);
+	    }
+	}
+	tell(x);
+    }
+
+will output the following:
+
+    A
+    B
+    C
 
 
 Constants
@@ -204,12 +227,45 @@ Function            | Description
 `cat(...)`          | Converts all args to strings and concatenates them.
 `haskey(key,arr)`   | Evaluates true if `key` is in the array `arr`.
 
-MUV also has several built-in constants:
+MUV also has some built-in constants:
 
 Constants           | Description
 --------------------|--------------------------------------------------------
 `true`              | `1` (Evaluates as true.)
 `false`             | `0` (Evaluates as false.)
+
+
+Namespaces
+----------
+
+If you declare global variables and function within a namespace block, then
+those variables and functions become part of that namespace:
+
+    namespace math {
+        const PI = 3.14159;
+    }
+
+Will define the constant `math::PI`.  To refer to that variable, you will
+need to either use the `math::` prefix, or specify that you want to use that
+namespace like this:
+
+    using namespace math;
+
+Here's more examples:
+
+    namespace math {
+        const PI = 3.14159;
+        func rad2deg(x) {
+            return x*180.0/PI;
+        }
+    }
+    func thirdpi() {
+        return math::rad2deg(math::PI/3.0);
+    }
+    using namespace math;
+    func halfpi() {
+        return rad2deg(PI/2.0);
+    }
 
 
 Includes
@@ -242,9 +298,9 @@ MUF Name       |  MUV Name        | Change
 Since MUF has kind of a messy namespace, you can *instead* include files with
 just the primitives you need, renamed a bit more sensibly.  For example, if
 you include the file `!fb6/obj` You can get access to the standard fb6 object
-related primitives, renamed into the `obj_` namespace such that MUF primitives
-like `name` and `set` are renamed to `obj_name()` and `obj_set()`, leading to
-far less namespace polution.  The standard namespaced include files are as
+related primitives, renamed into the `obj` namespace such that MUF primitives
+like `name` and `set` are renamed to `obj::name()` and `obj::set()`, leading
+to far less namespace polution.  The standard namespaced include files are as
 follows, in order of likely importance:
 
 File           | Prefix       | What it declares
@@ -332,7 +388,7 @@ Assignment:
 - BitShift Right and assign: `x >>= 2` is the same as `x = x >> 2`
 
 Array Operations:
-- Test if value in array: `x in [1, 1, 2, 3, 5, 8, 13, 21, 34]`.
+- Test if value in array: `x in [1, 2, 3, 5, 7, 11, 13, 17, 19]`.
 - Array subscript: `x[2]` returns the third item of the given array in `x`.
 - Array subscript assignment: `x[2] = 42` sets the third element of the array
   in `x` to `42`.
@@ -679,7 +735,7 @@ Similarly, you can mutate a dictionary:
 
 You can use any variation of for loop for making comprehensions:
 
-    var thirds = [for (x in 1 => 100 by 3) x];
+    var odd_thirds = [for (x in 1 => 100 by 3) if (x % 2) x];
 
 You can also filter a list or dictionary by adding an `if` or `unless` clause:
 
@@ -751,39 +807,6 @@ If you just want to trap any errors without doing anything, you can just do:
 If you need to throw your own custom exception, you can do it like:
 
     throw("MyError")
-
-
-Namespaces
-----------
-
-If you declare global variables and function within a namespace block, then
-those variables and functions become part of that namespace:
-
-    namespace math {
-        const pi = 3.14159;
-    }
-
-Will define the constant `math::pi`.  To refer to that variable, you will
-need to either use the `math::` prefix, or specify that you want to use that
-namespace like this:
-
-    using namespace math;
-
-Here's more examples:
-
-    namespace math {
-        const pi = 3.14159;
-        func rad2deg(x) {
-            return x*180.0/pi;
-        }
-    }
-    func thirdpi() {
-        return math::rad2deg(math::pi/3.0);
-    }
-    using namespace math;
-    func halfpi() {
-        return rad2deg(pi/2.0);
-    }
 
 
 MUF Interaction
