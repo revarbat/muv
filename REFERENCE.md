@@ -417,7 +417,7 @@ The `||` (OR) operator is useful in assigning default values:
 
     var foo = function1(x) || 42;
 
-This will set `foo` to the value returned from function1(), unless it is a
+This will set `foo` to the value returned from `function1()`, unless it is a
 value that evaluates as false, in which case `foo` is set to `42` instead.
 
 
