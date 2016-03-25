@@ -25,7 +25,8 @@ funclist_init(funclist *l)
 void
 funclist_free(funclist *l)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         funcinfo_free(&l->list[i]);
     }
     free(l->list);
@@ -59,7 +60,8 @@ funclist_add(funclist *l, const char *name, const char *code, int argcnt, int re
 funcinfo *
 funclist_find(funclist *l, const char *s)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i].name, s)) {
             return &l->list[i];
         }

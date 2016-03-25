@@ -20,7 +20,8 @@ strlist_init(strlist *l)
 void
 strlist_free(strlist *l)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         free((void*) l->list[i]);
     }
     free(l->list);
@@ -71,7 +72,8 @@ strlist_top(strlist *l)
 int
 strlist_find(strlist *l, const char *s)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i], s)) {
             return i;
         }
