@@ -198,8 +198,7 @@ globalstatement:
             free($2);
         }
     | VAR proposed_varname ASGN expr ';' {
-            char *vname;
-            char *code;
+            char *vname, *code, *init;
             const char *ns = strlist_top(&namespace_list);
             if (ns && *ns) {
                 vname = savefmt("%s::%s", ns, $2);
@@ -210,7 +209,7 @@ globalstatement:
             }
             $$ = savefmt("lvar %s\n", code);
             kvmap_add(&global_vars, vname, code);
-            char *init = savefmt("%s %s !", $4, code);
+            init = savefmt("%s %s !", $4, code);
             strlist_add(&inits_list, init);
             free(init);
             free(vname);
@@ -259,7 +258,8 @@ globalstatement:
             if (ns && *ns) {
                 fname = savefmt("%s::%s", ns, $4);
                 if ($1) {
-                    for (char *p = fname; *p; p++) {
+                    char *p;
+                    for (p = fname; *p; p++) {
                         if (*p == ':') *p = '_';
                     }
                 }
@@ -279,10 +279,12 @@ globalstatement:
         } '{' statements '}' sd {
             char *fname;
             const char *ns = strlist_top(&namespace_list);
+            char *body, *vars, *decls, *idecls;
             if (ns && *ns) {
                 fname = savefmt("%s::%s", ns, $4);
                 if ($1) {
-                    for (char *p = fname; *p; p++) {
+                    char *p;
+                    for (p = fname; *p; p++) {
                         if (*p == ':') *p = '_';
                     }
                 }
@@ -293,10 +295,10 @@ globalstatement:
                     fname = savefmt("%s%s", FUNC_PREFIX, $4);
                 }
             }
-            char *body = indent($11);
-            char *vars = strlist_join(&$6, " ", 0, -1);
-            char *decls = strlist_wrap(&vardecl_list, 0, -1);
-            char *idecls = indent(decls);
+            body = indent($11);
+            vars = strlist_join(&$6, " ", 0, -1);
+            decls = strlist_wrap(&vardecl_list, 0, -1);
+            idecls = indent(decls);
             if (*idecls) {
                 idecls = appendstr(idecls, "\n", NULL);
             }
@@ -471,6 +473,7 @@ simple_statement:
             if (!*$1) {
                 $$ = savestring("");
             } else {
+                char *out;
                 struct optims_t {
                     const char *pat;
                     const char *repl;
@@ -494,9 +497,10 @@ simple_statement:
 
                     {NULL, NULL}
                 };
-                char *out = savefmt("%s pop", $1);
+                out = savefmt("%s pop", $1);
                 if (do_optimize) {
-                    for (int i = 0; optims[i].pat; i++) {
+                    int i;
+                    for (i = 0; optims[i].pat; i++) {
                         char *tmp = replace_words(out, optims[i].pat, optims[i].repl);
                         free(out);
                         out = tmp;
@@ -785,6 +789,7 @@ lvalue: IDENT {
 
 settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
     | LT tuple_parts GT {
+            int i;
             if (debugging_level) {
                 if (!has_tuple_check) {
                     if (outf) {
@@ -796,7 +801,7 @@ settable: lvalue { $$ = savestring($1.set); getset_free(&$1); }
             } else {
                 $$ = savestring("");
             }
-            for (int i = 0; i < $2.count; i++) {
+            for (i = 0; i < $2.count; i++) {
                 $$ = appendfmt($$, "dup %d [] %s", i, $2.list[i]);
             }
             $$ = appendstr($$, "pop", NULL);
@@ -921,12 +926,13 @@ expr: paren_expr { $$ = $1; }
     | '[' FOR compr_loop compr_cond expr ']' {
             /* list comprehension */
             char *body = appendstr(NULL, $5, "swap []<-", NULL);
+            char *pfx;
             if (*$4) {
                 char *cond = wrapit($4, body, "then");
                 free(body);
                 body = cond;
             }
-            char *pfx = appendstr(NULL, "{ }list", $3, NULL);
+            pfx = appendstr(NULL, "{ }list", $3, NULL);
             $$ = wrapit(pfx, body, "repeat");
             free(pfx);
             free(body);
@@ -944,12 +950,13 @@ expr: paren_expr { $$ = $1; }
     | '[' FOR compr_loop compr_cond expr KEYVAL expr ']' {
             /* dictionary comprehension */
             char *body = appendstr(NULL, $7, "swap", $5, "->[]", NULL);
+            char *pfx;
             if (*$4) {
                 char *cond = wrapit($4, body, "then");
                 free(body);
                 body = cond;
             }
-            char *pfx = appendstr(NULL, "{ }dict", $3, NULL);
+            pfx = appendstr(NULL, "{ }dict", $3, NULL);
             $$ = wrapit(pfx, body, "repeat");
             free(pfx); free(body);
             free($3); free($4); free($5); free($7);
@@ -1072,7 +1079,7 @@ bookmark_push(const char *fname)
     char *dir, *fil;
     FILE *f;
 
-    // If file to include starts with '!', it's a global include file.
+    /* If file to include starts with '!', it's a global include file. */
     if (*fname == '!') {
         fname++;
         snprintf(buf, sizeof(buf), "%s/", includes_dir);
@@ -1379,12 +1386,13 @@ lookup_namespaced_func(funclist *l, const char *name)
 char*
 decl_new_variable(const char *name)
 {
+    int i;
     char *vname;
     kvmap *m = kvmaplist_top(&scoping_vars);
     if (kvmap_get(m, name)) {
         return NULL;  /* Already declared at this scope! */
     }
-    for (int i = 1; i < 99; i++) {
+    for (i = 1; i < 99; i++) {
         if (i > 1) {
             vname = savefmt("%s%s%d", VAR_PREFIX, name, i);
         } else {
@@ -1497,11 +1505,12 @@ yylex()
 
         num = 0;
         while(1) {
+            char uc;
             if (c == '_') {
                 c = fgetc(yyin);
                 continue;
             }
-            char uc = toupper(c);
+            uc = toupper(c);
             if (base == 10 && (uc == '.' || uc == 'E')) {
                 break;
             }
