@@ -527,9 +527,9 @@ statement: ';' { $$ = savestring(""); }
             free(body);
         }
     | CONST proposed_varname ASGN expr ';' {
-            $$ = savestring("");
             kvmap *m = kvmaplist_top(&scoping_consts);
             kvmap_add(m, $2, $4);
+            $$ = savestring("");
             free($2); free($4);
         }
     | IF paren_expr statement  %prec BARE {

@@ -28,7 +28,8 @@ kvlist_init(kvlist *l)
 void
 kvlist_free(kvlist *l)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         keyval_free(&l->list[i]);
     }
     free(l->list);
@@ -54,7 +55,8 @@ kvlist_add(kvlist *l, const char *k, const char *v)
 const char*
 kvlist_get(kvlist *l, const char *k)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         if (!strcmp(l->list[i].key, k)) {
             return l->list[i].val;
         }
@@ -67,7 +69,7 @@ kvlist_get(kvlist *l, const char *k)
 unsigned long
 kvmap_hash(const char*s)
 {
-    // Based on Dan Bernstein's djb2
+    /* Based on Dan Bernstein's djb2 */
     unsigned long h = 5381;
 
     while (*s)
@@ -138,7 +140,8 @@ kvmaplist_init(kvmaplist *l)
 void
 kvmaplist_free(kvmaplist *l)
 {
-    for (int i = 0; i < l->count; i++) {
+    int i;
+    for (i = 0; i < l->count; i++) {
         kvmap_free(&l->list[i]);
     }
     free(l->list);
@@ -179,7 +182,8 @@ kvmaplist_top(kvmaplist *l)
 const char*
 kvmaplist_find(kvmaplist *l, const char *name)
 {
-    for (int i = l->count; i-->0; ) {
+    int i;
+    for (i = l->count; i-->0; ) {
         const char *cp = kvmap_get(&l->list[i], name);
         if (cp) return cp;
     }
