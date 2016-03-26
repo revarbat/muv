@@ -50,6 +50,7 @@ char *decl_new_variable(const char *name);
 const char *includes_dir = MUV_INCLUDES_DIR;
 int debugging_level = 0;
 int do_optimize = 1;
+int allow_nonsys_includes = 1;
 int has_tuple_check = 0;
 const char *tuple_check =
     ": tuple_check[ arr expect pos -- ]\n"
@@ -1087,7 +1088,16 @@ bookmark_push(const char *fname)
         fname++;
         snprintf(buf, sizeof(buf), "%s/", includes_dir);
     } else if (*fname != '/') {
+        if (*fname && !allow_nonsys_includes) {
+            yyerror("Non-system includes forbidden.");
+            return 0;
+        }
         snprintf(buf, sizeof(buf), "%s/", yydirname);
+    } else {
+        if (*fname && !allow_nonsys_includes) {
+            yyerror("Non-system includes forbidden.");
+            return 0;
+        }
     }
 
     /* find last '/' in path to file */
@@ -2122,6 +2132,8 @@ main(int argc, char **argv)
             debugging_level++;
         } else if (!strcmp(argv[0], "--no-optimization")) {
             do_optimize = 0;
+        } else if (!strcmp(argv[0], "--sysincludes-only")) {
+            allow_nonsys_includes = 0;
         } else if (!strcmp(argv[0], "-I") || !strcmp(argv[0], "--includes-dir")) {
             if (argc < 2) {
                 usage(execname);
