@@ -1080,6 +1080,8 @@ bookmark_push(const char *fname)
     char *dir, *fil;
     FILE *f;
 
+    buf[0] = '\0';
+
     /* If file to include starts with '!', it's a global include file. */
     if (*fname == '!') {
         fname++;
@@ -1113,32 +1115,35 @@ bookmark_push(const char *fname)
     *ptr2 = '\0';
     fil = savestring(buf);
 
-    snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
+    if (*fil) {
+        snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
 
-    if (kvmap_get(&included_files, buf)) {
-        free(dir);
-        free(fil);
-        return 1;
+        if (kvmap_get(&included_files, buf)) {
+            free(dir);
+            free(fil);
+            return 1;
+        }
+        kvmap_add(&included_files, buf, buf);
+
+        f = fopen(buf, "r");
+        if (!f) {
+            char *errstr = savefmt("Could not include file '%s': %s", buf, strerror(errno));
+            yyerror(errstr);
+            free(errstr);
+            free(dir);
+            free(fil);
+            return 0;
+        }
+    } else {
+        f = NULL;
+        *buf = '\0';
     }
-
-    f = *fil? fopen(buf, "r") : stdin;
-    if (!f) {
-        char *errstr = savefmt("Could not include file '%s': %s", buf, strerror(errno));
-        yyerror(errstr);
-        free(errstr);
-        free(dir);
-        free(fil);
-        return 0;
-    }
-
     if (bookmark_count >= MAX_INCLUDE_LEVELS-1) {
         yyerror("Too many levels of includes!");
         free(dir);
         free(fil);
         return 0;
     }
-
-    kvmap_add(&included_files, buf, buf);
 
     bookmarks[bookmark_count].dname = savestring(yydirname);
     bookmarks[bookmark_count].fname = savestring(yyfilename);
@@ -1150,12 +1155,12 @@ bookmark_push(const char *fname)
     }
     bookmark_count++;
 
-    if (yyin != NULL) {
+    if (yyin != NULL && yyin != stdin) {
         fclose(yyin);
     }
     yydirname = dir;
     yyfilename = fil;
-    yyin = *yyfilename? f : stdin;
+    yyin = f? f : stdin;
     yylineno = 1;
 
     return 1;
