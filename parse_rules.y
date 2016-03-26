@@ -1113,9 +1113,7 @@ bookmark_push(const char *fname)
     *ptr2 = '\0';
     fil = savestring(buf);
 
-    if (*yyfilename) {
-        snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
-    }
+    snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
 
     if (kvmap_get(&included_files, buf)) {
         free(dir);
