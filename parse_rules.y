@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <errno.h>
 
 #include "configs.h"
 #include "strlist.h"
@@ -1124,7 +1125,7 @@ bookmark_push(const char *fname)
 
     f = *fil? fopen(buf, "r") : stdin;
     if (!f) {
-        char *errstr = savefmt("Could not include file %s", buf);
+        char *errstr = savefmt("Could not include file '%s': %s", buf, strerror(errno));
         yyerror(errstr);
         free(errstr);
         free(dir);
