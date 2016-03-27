@@ -1111,6 +1111,10 @@ bookmark_push(const char *fname, int doinit)
         sanitize_path(buf, sizeof(buf)-1, fname, "");
     } else if (*fname == '!') {
         fname++;
+        if (*fname == '/') {
+            yyerror("System include path must be relative.");
+            return 0;
+        }
         sanitize_path(buf, sizeof(buf)-1, fname, includes_dir);
     } else if (*fname != '/') {
         sanitize_path(buf, sizeof(buf)-1, fname, yydirname);
