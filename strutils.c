@@ -392,6 +392,77 @@ replace_words(char *txt, const char *pat, const char *repl)
 }
 
 
+char *
+sanitize_path(char* out, size_t outlen, const char *path, const char *cwd)
+{
+    char *outp = out;
+    const char *in;
+    int dots = 0;
+    if (*path != '/') {
+        /* relative path */
+        dots = 0;
+        for (in = cwd; *in && outp - out < outlen-2; ) {
+            if (*in == '/') {
+                if (dots > 0) {
+                    outp--;
+                    while (outp > out && *outp == '.') *outp-- = '\0';
+                }
+                *outp++ = '/';
+                while (*in == '/') in++;
+                dots = 0;
+                continue;
+            }
+            if (*in == '.') {
+                if (dots >= 0) {
+                    dots++;
+                }
+            } else {
+                dots = -1;
+            }
+            *outp++ = *in++;
+        }
+        *outp = '\0';
+        if (outp > out && outp[-1] == '/') {
+            outp--;
+            while (outp > out && *outp == '/') *outp-- = '\0';
+            if (outp>out) outp++;
+        }
+        if (cwd && *cwd) {
+            *outp++ = '/';
+        }
+        *outp = '\0';
+    }
+
+    dots = 0;
+    for (in = path; *in && outp - out < outlen-2; ) {
+        if (*in == '/') {
+            if (dots > 0) {
+                outp--;
+                while (outp > out && *outp == '.') *outp-- = '\0';
+            }
+            *outp++ = '/';
+            while (*in == '/') in++;
+            dots = 0;
+            continue;
+        }
+        if (*in == '.') {
+            if (dots >= 0) {
+                dots++;
+            }
+        } else {
+            dots = -1;
+        }
+        *outp++ = *in++;
+    }
+    *outp = '\0';
+    if (outp > out && outp[-1] == '/') {
+        outp--;
+        while (outp > out && *outp == '/') *outp-- = '\0';
+    }
+    return out;
+}
+
+
 void getset_free(accessor *x)
 {
     if (x->get) {

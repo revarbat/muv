@@ -348,7 +348,7 @@ directive:
     | D_INCLUDE STR { $$ = savefmt("$include %s\n", $2); free($2); }
     | D_ERROR STR { yyerror($2); free($2); $$ = savestring(""); YYERROR; }
     | D_WARN STR {
-            fprintf(stderr, "Warning in %s/%s:%d: %s\n", yydirname, yyfilename, yylineno, $2);
+            fprintf(stderr, "Warning in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, $2);
             $$ = savestring("");
             free($2);
         }
@@ -1090,9 +1090,8 @@ int
 bookmark_push(const char *fname, int doinit)
 {
     char buf[1024];
-    const char *ptr, *dirmk;
-    char *ptr2;
-    char *dir, *fil;
+    char *ptr;
+    char *dir, *fil, *full, *dirmk;
     FILE *f;
 
     buf[0] = '\0';
@@ -1104,57 +1103,52 @@ bookmark_push(const char *fname, int doinit)
             return 0;
         }
     }
+    if (strlen(fname)>512) {
+        yyerror("Include path too long.");
+        return 0;
+    }
     if (doinit) {
-        strcpy(buf, "./");
+        sanitize_path(buf, sizeof(buf)-1, fname, "");
     } else if (*fname == '!') {
         fname++;
-        snprintf(buf, sizeof(buf)-1, "%s/", includes_dir);
+        sanitize_path(buf, sizeof(buf)-1, fname, includes_dir);
     } else if (*fname != '/') {
-        snprintf(buf, sizeof(buf)-1, "%s/", yydirname);
+        sanitize_path(buf, sizeof(buf)-1, fname, yydirname);
     }
 
     /* find last '/' in path to file */
-    for (ptr = dirmk = fname; *ptr; ptr++) {
+    for (ptr = dirmk = buf; *ptr; ptr++) {
         if (*ptr == '/') {
             dirmk = ptr;
         }
     }
-    while (dirmk > fname && dirmk[-1] == '/')
-        dirmk--;
-
-    ptr = fname;
-    ptr2 = buf;
-    ptr2 += strlen(buf);
-    while (ptr < dirmk && ptr2-buf < sizeof(buf)-1)
-        *ptr2++ = *ptr++;
-    *ptr2 = '\0';
-    dir = savestring(buf);
-
-    while (*dirmk == '/')
-        dirmk++;
-    ptr2 = buf;
-    while (*dirmk && ptr2-buf < sizeof(buf)-1)
-        *ptr2++ = *dirmk++;
-    *ptr2 = '\0';
-    fil = savestring(buf);
+    full = savestring(buf);
+    if (dirmk > buf ) {
+        *dirmk = '\0';
+        dir = savestring(buf);
+        fil = savestring(dirmk+1);
+    } else {
+        dir = savestring("");
+        fil = savestring(buf);
+    }
 
     if (*fil) {
-        snprintf(buf, sizeof(buf)-1, "%s/%s", dir, fil);
-
-        if (kvmap_get(&included_files, buf)) {
+        if (kvmap_get(&included_files, full)) {
             free(dir);
             free(fil);
+            free(full);
             return 1;
         }
-        kvmap_add(&included_files, buf, buf);
+        kvmap_add(&included_files, full, full);
 
-        f = fopen(buf, "r");
+        f = fopen(full, "r");
         if (!f) {
             char *errstr = savefmt("Could not include file '%s': %s", buf, strerror(errno));
             yyerror(errstr);
             free(errstr);
             free(dir);
             free(fil);
+            free(full);
             return 0;
         }
     } else {
@@ -1165,6 +1159,7 @@ bookmark_push(const char *fname, int doinit)
         yyerror("Too many levels of includes!");
         free(dir);
         free(fil);
+        free(full);
         return 0;
     }
 
@@ -1189,6 +1184,7 @@ bookmark_push(const char *fname, int doinit)
     yyfilename = fil;
     yyin = f? f : stdin;
     yylineno = 1;
+    free(full);
 
     return 1;
 }
@@ -1212,7 +1208,7 @@ bookmark_pop()
 
     fclose(yyin);
     if (*yyfilename) {
-        char *fnam = savefmt("%s/%s", yydirname, yyfilename);
+        char *fnam = savefmt("%s%s%s", yydirname, (*yydirname?"/":""), yyfilename);
         yyin = fopen(fnam, "r");
         free(fnam);
         fseek(yyin, pos, SEEK_SET);
@@ -1946,7 +1942,7 @@ yylex()
 void
 yyerror(char *arg)
 {
-    fprintf(stderr, "ERROR in %s/%s:%d: %s\n", yydirname, yyfilename, yylineno, arg);
+    fprintf(stderr, "ERROR in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, arg);
 }
 
 
