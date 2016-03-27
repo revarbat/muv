@@ -686,7 +686,7 @@ statements: /* nothing */ { $$ = savestring(""); }
                 $$ = appendstr($$, "\n", NULL);
             }
             if (debugging_level > 0) {
-                $$ = appendfmt($$, "\"%s:%d\" pop\n", yyfilename, yylineno);
+                $$ = appendfmt($$, "\"%s:%d\" pop\n", (*yyfilename?yyfilename:"muv"), yylineno);
             }
             $$ = appendfmt($$, "%s", $2);
             free($1); free($2);
