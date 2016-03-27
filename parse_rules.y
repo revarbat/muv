@@ -1144,7 +1144,7 @@ bookmark_push(const char *fname, int doinit)
 
         f = fopen(full, "r");
         if (!f) {
-            char *errstr = savefmt("Could not include file '%s': %s", buf, strerror(errno));
+            char *errstr = savefmt("Could not include '%s': %s", fname, strerror(errno));
             yyerror(errstr);
             free(errstr);
             free(dir);
