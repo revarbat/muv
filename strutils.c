@@ -166,7 +166,7 @@ format_muv_str(const char *s)
     char *out;
     char *p2;
     size_t len;
-    for (len = 3, p = s; *p; len++, p++) {
+    for (len = 5, p = s; *p; len++, p++) {
         switch (*p) {
             case '\\':
             case '"':

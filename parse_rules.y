@@ -39,8 +39,8 @@ kvmaplist scoping_vars;
 FILE *yyin=NULL;
 FILE *outf=NULL;
 int yylineno = 1;
-const char *yydirname = ".";
-const char *yyfilename = "STDIN";
+const char *yydirname = NULL;
+const char *yyfilename = NULL;
 int yylex(void);
 int yyparse(void);
 void yyerror(char *s);
@@ -70,7 +70,7 @@ struct bookmark_t {
 } bookmarks[MAX_INCLUDE_LEVELS];
 int bookmark_count = 0;
 
-int bookmark_push(const char *fname);
+int bookmark_push(const char *fname, int doinit);
 int bookmark_pop();
 
 
@@ -153,6 +153,7 @@ nsdecl: NAMESPACE ns_ident {
                 strcpy(full, $2);
             }
             strlist_add(&namespace_list, full);
+            free($2);
         }
     ;
 
@@ -165,7 +166,7 @@ globalstatement:
             free($3);
         }
     | INCLUDE STR ';' {
-            if (!bookmark_push($2))
+            if (!bookmark_push($2, 0))
                 YYERROR;
             $$ = savestring("");
             free($2);
@@ -197,6 +198,7 @@ globalstatement:
             $$ = savefmt("lvar %s\n", code);
             kvmap_add(&global_vars, vname, code);
             free(vname);
+            free(code);
             free($2);
         }
     | VAR proposed_varname ASGN expr ';' {
@@ -215,6 +217,7 @@ globalstatement:
             strlist_add(&inits_list, init);
             free(init);
             free(vname);
+            free(code);
             free($2);
             free($4);
         }
@@ -355,7 +358,7 @@ opt_public: /* nothing */ { $$ = 0; }
     | PUBLIC { $$ = 1; }
     ;
 
-ns_ident: IDENT { $$ = savestring($1); }
+ns_ident: IDENT { $$ = savestring($1); free($1); }
     | DECLARED_VAR { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_CONST { $$ = savestring($1.key); keyval_free(&$1); }
     | DECLARED_FUNC { $$ = savestring($1.name); }
@@ -367,7 +370,7 @@ maybe_bad_funcname:
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
-proposed_funcname: IDENT { $$ = $1; }
+proposed_funcname: IDENT { $$ = savestring($1); free($1); }
     | maybe_bad_funcname {
             char *vname;
             const char *ns = strlist_top(&namespace_list);
@@ -398,7 +401,7 @@ maybe_bad_varname:
     | DECLARED_FUNC { $$ = savestring($1.name); }
     ;
 
-proposed_varname: IDENT { $$ = $1; }
+proposed_varname: IDENT { $$ = savestring($1); free($1); }
     | maybe_bad_varname {
             char *vname;
             const char *ns = strlist_top(&namespace_list);
@@ -595,7 +598,7 @@ statement: ';' { $$ = savestring(""); }
             $$ = wrapit(pfx, body, "repeat");
             free(body);
             free(pfx);
-            free($4); free($6); free($8); free($10);
+            free($4); free($6); free($8); free($10); free($12);
         }
     | FOR '(' su settable IN expr ')' statement sd {
             char *pfx = appendstr(NULL, $6, "foreach", NULL);
@@ -686,6 +689,7 @@ statements: /* nothing */ { $$ = savestring(""); }
                 $$ = appendfmt($$, "\"%s:%d\" pop\n", yyfilename, yylineno);
             }
             $$ = appendfmt($$, "%s", $2);
+            free($1); free($2);
         }
     ;
 
@@ -738,6 +742,7 @@ lvalue: IDENT {
             char *errstr = savefmt("Undeclared identifier '%s'.", $1);
             yyerror(errstr);
             free(errstr);
+            free($1);
             YYERROR;
         }
     | VAR proposed_varname {
@@ -746,6 +751,7 @@ lvalue: IDENT {
                 char *err = savefmt("Indentifier '%s' already declared at this scope level.", $2);
                 yyerror(err);
                 free(err);
+                free($2);
                 YYERROR;
             }
             $$.get = savestring("");
@@ -755,6 +761,7 @@ lvalue: IDENT {
             $$.oper_post = savefmt("%s !", vname);
             $$.call = savestring("");
             free(vname);
+            free($2);
         }
     | DECLARED_VAR  %prec BARE {
             $$.get = savefmt("%s @", $1.val);
@@ -831,7 +838,7 @@ index_parts:
 
 subscript: '[' expr ']' { $$ = $2; } ;
 
-attribute: DOT IDENT     { $$ = format_muv_str($2);     free($2); }
+attribute: DOT IDENT     { $$ = format_muv_str($2); free($2); }
     | DOT DECLARED_CONST { $$ = format_muv_str($2.key); keyval_free(&$2); }
     | DOT DECLARED_VAR   { $$ = format_muv_str($2.key); keyval_free(&$2); }
     | DOT DECLARED_FUNC  { $$ = format_muv_str($2.name); }
@@ -859,7 +866,7 @@ compr_loop:
             char *ind = indent($2);
             $$ = appendstr(NULL, $4, $6, $8, "for\n", ind, NULL);
             free(ind);
-            free($2); free($4); free($6);
+            free($2); free($4); free($6); free($8);
         }
     | '(' settable IN expr ')' {
             char *ind = indent($2);
@@ -963,9 +970,16 @@ expr: paren_expr { $$ = $1; }
             free(pfx); free(body);
             free($3); free($4); free($5); free($7);
         }
-    | PLUS   expr  %prec UNARY { $$ = $2; }
-    | MINUS  expr  %prec UNARY { if (isint($2)) $$ = savefmt("-%s", $2); else $$ = savefmt("0 %s -", $2); free($2); }
-    | NOT    expr  %prec UNARY { $$ = appendstr(NULL, $2, "not", NULL); free($2); }
+    | PLUS expr  %prec UNARY { $$ = savestring($2); free($2); }
+    | MINUS expr  %prec UNARY {
+            if (isint($2)) {
+                $$ = savefmt("-%s", $2);
+            } else {
+                $$ = savefmt("0 %s -", $2);
+            }
+            free($2);
+        }
+    | NOT expr  %prec UNARY { $$ = appendstr(NULL, $2, "not", NULL); free($2); }
     | BITNOT expr  %prec UNARY { $$ = appendstr(NULL, $2, "-1", "bitxor", NULL); free($2); }
     | BITAND DECLARED_FUNC  %prec UNARY { $$ = savefmt("'%s%s", FUNC_PREFIX, $2.name); }
     | expr PLUS expr {
@@ -1012,7 +1026,7 @@ expr: paren_expr { $$ = $1; }
     | expr BITLEFT expr  { $$ = appendstr(NULL, $1, $3, "bitshift", NULL); free($1); free($3); }
     | expr BITRIGHT expr { $$ = appendstr(NULL, $1, "0", $3, "-", "bitshift", NULL); free($1); free($3); }
     | settable ASGN expr { $$ = appendstr(NULL, $3, "dup", $1, NULL); free($1); free($3); }
-    | lvalue APPEND ASGN expr { $$ = appendstr(NULL, $1.oper_pre, $4, "swap", "[]<-", "dup", $1.oper_post, NULL); getset_free(&$1); }
+    | lvalue APPEND ASGN expr { $$ = appendstr(NULL, $1.oper_pre, $4, "swap", "[]<-", "dup", $1.oper_post, NULL); getset_free(&$1); free($4); }
     | lvalue PLUSASGN expr {
             if (!strcmp($3, "1")) {
                 $$ = appendstr(NULL, $1.oper_pre, "++ dup", $1.oper_post, NULL);
@@ -1073,7 +1087,7 @@ dictlist: KEYVAL { strlist_init(&$$); }
 
 
 int
-bookmark_push(const char *fname)
+bookmark_push(const char *fname, int doinit)
 {
     char buf[1024];
     const char *ptr, *dirmk;
@@ -1084,20 +1098,19 @@ bookmark_push(const char *fname)
     buf[0] = '\0';
 
     /* If file to include starts with '!', it's a global include file. */
-    if (*fname == '!') {
+    if (!doinit && *fname && *fname != '!') {
+        if (!allow_nonsys_includes) {
+            yyerror("Non-system includes forbidden.");
+            return 0;
+        }
+    }
+    if (doinit) {
+        strcpy(buf, "./");
+    } else if (*fname == '!') {
         fname++;
-        snprintf(buf, sizeof(buf), "%s/", includes_dir);
+        snprintf(buf, sizeof(buf)-1, "%s/", includes_dir);
     } else if (*fname != '/') {
-        if (*fname && !allow_nonsys_includes) {
-            yyerror("Non-system includes forbidden.");
-            return 0;
-        }
-        snprintf(buf, sizeof(buf), "%s/", yydirname);
-    } else {
-        if (*fname && !allow_nonsys_includes) {
-            yyerror("Non-system includes forbidden.");
-            return 0;
-        }
+        snprintf(buf, sizeof(buf)-1, "%s/", yydirname);
     }
 
     /* find last '/' in path to file */
@@ -1112,7 +1125,7 @@ bookmark_push(const char *fname)
     ptr = fname;
     ptr2 = buf;
     ptr2 += strlen(buf);
-    while (ptr < dirmk)
+    while (ptr < dirmk && ptr2-buf < sizeof(buf)-1)
         *ptr2++ = *ptr++;
     *ptr2 = '\0';
     dir = savestring(buf);
@@ -1120,13 +1133,13 @@ bookmark_push(const char *fname)
     while (*dirmk == '/')
         dirmk++;
     ptr2 = buf;
-    while (*dirmk)
+    while (*dirmk && ptr2-buf < sizeof(buf)-1)
         *ptr2++ = *dirmk++;
     *ptr2 = '\0';
     fil = savestring(buf);
 
     if (*fil) {
-        snprintf(buf, sizeof(buf), "%s/%s", dir, fil);
+        snprintf(buf, sizeof(buf)-1, "%s/%s", dir, fil);
 
         if (kvmap_get(&included_files, buf)) {
             free(dir);
@@ -1155,15 +1168,19 @@ bookmark_push(const char *fname)
         return 0;
     }
 
-    bookmarks[bookmark_count].dname = savestring(yydirname);
-    bookmarks[bookmark_count].fname = savestring(yyfilename);
-    bookmarks[bookmark_count].lineno = yylineno;
-    if (yyin) {
-        bookmarks[bookmark_count].pos = ftell(yyin);
-    } else {
-        bookmarks[bookmark_count].pos = 0;
+    if (!doinit) {
+        bookmarks[bookmark_count].dname = savestring(yydirname);
+        bookmarks[bookmark_count].fname = savestring(yyfilename);
+        bookmarks[bookmark_count].lineno = yylineno;
+        if (yyin) {
+            bookmarks[bookmark_count].pos = ftell(yyin);
+        } else {
+            bookmarks[bookmark_count].pos = 0;
+        }
+        bookmark_count++;
+        free((char*)yydirname);
+        free((char*)yyfilename);
     }
-    bookmark_count++;
 
     if (yyin != NULL && yyin != stdin) {
         fclose(yyin);
@@ -2025,18 +2042,15 @@ process_file(strlist *files, const char *progname)
         }
 
         yylineno = 1;
-        yydirname = savestring(".");
-        yyfilename = savestring(fullname);
+        yydirname = NULL;
+        yyfilename = NULL;
         yyin = NULL;
 
         /* Open file, initialize file state info. */
-        if (!bookmark_push(fullname)) {
+        if (!bookmark_push(fullname, 1)) {
             res = -3;
             break;
         }
-
-        /* We don't actually need to pop the base bookmark. */
-        bookmark_count--;
 
         if (outf) {
             if (*basename) {
@@ -2057,6 +2071,9 @@ process_file(strlist *files, const char *progname)
             }
         } while (bookmark_pop());
         fclose(yyin);
+
+        free((char*)yydirname);
+        free((char*)yyfilename);
 
         if (res != 0) {
             break;
@@ -2161,6 +2178,7 @@ main(int argc, char **argv)
     }
 
     res = process_file(&files, progname);
+    strlist_free(&files);
     return -res;
 }
 
