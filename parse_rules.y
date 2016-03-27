@@ -44,6 +44,7 @@ const char *yyfilename = NULL;
 int yylex(void);
 int yyparse(void);
 void yyerror(char *s);
+void muv_warn(char *arg);
 
 char *decl_new_variable(const char *name);
 
@@ -346,12 +347,8 @@ directive:
     | D_ECHO STR  { $$ = savefmt("$echo %s\n", $2); free($2); }
     | D_PRAGMA STR { $$ = savefmt("$pragma %s\n", $2); free($2); }
     | D_INCLUDE STR { $$ = savefmt("$include %s\n", $2); free($2); }
-    | D_ERROR STR { yyerror($2); free($2); $$ = savestring(""); YYERROR; }
-    | D_WARN STR {
-            fprintf(stderr, "Warning in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, $2);
-            $$ = savestring("");
-            free($2);
-        }
+    | D_ERROR STR { yyerror($2); $$ = savestring(""); free($2); YYERROR; }
+    | D_WARN STR { muv_warn($2); $$ = savestring(""); free($2); }
     ;
 
 opt_public: /* nothing */ { $$ = 0; }
@@ -1944,9 +1941,25 @@ yylex()
 
 
 void
+muv_warn(char *arg)
+{
+    if (*yyfilename) {
+        fprintf(stderr, "Warning in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, arg);
+    } else {
+        fprintf(stderr, "Warning in muv:%d: %s\n", yylineno, arg);
+    }
+}
+
+
+
+void
 yyerror(char *arg)
 {
-    fprintf(stderr, "ERROR in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, arg);
+    if (*yyfilename) {
+        fprintf(stderr, "ERROR in %s%s%s:%d: %s\n", yydirname, (*yydirname?"/":""), yyfilename, yylineno, arg);
+    } else {
+        fprintf(stderr, "ERROR in muv:%d: %s\n", yylineno, arg);
+    }
 }
 
 
