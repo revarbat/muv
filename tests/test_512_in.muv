@@ -1,7 +1,0 @@
-include "!fb6/prims";
-include "test_512_in_2.muv";
-
-func foof(arg) {
-    return bass();
-}
-

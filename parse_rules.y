@@ -2131,6 +2131,7 @@ usage(const char* execname)
     fprintf(stderr, "     -I DIR\n");
     fprintf(stderr, "     --includes-dir DIR  Specify dir to pull system includes from.\n");
     fprintf(stderr, "     --no-optimization   Turns off code optimizations.\n");
+    fprintf(stderr, "     --sysincludes-only  Only allow system ! includes.\n");
 }
 
 
