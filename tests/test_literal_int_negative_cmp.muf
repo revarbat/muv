@@ -1,7 +1,7 @@
-( Generated from test_string2_in.muv by the MUV compiler. )
+( Generated from test_literal_int_negative_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    "Multi-\rline\rstring"
+    -42
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

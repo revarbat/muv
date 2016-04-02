@@ -1,7 +1,7 @@
-( Generated from test_string_escapes_in.muv by the MUV compiler. )
+( Generated from test_oper_times_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    "A string with\rnewlines and \[[1mstuff\[[0m."
+    42 13 *
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

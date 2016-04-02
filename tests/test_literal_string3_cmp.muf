@@ -1,4 +1,4 @@
-( Generated from test_string3_in.muv by the MUV compiler. )
+( Generated from test_literal_string3_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
     var _foo

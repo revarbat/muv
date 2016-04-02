@@ -1,7 +1,7 @@
-( Generated from test_string1_in.muv by the MUV compiler. )
+( Generated from test_literal_int_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _main[ _arg -- ret ]
-    "A String"
+    42
 ;
 : __start
     "me" match me ! me @ location loc ! trig trigger !

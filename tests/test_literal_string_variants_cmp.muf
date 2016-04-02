@@ -1,4 +1,4 @@
-( Generated from test_string_variants_in.muv by the MUV compiler. )
+( Generated from test_literal_string_variants_in.muv by the MUV compiler. )
 (   https://github.com/revarbat/muv )
 : _quotes[ _arg -- ret ]
     var _a var _b var _c var _d var _e var _f var _g var _h
