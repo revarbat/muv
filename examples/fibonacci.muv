@@ -9,7 +9,7 @@ func fibseq(x) {
 }
 
 func main(arg) {
-    var fs = fibseq(intostr(arg));
+    var fs = fibseq(atoi(arg));
     tell(array_join(fs, ", "));
 }
 

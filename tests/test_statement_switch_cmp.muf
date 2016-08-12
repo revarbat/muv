@@ -7,7 +7,9 @@
     _v1 @ string? dup if pop _v2 @ int? then if
         _v1 @ _v2 @ intostr strcmp not exit
     then
-    _v1 @ type _v2 @ type strcmp not if 0 exit then
+    _v1 @ "%?" fmtstring _v2 @ "%?" fmtstring strcmp not if
+        0 exit
+    then
     _v1 @ string? if
         _v1 @ tolower _v2 @ tolower strcmp not exit
     then

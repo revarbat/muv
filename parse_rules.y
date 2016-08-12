@@ -682,10 +682,15 @@ statements: /* nothing */ { $$ = savestring(""); }
             if (*$$ && *$2) {
                 $$ = appendstr($$, "\n", NULL);
             }
-            if (debugging_level > 0) {
-                $$ = appendfmt($$, "\"%s:%d\" pop\n", (*yyfilename?yyfilename:"muv"), yylineno);
+            char *dbg = savestring("");
+            if (debugging_level == 1) {
+                int lineno = bookmark_count? bookmarks[0].lineno : yylineno;
+                dbg = appendfmt(dbg, "(MUV:L%d) ", lineno);
+            } else if (debugging_level == 2) {
+                dbg = appendfmt(dbg, "\"%s:%d\" pop ", (*yyfilename?yyfilename:"muv"), yylineno);
             }
-            $$ = appendfmt($$, "%s", $2);
+            $$ = appendfmt($$, "%s%s", dbg, $2);
+            free(dbg);
             free($1); free($2);
         }
     ;

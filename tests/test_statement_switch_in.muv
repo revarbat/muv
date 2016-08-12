@@ -1,6 +1,6 @@
 include "!fb6/prims";
 
-extern single type(val);
+extern single type(val) = '"%?" fmtstring';
 
 func complex_match(v1, v2) {
     if (number?(v1) && number?(v2)) {
